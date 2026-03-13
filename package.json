@@ -1,0 +1,61 @@
+{
+  "name": "fast-pixelizer",
+  "version": "1.0.0",
+  "description": "Fast, zero-dependency image pixelation. Works in browser and Node.js.",
+  "keywords": [
+    "pixelate",
+    "pixel-art",
+    "image",
+    "canvas",
+    "imagedata"
+  ],
+  "license": "MIT",
+  "author": "handsupmin",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/handsupmin/fast-pixelizer.git"
+  },
+  "type": "module",
+  "main": "./dist/index.cjs",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": {
+        "types": "./dist/index.d.ts",
+        "default": "./dist/index.js"
+      },
+      "require": {
+        "types": "./dist/index.d.cts",
+        "default": "./dist/index.cjs"
+      }
+    }
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "build": "tsup",
+    "dev": "tsup --watch",
+    "lint": "eslint src",
+    "lint:fix": "eslint src --fix",
+    "format": "prettier --write .",
+    "examples": "npm run build && node scripts/generate-examples.mjs",
+    "prepublishOnly": "npm run build"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.0.0",
+    "@types/sharp": "^0.31.1",
+    "eslint": "^9.0.0",
+    "eslint-config-prettier": "^10.0.0",
+    "eslint-plugin-prettier": "^5.0.0",
+    "globals": "^15.0.0",
+    "prettier": "^3.0.0",
+    "sharp": "^0.34.5",
+    "tsup": "^8.0.0",
+    "typescript": "~5.5.0",
+    "typescript-eslint": "^8.0.0"
+  }
+}
