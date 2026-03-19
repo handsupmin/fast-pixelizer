@@ -1,13 +1,16 @@
 {
   "name": "fast-pixelizer",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "Fast, zero-dependency image pixelation. Works in browser and Node.js.",
   "keywords": [
     "pixelate",
     "pixel-art",
     "image",
     "canvas",
-    "imagedata"
+    "imagedata",
+    "snap",
+    "repair",
+    "pixel-grid"
   ],
   "license": "MIT",
   "author": "handsupmin",

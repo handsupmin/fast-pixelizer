@@ -8,7 +8,35 @@ Fast, zero-dependency image pixelation library. Works in **browser** and **Node.
 
 ---
 
-## Overview
+## Snap Mode — Turn Fake Pixel Art into Real Pixel Art
+
+Most pixel art you find online is **broken** — scaled up with blurry interpolation, anti-aliased edges, and misaligned grids. `snap()` automatically detects the original pixel grid and rebuilds it with perfectly uniform cells.
+
+|          Before (blurry, misaligned)          |           After (clean, uniform)            |                 After + Grid overlay                 |
+| :-------------------------------------------: | :-----------------------------------------: | :--------------------------------------------------: |
+| ![before](./examples/example-snap-before.png) | ![after](./examples/example-snap-after.png) | ![grid](./examples/example-snap-after-with-grid.png) |
+
+**How it works:**
+
+1. **K-means++ color quantization** — reduces noise to make grid edges detectable
+2. **Edge profile analysis** — scans horizontal & vertical color boundaries
+3. **Peak-based grid detection** — finds the repeating cell pattern
+4. **Boundary snapping** — locks cuts to actual detected edges
+5. **Majority-vote resampling** — picks the dominant color per cell
+6. **Uniform re-rendering** — every cell gets the exact same pixel size
+
+No manual resolution input needed. The grid is auto-detected.
+
+```ts
+import { snap } from 'fast-pixelizer'
+
+const result = snap(imageData)
+// → { data, width, height, detectedResolution, colCuts, rowCuts }
+```
+
+---
+
+## Pixelate Mode — Generate Pixel Art from Any Image
 
 |           |             Original             |                   `clean`                    |                    `detail`                    |
 | :-------: | :------------------------------: | :------------------------------------------: | :--------------------------------------------: |
@@ -18,6 +46,12 @@ Fast, zero-dependency image pixelation library. Works in **browser** and **Node.
 **`clean`** — picks the most frequent color in each cell. Sharp, graphic pixel art look.
 
 **`detail`** — averages all colors in each cell. Smoother gradients, more texture.
+
+```ts
+import { pixelate } from 'fast-pixelizer'
+
+const result = pixelate(imageData, { resolution: 32 })
+```
 
 ---
 
@@ -31,26 +65,24 @@ npm install fast-pixelizer
 
 ## Usage
 
-```ts
-import { pixelate } from 'fast-pixelizer'
-
-const result = pixelate(imageData, { resolution: 32 })
-// → { data: Uint8ClampedArray, width: number, height: number }
-```
-
 The input accepts a browser `ImageData`, a `node-canvas` image data object, or any plain `{ data: Uint8ClampedArray, width: number, height: number }`.
 
 ### Browser
 
 ```ts
-import { pixelate } from 'fast-pixelizer'
+import { pixelate, snap } from 'fast-pixelizer'
 
 const canvas = document.querySelector('canvas')
 const ctx = canvas.getContext('2d')
 ctx.drawImage(myImage, 0, 0)
 
 const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height)
+
+// Generate pixel art
 const result = pixelate(imageData, { resolution: 32 })
+
+// Or repair existing pixel art
+const repaired = snap(imageData)
 
 // Draw back
 const out = new ImageData(result.data, result.width, result.height)
@@ -61,17 +93,24 @@ ctx.putImageData(out, 0, 0)
 
 ```ts
 import sharp from 'sharp'
-import { pixelate } from 'fast-pixelizer'
+import { pixelate, snap } from 'fast-pixelizer'
 
 const { data, info } = await sharp('./photo.png')
   .ensureAlpha()
   .raw()
   .toBuffer({ resolveWithObject: true })
 
-const result = pixelate(
-  { data: new Uint8ClampedArray(data.buffer), width: info.width, height: info.height },
-  { resolution: 32 },
-)
+const input = {
+  data: new Uint8ClampedArray(data.buffer),
+  width: info.width,
+  height: info.height,
+}
+
+// Generate pixel art
+const result = pixelate(input, { resolution: 32 })
+
+// Or repair existing pixel art
+const repaired = snap(input, { colorVariety: 64 })
 
 await sharp(Buffer.from(result.data), {
   raw: { width: result.width, height: result.height, channels: 4 },
@@ -83,6 +122,32 @@ await sharp(Buffer.from(result.data), {
 ---
 
 ## API
+
+### `snap(input, options?): SnapResult`
+
+Detects the pixel grid in existing pixel art and re-snaps it to a clean, uniform grid.
+
+#### `options: SnapOptions`
+
+| Option         | Type                      | Default      | Description                                                              |
+| -------------- | ------------------------- | ------------ | ------------------------------------------------------------------------ |
+| `colorVariety` | `number`                  | `32`         | K-means color count. Higher = more detail, slower detection.             |
+| `output`       | `'original' \| 'resized'` | `'original'` | `'original'` = uniform grid at ~original size. `'resized'` = grid-sized. |
+
+#### `SnapResult`
+
+```ts
+interface SnapResult {
+  data: Uint8ClampedArray
+  width: number
+  height: number
+  detectedResolution: number // auto-detected grid size
+  colCuts: number[] // column boundaries (for grid overlay)
+  rowCuts: number[] // row boundaries (for grid overlay)
+}
+```
+
+---
 
 ### `pixelate(input, options): PixelateResult`
 
@@ -121,14 +186,13 @@ interface PixelateResult {
 ## Examples
 
 ```ts
-// Defaults: clean mode, original size
+// Snap: auto-detect grid and repair
+snap(img)
+snap(img, { colorVariety: 64, output: 'resized' })
+
+// Pixelate: generate pixel art
 pixelate(img, { resolution: 32 })
-
-// Average color, output as resolution × resolution
 pixelate(img, { resolution: 64, mode: 'detail', output: 'resized' })
-
-// Very blocky, 8×8 grid
-pixelate(img, { resolution: 8 })
 ```
 
 ### Try it locally
@@ -148,31 +212,33 @@ Output images will be written to `examples/`. Replace `docs/original.png` with a
 
 ## Performance
 
-| Resolution | Image size | clean | detail |
-| ---------- | ---------- | ----- | ------ |
-| 32         | 512×512    | ~1ms  | ~0.5ms |
-| 128        | 512×512    | ~3ms  | ~1ms   |
-| 256        | 1024×1024  | ~12ms | ~5ms   |
+| Function   | Resolution | Image size | Time   |
+| ---------- | ---------- | ---------- | ------ |
+| `pixelate` | 32         | 512×512    | ~1ms   |
+| `pixelate` | 128        | 512×512    | ~3ms   |
+| `pixelate` | 256        | 1024×1024  | ~12ms  |
+| `snap`     | auto       | 512×512    | ~50ms  |
+| `snap`     | auto       | 1024×1024  | ~150ms |
 
-- **`clean` mode** uses a pre-allocated `Uint16Array(32768)` bucket table — no `Map`, no per-call heap allocations.
-- **`detail` mode** is a single accumulation pass with no allocations.
+- **`pixelate`**: pre-allocated `Uint16Array(32768)` bucket table — no `Map`, no per-call heap allocations.
+- **`snap`**: K-means++ quantization + edge-profile grid detection. Heavier than pixelate but still fast enough for real-time use.
 - Cell boundaries use `Math.round` to eliminate pixel gaps and overlaps between adjacent cells.
-- Both modes iterate in row-major order for CPU cache locality.
+- Both functions iterate in row-major order for CPU cache locality.
 - Zero runtime dependencies.
 
 ---
 
 ## Web Worker (browser)
 
-For large images, run `pixelate` inside a Worker to keep the main thread unblocked:
+For large images, run inside a Worker to keep the main thread unblocked:
 
 ```ts
 // pixelate.worker.ts
-import { pixelate } from 'fast-pixelizer'
+import { pixelate, snap } from 'fast-pixelizer'
 
 self.onmessage = (e) => {
-  const { input, options } = e.data
-  const result = pixelate(input, options)
+  const { input, options, mode } = e.data
+  const result = mode === 'snap' ? snap(input, options) : pixelate(input, options)
   self.postMessage(result, [result.data.buffer]) // transfer buffer, no copy
 }
 ```
@@ -180,8 +246,8 @@ self.onmessage = (e) => {
 ```ts
 // main thread
 const worker = new Worker(new URL('./pixelate.worker.ts', import.meta.url), { type: 'module' })
-worker.postMessage({ input, options }, [input.data.buffer])
-worker.onmessage = (e) => console.log(e.data) // PixelateResult
+worker.postMessage({ input, options, mode: 'snap' }, [input.data.buffer])
+worker.onmessage = (e) => console.log(e.data) // SnapResult or PixelateResult
 ```
 
 ---

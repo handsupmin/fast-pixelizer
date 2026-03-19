@@ -1,5 +1,8 @@
 import { getAverageColor, getFrequentColor } from './algorithms'
 
+export { snap } from './snap'
+export type { SnapOptions, SnapResult } from './snap'
+
 // ─── Types ───────────────────────────────────────────────────────────────────
 
 /**
