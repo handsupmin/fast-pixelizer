@@ -12,6 +12,17 @@ Fast, zero-dependency image pixelation library. Works in **browser** and **Node.
 
 Most pixel art you find online is **broken** — scaled up with blurry interpolation, anti-aliased edges, and misaligned grids. `snap()` automatically detects the original pixel grid and rebuilds it with perfectly uniform cells.
 
+As of `1.2.0`, repeated `snap()` runs stay stable on already-clean images and square canvases no longer drift into mismatched X/Y grids.
+
+Recent regression examples:
+
+| Input                  | Previous           | `1.2.0`   |
+| ---------------------- | ------------------ | --------- |
+| `1.gemini.png`         | `201x201`          | `200x200` |
+| `2.well-converted.png` | `65x69` on re-snap | `201x201` |
+| `3.gpt.png`            | `148x150`          | `148x148` |
+| `4.gpt.png`            | `98x179`           | `97x97`   |
+
 |          Before (blurry, misaligned)          |           After (clean, uniform)            |                 After + Grid overlay                 |
 | :-------------------------------------------: | :-----------------------------------------: | :--------------------------------------------------: |
 | ![before](./examples/example-snap-before.png) | ![after](./examples/example-snap-after.png) | ![grid](./examples/example-snap-after-with-grid.png) |
@@ -20,12 +31,20 @@ Most pixel art you find online is **broken** — scaled up with blurry interpola
 
 1. **K-means++ color quantization** — reduces noise to make grid edges detectable
 2. **Edge profile analysis** — scans horizontal & vertical color boundaries
-3. **Peak-based grid detection** — finds the repeating cell pattern
-4. **Boundary snapping** — locks cuts to actual detected edges
+3. **Periodicity detection** — recovers the repeating cell size even when visible boundaries are sparse
+4. **Lattice regularization** — rebuilds a globally uniform grid instead of letting local cut drift accumulate
 5. **Majority-vote resampling** — picks the dominant color per cell
 6. **Uniform re-rendering** — every cell gets the exact same pixel size
 
 No manual resolution input needed. The grid is auto-detected.
+
+**Input quality note**
+
+`snap()` works best when the source image really came from a low-resolution square grid that was later scaled up.
+
+ChatGPT-generated "pixel art" often bakes the inconsistency into the source image itself: some cells are already wider, taller, softer, or slightly off-axis before `snap()` ever sees them. In those cases `snap()` can regularize the output and force it back onto a square lattice, but it cannot perfectly recover information that was never on a clean grid to begin with, so quality is not guaranteed.
+
+If you are generating new source images specifically for `snap()`, prefer Nano Banana or any workflow that preserves a true square low-res lattice from the start.
 
 ```ts
 import { snap } from 'fast-pixelizer'
@@ -221,7 +240,7 @@ Output images will be written to `examples/`. Replace `docs/original.png` with a
 | `snap`     | auto       | 1024×1024  | ~150ms |
 
 - **`pixelate`**: pre-allocated `Uint16Array(32768)` bucket table — no `Map`, no per-call heap allocations.
-- **`snap`**: K-means++ quantization + edge-profile grid detection. Heavier than pixelate but still fast enough for real-time use.
+- **`snap`**: K-means++ quantization + periodicity-guided grid recovery. Heavier than pixelate but still fast enough for real-time use.
 - Cell boundaries use `Math.round` to eliminate pixel gaps and overlaps between adjacent cells.
 - Both functions iterate in row-major order for CPU cache locality.
 - Zero runtime dependencies.

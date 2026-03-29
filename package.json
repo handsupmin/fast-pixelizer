@@ -1,6 +1,6 @@
 {
   "name": "fast-pixelizer",
-  "version": "1.1.0",
+  "version": "1.2.0",
   "description": "Fast, zero-dependency image pixelation. Works in browser and Node.js.",
   "keywords": [
     "pixelate",
@@ -44,6 +44,7 @@
     "dev": "tsup --watch",
     "lint": "eslint src",
     "lint:fix": "eslint src --fix",
+    "test": "node --test tests/*.test.mjs",
     "format": "prettier --write .",
     "examples": "npm run build && node scripts/generate-examples.mjs",
     "prepublishOnly": "npm run build"
