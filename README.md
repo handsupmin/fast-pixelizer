@@ -186,9 +186,9 @@ Compatible with the browser's built-in `ImageData`, `node-canvas`, and raw pixel
 
 | Option       | Type                      | Default      | Description                                                                                 |
 | ------------ | ------------------------- | ------------ | ------------------------------------------------------------------------------------------- |
-| `resolution` | `number`                  | **required** | Grid size. `32` means a 32×32 cell grid. Clamped to image dimensions automatically.         |
+| `resolution` | `number \| { cols, rows }` | **required** | Grid size. `32` keeps legacy 32×32 output. `{ cols, rows }` enables rectangular grids.      |
 | `mode`       | `'clean' \| 'detail'`     | `'clean'`    | `'clean'` = most-frequent color per cell. `'detail'` = average color per cell.              |
-| `output`     | `'original' \| 'resized'` | `'original'` | `'original'` = same dimensions as input. `'resized'` = output is `resolution × resolution`. |
+| `output`     | `'original' \| 'resized'` | `'original'` | `'original'` = same dimensions as input. `'resized'` = output is grid-sized.                |
 
 #### `PixelateResult`
 
@@ -198,6 +198,18 @@ interface PixelateResult {
   width: number
   height: number
 }
+```
+
+For non-square crops, use `fitResolutionToAspect(input, n)` to turn a single scalar into a rectangular grid while keeping square cells:
+
+```ts
+const grid = fitResolutionToAspect(imageData, 64)
+// 5:2 image → { cols: 160, rows: 64 }
+
+const result = pixelate(imageData, {
+  resolution: grid,
+  output: 'resized',
+})
 ```
 
 ---
@@ -211,6 +223,7 @@ snap(img, { colorVariety: 64, output: 'resized' })
 
 // Pixelate: generate pixel art
 pixelate(img, { resolution: 32 })
+pixelate(img, { resolution: { cols: 80, rows: 32 } })
 pixelate(img, { resolution: 64, mode: 'detail', output: 'resized' })
 ```
 

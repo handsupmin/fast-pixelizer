@@ -15,12 +15,27 @@ export interface ImageLike {
   height: number
 }
 
+export interface ImageDimensions {
+  width: number
+  height: number
+}
+
+export interface PixelateGridResolution {
+  cols: number
+  rows: number
+}
+
+export type PixelateResolution = number | PixelateGridResolution
+
 export interface PixelateOptions {
   /**
-   * Number of pixel cells along each axis (e.g. 32 → 32×32 grid).
-   * Any positive integer. Values larger than the image dimension are clamped.
+   * Pixel grid size.
+   * - `32` keeps the legacy square-grid behavior (32×32)
+   * - `{ cols: 80, rows: 32 }` uses a rectangular grid
+   *
+   * Values larger than the image dimension are clamped automatically.
    */
-  resolution: number
+  resolution: PixelateResolution
 
   /**
    * Color sampling algorithm per cell.
@@ -32,7 +47,7 @@ export interface PixelateOptions {
   /**
    * Output dimensions.
    * - `'original'` — same size as input, cells filled with uniform color [default]
-   * - `'resized'`  — output is `resolution × resolution` pixels
+   * - `'resized'`  — output is grid-sized (`cols × rows`) pixels
    */
   output?: 'original' | 'resized'
 }
@@ -45,6 +60,49 @@ export interface PixelateResult {
 
 // ─── Core ────────────────────────────────────────────────────────────────────
 
+function sanitizeResolution(value: number, limit: number): number {
+  return Math.max(1, Math.min(Math.floor(value), limit))
+}
+
+function resolveGridSize(width: number, height: number, resolution: PixelateResolution) {
+  if (typeof resolution === 'number') {
+    const size = sanitizeResolution(resolution, Math.min(width, height))
+    return { cols: size, rows: size }
+  }
+
+  return {
+    cols: sanitizeResolution(resolution.cols, width),
+    rows: sanitizeResolution(resolution.rows, height),
+  }
+}
+
+/**
+ * Converts a single scalar resolution into an aspect-preserving rectangular grid.
+ *
+ * The scalar is applied to the shorter axis, and the longer axis is scaled to
+ * keep square pixel cells for non-square images.
+ */
+export function fitResolutionToAspect(
+  input: ImageDimensions,
+  resolution: number,
+): PixelateGridResolution {
+  const width = Math.max(1, Math.floor(input.width))
+  const height = Math.max(1, Math.floor(input.height))
+  const base = sanitizeResolution(resolution, Math.min(width, height))
+
+  if (width >= height) {
+    return {
+      cols: sanitizeResolution(Math.round(base * (width / height)), width),
+      rows: base,
+    }
+  }
+
+  return {
+    cols: base,
+    rows: sanitizeResolution(Math.round(base * (height / width)), height),
+  }
+}
+
 /**
  * Pixelates an image synchronously.
  *
@@ -53,6 +111,8 @@ export interface PixelateResult {
  * @example
  * ```ts
  * const result = pixelate(imageData, { resolution: 32 })
+ * const grid = fitResolutionToAspect(imageData, 64)
+ * const result = pixelate(imageData, { resolution: grid, output: 'resized' })
  * const result = pixelate(imageData, { resolution: 64, mode: 'detail', output: 'resized' })
  * ```
  */
@@ -60,23 +120,23 @@ export function pixelate(input: ImageLike, options: PixelateOptions): PixelateRe
   const { data, width, height } = input
   const { mode = 'clean', output = 'original' } = options
 
-  const resolution = Math.max(1, Math.min(Math.floor(options.resolution), width, height))
+  const { cols, rows } = resolveGridSize(width, height, options.resolution)
 
   const getColor = mode === 'clean' ? getFrequentColor : getAverageColor
-  const cellW = width / resolution
-  const cellH = height / resolution
+  const cellW = width / cols
+  const cellH = height / rows
 
   // Sample one color per cell
-  const cellColors = new Uint8ClampedArray(resolution * resolution * 4)
+  const cellColors = new Uint8ClampedArray(cols * rows * 4)
 
-  for (let row = 0; row < resolution; row++) {
-    for (let col = 0; col < resolution; col++) {
+  for (let row = 0; row < rows; row++) {
+    for (let col = 0; col < cols; col++) {
       const x0 = Math.round(col * cellW)
       const y0 = Math.round(row * cellH)
       const x1 = Math.round((col + 1) * cellW)
       const y1 = Math.round((row + 1) * cellH)
       const [r, g, b, a] = getColor(data, width, x0, y0, x1, y1)
-      const idx = (row * resolution + col) * 4
+      const idx = (row * cols + col) * 4
       cellColors[idx] = r
       cellColors[idx + 1] = g
       cellColors[idx + 2] = b
@@ -86,15 +146,15 @@ export function pixelate(input: ImageLike, options: PixelateOptions): PixelateRe
 
   // Build output
   if (output === 'resized') {
-    return { data: cellColors, width: resolution, height: resolution }
+    return { data: cellColors, width: cols, height: rows }
   }
 
   // output === 'original': paint each cell back at full size
   const out = new Uint8ClampedArray(width * height * 4)
 
-  for (let row = 0; row < resolution; row++) {
-    for (let col = 0; col < resolution; col++) {
-      const idx = (row * resolution + col) * 4
+  for (let row = 0; row < rows; row++) {
+    for (let col = 0; col < cols; col++) {
+      const idx = (row * cols + col) * 4
       const r = cellColors[idx]
       const g = cellColors[idx + 1]
       const b = cellColors[idx + 2]
