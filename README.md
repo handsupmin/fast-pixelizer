@@ -14,6 +14,8 @@ Most pixel art you find online is **broken** — scaled up with blurry interpola
 
 As of `1.2.0`, repeated `snap()` runs stay stable on already-clean images and square canvases no longer drift into mismatched X/Y grids.
 
+As of `1.3.1`, high-resolution generated images are also evaluated against model and demo fixtures so the detector avoids snapping to tiny texture noise while keeping already-uniform snap outputs idempotent.
+
 Recent regression examples:
 
 | Input                  | Previous           | `1.2.0`   |
@@ -32,9 +34,11 @@ Recent regression examples:
 1. **K-means++ color quantization** — reduces noise to make grid edges detectable
 2. **Edge profile analysis** — scans horizontal & vertical color boundaries
 3. **Periodicity detection** — recovers the repeating cell size even when visible boundaries are sparse
-4. **Lattice regularization** — rebuilds a globally uniform grid instead of letting local cut drift accumulate
-5. **Majority-vote resampling** — picks the dominant color per cell
-6. **Uniform re-rendering** — every cell gets the exact same pixel size
+4. **High-resolution plausibility guard** — avoids treating 1–2px generated texture as the real grid
+5. **Uniform-cell detection** — preserves already-snapped square-cell outputs on repeated runs
+6. **Lattice regularization** — rebuilds a globally uniform grid instead of letting local cut drift accumulate
+7. **Majority-vote resampling** — picks the dominant color per cell
+8. **Uniform re-rendering** — every cell gets the exact same pixel size
 
 No manual resolution input needed. The grid is auto-detected.
 
@@ -45,6 +49,29 @@ No manual resolution input needed. The grid is auto-detected.
 ChatGPT-generated "pixel art" often bakes the inconsistency into the source image itself: some cells are already wider, taller, softer, or slightly off-axis before `snap()` ever sees them. In those cases `snap()` can regularize the output and force it back onto a square lattice, but it cannot perfectly recover information that was never on a clean grid to begin with, so quality is not guaranteed.
 
 If you are generating new source images specifically for `snap()`, prefer Nano Banana or any workflow that preserves a true square low-res lattice from the start.
+
+### Snap quality eval
+
+Run the model/demo quality loop with:
+
+```bash
+npm run eval:snap-quality
+```
+
+The eval writes `summary.json`, `summary.md`, snapped images, and resized grid images under `.tmp/snap-quality-eval/`.
+
+Current criteria include:
+
+| Criterion           | What it catches                                                |
+| ------------------- | -------------------------------------------------------------- |
+| Aspect preservation | Crops or grids whose cell aspect drifts from the source ratio  |
+| Micro-grid snap     | Detectors that lock onto generated texture instead of cells    |
+| Idempotence         | `snap(snap(image))` changing the detected grid                 |
+| Boundary evidence   | Weak inferred boundaries compared with average image gradients |
+| Source disorder     | Images whose inferred cells are internally noisy or painterly  |
+| Preservation        | Excessive nearest-neighbor MAE against the original image      |
+
+The June 2026 model/demo fixture run improved from `5 fail / 5 pass / 6 review` with total repeat gap `273` to `0 fail / 11 pass / 5 review` with repeat gap `0`.
 
 ```ts
 import { snap } from 'fast-pixelizer'

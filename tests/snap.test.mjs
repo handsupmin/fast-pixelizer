@@ -22,6 +22,15 @@ async function detect(file) {
   }
 }
 
+async function repeatGap(file) {
+  const input = await loadImage(file)
+  const resized = snap(input, { colorVariety: 64, output: 'resized' })
+  const original = snap(input, { colorVariety: 64, output: 'original' })
+  const repeated = snap(original, { colorVariety: 64, output: 'resized' })
+
+  return Math.abs(resized.width - repeated.width) + Math.abs(resized.height - repeated.height)
+}
+
 test('already snapped Gemini output keeps nearly the same detected grid', async () => {
   const gemini = await detect('examples/1.gemini.png')
   const converted = await detect('examples/2.well-converted.png')
@@ -50,4 +59,11 @@ test('square GPT pixel art collapses to an exact square grid', async () => {
     gpt4.rows,
     `expected 4.gpt grid to be square, got ${gpt4.cols}x${gpt4.rows}`,
   )
+})
+
+test('uniform snap outputs keep the same grid when snapped again', async () => {
+  for (const file of ['examples/example-64-detail.png', 'examples/example-snap-after-with-grid.png']) {
+    const gap = await repeatGap(file)
+    assert.equal(gap, 0, `expected repeated snap to preserve ${file}, got grid gap ${gap}`)
+  }
 })

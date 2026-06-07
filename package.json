@@ -47,6 +47,8 @@
     "test": "node --test tests/*.test.mjs",
     "format": "prettier --write .",
     "examples": "npm run build && node scripts/generate-examples.mjs",
+    "eval:model-examples": "npm run eval:snap-quality",
+    "eval:snap-quality": "npm run build && node scripts/evaluate-model-examples.mjs",
     "prepublishOnly": "npm run build"
   },
   "devDependencies": {
