@@ -54,6 +54,8 @@ export const QUALITY_RULES = {
   maxAlphaSmallComponentCountDrift: 0,
   minAlphaSemitransparentPixelCount: 16,
   minAlphaSemitransparentRetention: 0.95,
+  maxAlphaSemitransparentValueMae: 8,
+  maxAlphaSemitransparentValueP95: 16,
   maxAlphaSemitransparentSpuriousRatio: 0.1,
   minAlphaEdgeCount: 64,
   minAlphaEdgeRecall: 0.9,

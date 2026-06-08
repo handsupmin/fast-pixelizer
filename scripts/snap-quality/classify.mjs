@@ -396,6 +396,21 @@ export function classifyMetrics(metrics) {
     )
   }
   if (
+    metrics.alphaSemitransparentPixelCount >= QUALITY_RULES.minAlphaSemitransparentPixelCount &&
+    (metrics.alphaSemitransparentValueMae > QUALITY_RULES.maxAlphaSemitransparentValueMae ||
+      metrics.alphaSemitransparentValueP95 > QUALITY_RULES.maxAlphaSemitransparentValueP95)
+  ) {
+    issues.push(
+      issue(
+        'review',
+        'alpha-semitransparency-value-drift',
+        `alpha semitransparent value MAE ${formatNum(
+          metrics.alphaSemitransparentValueMae,
+        )}, p95 ${formatNum(metrics.alphaSemitransparentValueP95)}`,
+      ),
+    )
+  }
+  if (
     metrics.outputAlphaSemitransparentPixelCount >=
       QUALITY_RULES.minAlphaSemitransparentPixelCount &&
     metrics.alphaSemitransparentSpuriousRatio > QUALITY_RULES.maxAlphaSemitransparentSpuriousRatio
@@ -545,6 +560,16 @@ export function objective(metrics) {
       QUALITY_RULES.minAlphaSemitransparentRetention - (metrics.alphaSemitransparentRetention ?? 1),
     ) *
       45 +
+    Math.max(
+      0,
+      (metrics.alphaSemitransparentValueMae ?? 0) - QUALITY_RULES.maxAlphaSemitransparentValueMae,
+    ) *
+      0.5 +
+    Math.max(
+      0,
+      (metrics.alphaSemitransparentValueP95 ?? 0) - QUALITY_RULES.maxAlphaSemitransparentValueP95,
+    ) *
+      0.25 +
     Math.max(
       0,
       (metrics.alphaSemitransparentSpuriousRatio ?? 0) -

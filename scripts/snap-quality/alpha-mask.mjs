@@ -40,6 +40,12 @@ function isSemitransparent(alpha) {
   return alpha > SEMITRANSPARENT_ALPHA_MIN && alpha < SEMITRANSPARENT_ALPHA_MAX
 }
 
+function percentile(sortedValues, quantile) {
+  return sortedValues.length > 0
+    ? sortedValues[Math.min(sortedValues.length - 1, Math.floor(sortedValues.length * quantile))]
+    : 0
+}
+
 function alphaEdgeMap(data, width, height) {
   const map = new Uint8Array(width * height)
   let count = 0
@@ -117,15 +123,19 @@ function alphaSemitransparentStats(input, resized) {
   let outputCount = 0
   let retained = 0
   let outputOnly = 0
+  const alphaErrors = []
 
   for (let pixel = 0; pixel < width * height; pixel++) {
     const i = pixel * 4
-    const source = isSemitransparent(input.data[i + 3])
-    const output = isSemitransparent(resized[i + 3])
+    const sourceAlpha = input.data[i + 3]
+    const outputAlpha = resized[i + 3]
+    const source = isSemitransparent(sourceAlpha)
+    const output = isSemitransparent(outputAlpha)
 
     if (source) {
       sourceCount++
       if (output) retained++
+      alphaErrors.push(Math.abs(sourceAlpha - outputAlpha))
     }
     if (output) {
       outputCount++
@@ -137,6 +147,14 @@ function alphaSemitransparentStats(input, resized) {
     alphaSemitransparentPixelCount: sourceCount,
     alphaSemitransparentRetention: sourceCount > 0 ? retained / sourceCount : 1,
     alphaSemitransparentSpuriousRatio: outputCount > 0 ? outputOnly / outputCount : 0,
+    alphaSemitransparentValueMae:
+      alphaErrors.length > 0
+        ? alphaErrors.reduce((sum, value) => sum + value, 0) / alphaErrors.length
+        : 0,
+    alphaSemitransparentValueP95: percentile(
+      alphaErrors.sort((a, b) => a - b),
+      0.95,
+    ),
     outputAlphaSemitransparentPixelCount: outputCount,
   }
 }
