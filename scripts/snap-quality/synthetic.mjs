@@ -131,6 +131,41 @@ function makeTransparentLowPaletteSprite(cols, rows) {
   return image
 }
 
+function makeDiagonalLineSprite(cols, rows) {
+  const palette = {
+    accent: [183, 72, 82, 255],
+    background: [24, 26, 34, 255],
+    highlight: [232, 218, 139, 255],
+    outline: [8, 10, 16, 255],
+    teal: [73, 135, 112, 255],
+  }
+  const image = { data: new Uint8ClampedArray(cols * rows * 4), width: cols, height: rows }
+  paintRect(image, 0, 0, cols, rows, palette.background)
+  paintLine(image, 4, rows - 6, 20, 10, palette.outline)
+  paintLine(image, 5, rows - 6, 21, 10, palette.highlight)
+  paintLine(image, 20, 10, cols - 12, rows - 6, palette.outline)
+  paintLine(image, 21, 10, cols - 11, rows - 6, palette.teal)
+  paintRect(image, 10, rows - 12, 13, rows - 9, palette.accent)
+  paintRect(image, cols - 13, 7, cols - 10, 10, palette.accent)
+  return image
+}
+
+function makeAlphaHoleSprite(cols, rows) {
+  const palette = {
+    cloth: [73, 135, 112, 255],
+    highlight: [232, 218, 139, 255],
+    outline: [12, 16, 22, 255],
+  }
+  const image = { data: new Uint8ClampedArray(cols * rows * 4), width: cols, height: rows }
+  paintRect(image, 8, 6, 24, 26, palette.outline)
+  paintRect(image, 10, 8, 22, 24, palette.cloth)
+  paintRect(image, 14, 12, 18, 16, [0, 0, 0, 0])
+  paintRect(image, 6, 16, 8, 18, palette.highlight)
+  paintRect(image, 24, 15, 26, 17, palette.highlight)
+  paintRect(image, 15, 26, 17, 29, palette.outline)
+  return image
+}
+
 async function writeScaled(file, image, scale, kernel) {
   await sharp(Buffer.from(image.data), {
     raw: { width: image.width, height: image.height, channels: 4 },
@@ -273,6 +308,20 @@ export async function generateSyntheticDataset(outDir) {
     {
       file: 'transparent-sprite-32x32-scale8.png',
       image: makeTransparentLowPaletteSprite(32, 32),
+      scale: 8,
+      kernel: 'nearest',
+      expected: { cols: 32, rows: 32 },
+    },
+    {
+      file: 'diagonal-lines-48x32-scale8.png',
+      image: makeDiagonalLineSprite(48, 32),
+      scale: 8,
+      kernel: 'nearest',
+      expected: { cols: 48, rows: 32 },
+    },
+    {
+      file: 'alpha-holes-detached-details-32x32-scale8.png',
+      image: makeAlphaHoleSprite(32, 32),
       scale: 8,
       kernel: 'nearest',
       expected: { cols: 32, rows: 32 },
