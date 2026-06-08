@@ -378,7 +378,14 @@ export async function preservationStats(input, result, options = {}) {
   )
   const edgeOverlap = options.edgeOverlap
     ? edgeOverlapStats(input, resized)
-    : { edgeRecall: 1, edgeSpuriousRatio: 0, edgeJaccard: 1 }
+    : {
+        edgeDirectionDrift: 0,
+        edgeRecall: 1,
+        edgeSpuriousRatio: 0,
+        edgeJaccard: 1,
+        outputEdgeDirectionCount: 0,
+        sourceEdgeDirectionCount: 0,
+      }
   const alphaMask = options.alphaMask
     ? alphaMaskStats(input, resized)
     : {
@@ -462,9 +469,12 @@ export async function preservationStats(input, result, options = {}) {
     hueSampleCount: hueErrors.length,
     contrastRatio: inputLuma.stdDev > 0 ? outputLuma.stdDev / inputLuma.stdDev : 1,
     lineEdgeRatio: inputEdge > 0 ? outputEdge / inputEdge : 1,
+    edgeDirectionDrift: edgeOverlap.edgeDirectionDrift,
     edgeRecall: edgeOverlap.edgeRecall,
     edgeSpuriousRatio: edgeOverlap.edgeSpuriousRatio,
     edgeJaccard: edgeOverlap.edgeJaccard,
+    outputEdgeDirectionCount: edgeOverlap.outputEdgeDirectionCount,
+    sourceEdgeDirectionCount: edgeOverlap.sourceEdgeDirectionCount,
   }
 }
 

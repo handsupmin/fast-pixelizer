@@ -183,6 +183,15 @@ export function summarize(results) {
     edgeRecallMean: mean(results, 'edgeRecall'),
     edgeSpuriousRatioMean: mean(results, 'edgeSpuriousRatio'),
     edgeJaccardMean: mean(results, 'edgeJaccard'),
+    edgeDirectionDriftMean: mean(results, 'edgeDirectionDrift'),
+    sourceEdgeDirectionCountTotal: results.reduce(
+      (sum, item) => sum + item.sourceEdgeDirectionCount,
+      0,
+    ),
+    outputEdgeDirectionCountTotal: results.reduce(
+      (sum, item) => sum + item.outputEdgeDirectionCount,
+      0,
+    ),
     outputAlphaCellMaeMean: mean(results, 'outputAlphaCellMae'),
     phaseAlignmentMean: mean(results, 'phaseAlignment'),
     axisPhaseAlignmentMinMean: mean(results, 'axisPhaseAlignmentMin'),
@@ -256,6 +265,7 @@ function criteriaMarkdown() {
     `- Chroma: review when colorful inputs with mean chroma at least ${QUALITY_RULES.minChromaMeanForRatio} fall outside chroma ratio ${QUALITY_RULES.minChromaRatio}-${QUALITY_RULES.maxChromaRatio}.`,
     `- Hue: review when at least ${QUALITY_RULES.minHueSampleCount} colorful pixels have hue error mean > ${QUALITY_RULES.maxHueErrorMean} degrees or p95 > ${QUALITY_RULES.maxHueErrorP95} degrees.`,
     `- Line strength: review when resized snap edge strength falls outside ${QUALITY_RULES.minLineEdgeRatio}-${QUALITY_RULES.maxLineEdgeRatio}x the source edge strength.`,
+    `- Edge direction: review when at least ${QUALITY_RULES.minEdgeDirectionCount} strong source and output edges shift x/y/diagonal direction histogram by more than ${QUALITY_RULES.maxEdgeDirectionDrift}.`,
     `- Edge map overlap: review when fewer than ${(QUALITY_RULES.minEdgeRecall * 100).toFixed(0)}% of strong source edges survive nearby, when more than ${(QUALITY_RULES.maxEdgeSpuriousRatio * 100).toFixed(0)}% of strong output edges are not near source edges, or when tolerant edge overlap drops below ${QUALITY_RULES.minEdgeJaccard}.`,
     '',
   ]
@@ -421,6 +431,9 @@ export function toMarkdown(summary) {
     'hueSampleCount',
     'contrastRatio',
     'lineEdgeRatio',
+    'sourceEdgeDirectionCount',
+    'outputEdgeDirectionCount',
+    'edgeDirectionDrift',
     'edgeRecall',
     'edgeSpuriousRatio',
     'edgeJaccard',

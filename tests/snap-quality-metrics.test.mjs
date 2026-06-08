@@ -30,6 +30,21 @@ function makeVerticalStripes(width, height, stripeWidth) {
   return { data, width, height }
 }
 
+function makeHorizontalStripes(width, height, stripeHeight) {
+  const data = new Uint8ClampedArray(width * height * 4)
+  for (let y = 0; y < height; y++) {
+    for (let x = 0; x < width; x++) {
+      const i = (y * width + x) * 4
+      const value = Math.floor(y / stripeHeight) % 2 === 0 ? 0 : 255
+      data[i] = value
+      data[i + 1] = value
+      data[i + 2] = value
+      data[i + 3] = 255
+    }
+  }
+  return { data, width, height }
+}
+
 function makeChecker(width, height, cellSize) {
   const data = new Uint8ClampedArray(width * height * 4)
   for (let y = 0; y < height; y++) {
@@ -215,6 +230,21 @@ test('line edge ratio stays near one when the snapped output is identical', asyn
   assert.ok(
     stats.lineEdgeRatio > 0.99 && stats.lineEdgeRatio < 1.01,
     `expected line edge ratio near 1, got ${stats.lineEdgeRatio}`,
+  )
+})
+
+test('edge overlap tracks strong edge direction drift', () => {
+  const vertical = makeVerticalStripes(64, 64, 8)
+  const horizontal = makeHorizontalStripes(64, 64, 8)
+  const preserved = edgeOverlapStats(vertical, vertical.data)
+  const rotated = edgeOverlapStats(vertical, horizontal.data)
+
+  assert.equal(preserved.edgeDirectionDrift, 0)
+  assert.ok(preserved.sourceEdgeDirectionCount > 64)
+  assert.ok(preserved.outputEdgeDirectionCount > 64)
+  assert.ok(
+    rotated.edgeDirectionDrift > 0.9,
+    `expected large edge direction drift, got ${rotated.edgeDirectionDrift}`,
   )
 })
 
@@ -1381,6 +1411,20 @@ test('quality classification reviews weak edge map overlap', () => {
   assert.ok(result.issues.some((issue) => issue.code === 'edge-recall-loss'))
   assert.ok(result.issues.some((issue) => issue.code === 'spurious-edge-growth'))
   assert.ok(result.issues.some((issue) => issue.code === 'edge-map-drift'))
+})
+
+test('quality classification reviews edge direction drift', () => {
+  const result = classifyMetrics({
+    edgeDirectionDrift: 0.8,
+    edgeJaccard: 1,
+    edgeRecall: 1,
+    edgeSpuriousRatio: 0,
+    outputEdgeDirectionCount: 128,
+    sourceEdgeDirectionCount: 128,
+  })
+
+  assert.equal(result.status, 'review')
+  assert.ok(result.issues.some((issue) => issue.code === 'edge-direction-drift'))
 })
 
 test('quality classification reviews alpha silhouette drift', () => {

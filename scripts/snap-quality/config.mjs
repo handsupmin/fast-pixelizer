@@ -121,6 +121,8 @@ export const QUALITY_RULES = {
   maxContrastRatio: 1.8,
   minLineEdgeRatio: 0.3,
   maxLineEdgeRatio: 2.4,
+  minEdgeDirectionCount: 64,
+  maxEdgeDirectionDrift: 0.7,
   minEdgeRecall: 0.65,
   maxEdgeSpuriousRatio: 0.5,
   minEdgeJaccard: 0.4,

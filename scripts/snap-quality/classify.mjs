@@ -1000,6 +1000,19 @@ export function classifyMetrics(metrics) {
       issue('review', 'line-edge-drift', `line edge ratio ${formatNum(metrics.lineEdgeRatio)}`),
     )
   }
+  if (
+    (metrics.sourceEdgeDirectionCount ?? 0) >= QUALITY_RULES.minEdgeDirectionCount &&
+    (metrics.outputEdgeDirectionCount ?? 0) >= QUALITY_RULES.minEdgeDirectionCount &&
+    (metrics.edgeDirectionDrift ?? 0) > QUALITY_RULES.maxEdgeDirectionDrift
+  ) {
+    issues.push(
+      issue(
+        'review',
+        'edge-direction-drift',
+        `edge direction drift ${formatNum(metrics.edgeDirectionDrift)}`,
+      ),
+    )
+  }
   if (metrics.edgeRecall < QUALITY_RULES.minEdgeRecall) {
     issues.push(issue('review', 'edge-recall-loss', `edge recall ${formatNum(metrics.edgeRecall)}`))
   }
@@ -1307,6 +1320,7 @@ export function objective(metrics) {
     Math.max(0, metrics.hueErrorMean - QUALITY_RULES.maxHueErrorMean) * 0.5 +
     Math.max(0, metrics.hueErrorP95 - QUALITY_RULES.maxHueErrorP95) * 0.2 +
     Math.abs(1 - metrics.lineEdgeRatio) * 8 +
+    Math.max(0, (metrics.edgeDirectionDrift ?? 0) - QUALITY_RULES.maxEdgeDirectionDrift) * 40 +
     Math.max(0, QUALITY_RULES.minEdgeRecall - metrics.edgeRecall) * 60 +
     Math.max(0, metrics.edgeSpuriousRatio - QUALITY_RULES.maxEdgeSpuriousRatio) * 40 +
     Math.max(0, QUALITY_RULES.minEdgeJaccard - metrics.edgeJaccard) * 40
