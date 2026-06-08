@@ -110,6 +110,27 @@ function makePatchedSolid(width, height, value, patch) {
   return image
 }
 
+function copyImage(image) {
+  return {
+    data: new Uint8ClampedArray(image.data),
+    height: image.height,
+    width: image.width,
+  }
+}
+
+function setRgbRect(image, left, top, right, bottom, value) {
+  for (let y = top; y < bottom; y++) {
+    for (let x = left; x < right; x++) {
+      const i = (y * image.width + x) * 4
+      image.data[i] = value
+      image.data[i + 1] = value
+      image.data[i + 2] = value
+      image.data[i + 3] = 255
+    }
+  }
+  return image
+}
+
 function makeTransparentBox(width, height, left, top, right, bottom) {
   const data = new Uint8ClampedArray(width * height * 4)
   for (let y = top; y < bottom; y++) {
@@ -245,6 +266,32 @@ test('edge overlap tracks strong edge direction drift', () => {
   assert.ok(
     rotated.edgeDirectionDrift > 0.9,
     `expected large edge direction drift, got ${rotated.edgeDirectionDrift}`,
+  )
+})
+
+test('edge overlap tracks localized tile edge loss and growth', () => {
+  const source = makeVerticalStripes(64, 64, 4)
+  const localLoss = setRgbRect(copyImage(source), 0, 0, 16, 16, 0)
+  const solid = makeSolid(64, 64, 0)
+  const localGrowth = setRgbRect(copyImage(solid), 0, 0, 16, 16, 255)
+  for (let y = 0; y < 16; y++) {
+    for (let x = 0; x < 16; x += 4) {
+      setRgbRect(localGrowth, x, y, Math.min(16, x + 2), y + 1, 0)
+    }
+  }
+
+  const preserved = edgeOverlapStats(source, source.data)
+  const loss = edgeOverlapStats(source, localLoss.data)
+  const growth = edgeOverlapStats(solid, localGrowth.data)
+
+  assert.equal(preserved.edgeTileRecallMin, 1)
+  assert.ok(
+    loss.edgeTileRecallMin < 0.5,
+    `expected regional edge loss, got ${loss.edgeTileRecallMin}`,
+  )
+  assert.ok(
+    growth.edgeTileSpuriousMax > 0.9,
+    `expected regional spurious edge growth, got ${growth.edgeTileSpuriousMax}`,
   )
 })
 
@@ -1425,6 +1472,30 @@ test('quality classification reviews edge direction drift', () => {
 
   assert.equal(result.status, 'review')
   assert.ok(result.issues.some((issue) => issue.code === 'edge-direction-drift'))
+})
+
+test('quality classification reviews regional edge loss and growth', () => {
+  const loss = classifyMetrics({
+    edgeJaccard: 1,
+    edgeRecall: 1,
+    edgeSpuriousRatio: 0,
+    edgeTileRecallMin: 0.2,
+    edgeTileSpuriousMax: 0,
+    sourceEdgeTileCount: 1,
+  })
+  const growth = classifyMetrics({
+    edgeJaccard: 1,
+    edgeRecall: 1,
+    edgeSpuriousRatio: 0,
+    edgeTileRecallMin: 1,
+    edgeTileSpuriousMax: 0.95,
+    outputEdgeTileCount: 1,
+  })
+
+  assert.equal(loss.status, 'review')
+  assert.ok(loss.issues.some((issue) => issue.code === 'regional-edge-loss'))
+  assert.equal(growth.status, 'review')
+  assert.ok(growth.issues.some((issue) => issue.code === 'regional-spurious-edge-growth'))
 })
 
 test('quality classification reviews alpha silhouette drift', () => {

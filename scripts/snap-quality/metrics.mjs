@@ -383,8 +383,12 @@ export async function preservationStats(input, result, options = {}) {
         edgeRecall: 1,
         edgeSpuriousRatio: 0,
         edgeJaccard: 1,
+        edgeTileRecallMin: 1,
+        edgeTileSpuriousMax: 0,
         outputEdgeDirectionCount: 0,
+        outputEdgeTileCount: 0,
         sourceEdgeDirectionCount: 0,
+        sourceEdgeTileCount: 0,
       }
   const alphaMask = options.alphaMask
     ? alphaMaskStats(input, resized)
@@ -473,8 +477,12 @@ export async function preservationStats(input, result, options = {}) {
     edgeRecall: edgeOverlap.edgeRecall,
     edgeSpuriousRatio: edgeOverlap.edgeSpuriousRatio,
     edgeJaccard: edgeOverlap.edgeJaccard,
+    edgeTileRecallMin: edgeOverlap.edgeTileRecallMin,
+    edgeTileSpuriousMax: edgeOverlap.edgeTileSpuriousMax,
     outputEdgeDirectionCount: edgeOverlap.outputEdgeDirectionCount,
+    outputEdgeTileCount: edgeOverlap.outputEdgeTileCount,
     sourceEdgeDirectionCount: edgeOverlap.sourceEdgeDirectionCount,
+    sourceEdgeTileCount: edgeOverlap.sourceEdgeTileCount,
   }
 }
 

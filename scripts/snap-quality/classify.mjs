@@ -1028,6 +1028,30 @@ export function classifyMetrics(metrics) {
   if (metrics.edgeJaccard < QUALITY_RULES.minEdgeJaccard) {
     issues.push(issue('review', 'edge-map-drift', `edge overlap ${formatNum(metrics.edgeJaccard)}`))
   }
+  if (
+    (metrics.sourceEdgeTileCount ?? 0) >= QUALITY_RULES.minEdgeTileCount &&
+    (metrics.edgeTileRecallMin ?? 1) < QUALITY_RULES.minEdgeTileRecall
+  ) {
+    issues.push(
+      issue(
+        'review',
+        'regional-edge-loss',
+        `min tile edge recall ${formatNum(metrics.edgeTileRecallMin)}`,
+      ),
+    )
+  }
+  if (
+    (metrics.outputEdgeTileCount ?? 0) >= QUALITY_RULES.minEdgeTileCount &&
+    (metrics.edgeTileSpuriousMax ?? 0) > QUALITY_RULES.maxEdgeTileSpuriousRatio
+  ) {
+    issues.push(
+      issue(
+        'review',
+        'regional-spurious-edge-growth',
+        `max tile edge spurious ratio ${formatNum(metrics.edgeTileSpuriousMax)}`,
+      ),
+    )
+  }
 
   if (issues.some((item) => item.severity === 'fail')) return { status: 'fail', issues }
   if (issues.length > 0) return { status: 'review', issues }
@@ -1323,6 +1347,8 @@ export function objective(metrics) {
     Math.max(0, (metrics.edgeDirectionDrift ?? 0) - QUALITY_RULES.maxEdgeDirectionDrift) * 40 +
     Math.max(0, QUALITY_RULES.minEdgeRecall - metrics.edgeRecall) * 60 +
     Math.max(0, metrics.edgeSpuriousRatio - QUALITY_RULES.maxEdgeSpuriousRatio) * 40 +
-    Math.max(0, QUALITY_RULES.minEdgeJaccard - metrics.edgeJaccard) * 40
+    Math.max(0, QUALITY_RULES.minEdgeJaccard - metrics.edgeJaccard) * 40 +
+    Math.max(0, QUALITY_RULES.minEdgeTileRecall - (metrics.edgeTileRecallMin ?? 1)) * 30 +
+    Math.max(0, (metrics.edgeTileSpuriousMax ?? 0) - QUALITY_RULES.maxEdgeTileSpuriousRatio) * 20
   )
 }

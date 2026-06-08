@@ -1,5 +1,7 @@
 const MAX_EDGE_SAMPLES = 50_000
 const EDGE_RADIUS = 2
+const EDGE_TILE_GRID = 4
+const EDGE_TILE_MIN_EDGES = 8
 
 function grayAt(data, width, x, y) {
   const i = (y * width + x) * 4
@@ -60,6 +62,37 @@ function directionDrift(source, sourceCount, output, outputCount) {
   return drift / 2
 }
 
+function tileIndex(x, y, width, height) {
+  const col = Math.min(EDGE_TILE_GRID - 1, Math.floor((x * EDGE_TILE_GRID) / width))
+  const row = Math.min(EDGE_TILE_GRID - 1, Math.floor((y * EDGE_TILE_GRID) / height))
+  return row * EDGE_TILE_GRID + col
+}
+
+function regionalEdgeStats(sourceTiles, outputTiles, matchedTiles, outputOnlyTiles) {
+  let sourceTileCount = 0
+  let outputTileCount = 0
+  let recallMin = 1
+  let spuriousMax = 0
+
+  for (let tile = 0; tile < sourceTiles.length; tile++) {
+    if (sourceTiles[tile] >= EDGE_TILE_MIN_EDGES) {
+      sourceTileCount++
+      recallMin = Math.min(recallMin, matchedTiles[tile] / sourceTiles[tile])
+    }
+    if (outputTiles[tile] >= EDGE_TILE_MIN_EDGES) {
+      outputTileCount++
+      spuriousMax = Math.max(spuriousMax, outputOnlyTiles[tile] / outputTiles[tile])
+    }
+  }
+
+  return {
+    edgeTileRecallMin: sourceTileCount > 0 ? recallMin : 1,
+    edgeTileSpuriousMax: outputTileCount > 0 ? spuriousMax : 0,
+    outputEdgeTileCount: outputTileCount,
+    sourceEdgeTileCount: sourceTileCount,
+  }
+}
+
 export function edgeOverlapStats(input, resized) {
   const { width, height } = input
   if (width < 3 || height < 3) {
@@ -68,8 +101,12 @@ export function edgeOverlapStats(input, resized) {
       edgeJaccard: 1,
       edgeRecall: 1,
       edgeSpuriousRatio: 0,
+      edgeTileRecallMin: 1,
+      edgeTileSpuriousMax: 0,
       outputEdgeDirectionCount: 0,
+      outputEdgeTileCount: 0,
       sourceEdgeDirectionCount: 0,
+      sourceEdgeTileCount: 0,
     }
   }
 
@@ -95,6 +132,10 @@ export function edgeOverlapStats(input, resized) {
   const outputThreshold = Math.max(8, inputThreshold * 0.35, percentile(outputEdges, 0.85) * 0.5)
   const sourceDirections = new Uint32Array(4)
   const outputDirectionsTotal = new Uint32Array(4)
+  const sourceTiles = new Uint32Array(EDGE_TILE_GRID * EDGE_TILE_GRID)
+  const outputTiles = new Uint32Array(EDGE_TILE_GRID * EDGE_TILE_GRID)
+  const matchedTiles = new Uint32Array(EDGE_TILE_GRID * EDGE_TILE_GRID)
+  const outputOnlyTiles = new Uint32Array(EDGE_TILE_GRID * EDGE_TILE_GRID)
   let sourceEdges = 0
   let outputEdgesTotal = 0
   let matchedEdges = 0
@@ -102,6 +143,7 @@ export function edgeOverlapStats(input, resized) {
 
   for (let i = 0; i < points.length; i++) {
     const { x, y } = points[i]
+    const tile = tileIndex(x, y, width, height)
     const sourceEdge = inputEdges[i] >= inputThreshold
     const outputEdge = outputEdges[i] >= outputThreshold
     const sourceNearby =
@@ -110,16 +152,25 @@ export function edgeOverlapStats(input, resized) {
 
     if (sourceEdge) {
       sourceEdges++
+      sourceTiles[tile]++
       if (inputDirections[i] >= 0) sourceDirections[inputDirections[i]]++
     }
     if (outputEdge) {
       outputEdgesTotal++
+      outputTiles[tile]++
       if (outputDirections[i] >= 0) outputDirectionsTotal[outputDirections[i]]++
     }
-    if (sourceEdge && outputNearby) matchedEdges++
-    if (outputEdge && !sourceNearby) outputOnlyEdges++
+    if (sourceEdge && outputNearby) {
+      matchedEdges++
+      matchedTiles[tile]++
+    }
+    if (outputEdge && !sourceNearby) {
+      outputOnlyEdges++
+      outputOnlyTiles[tile]++
+    }
   }
 
+  const regional = regionalEdgeStats(sourceTiles, outputTiles, matchedTiles, outputOnlyTiles)
   return {
     edgeDirectionDrift: directionDrift(
       sourceDirections,
@@ -131,7 +182,11 @@ export function edgeOverlapStats(input, resized) {
     edgeSpuriousRatio: outputEdgesTotal > 0 ? outputOnlyEdges / outputEdgesTotal : 0,
     edgeJaccard:
       sourceEdges + outputOnlyEdges > 0 ? matchedEdges / (sourceEdges + outputOnlyEdges) : 1,
+    edgeTileRecallMin: regional.edgeTileRecallMin,
+    edgeTileSpuriousMax: regional.edgeTileSpuriousMax,
     outputEdgeDirectionCount: outputEdgesTotal,
+    outputEdgeTileCount: regional.outputEdgeTileCount,
     sourceEdgeDirectionCount: sourceEdges,
+    sourceEdgeTileCount: regional.sourceEdgeTileCount,
   }
 }

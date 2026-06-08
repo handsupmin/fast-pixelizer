@@ -192,6 +192,13 @@ export function summarize(results) {
       (sum, item) => sum + item.outputEdgeDirectionCount,
       0,
     ),
+    edgeTileRecallMin: results.reduce(
+      (min, item) => Math.min(min, item.edgeTileRecallMin),
+      results.length > 0 ? 1 : 0,
+    ),
+    edgeTileSpuriousMax: results.reduce((max, item) => Math.max(max, item.edgeTileSpuriousMax), 0),
+    sourceEdgeTileCountTotal: results.reduce((sum, item) => sum + item.sourceEdgeTileCount, 0),
+    outputEdgeTileCountTotal: results.reduce((sum, item) => sum + item.outputEdgeTileCount, 0),
     outputAlphaCellMaeMean: mean(results, 'outputAlphaCellMae'),
     phaseAlignmentMean: mean(results, 'phaseAlignment'),
     axisPhaseAlignmentMinMean: mean(results, 'axisPhaseAlignmentMin'),
@@ -267,6 +274,7 @@ function criteriaMarkdown() {
     `- Line strength: review when resized snap edge strength falls outside ${QUALITY_RULES.minLineEdgeRatio}-${QUALITY_RULES.maxLineEdgeRatio}x the source edge strength.`,
     `- Edge direction: review when at least ${QUALITY_RULES.minEdgeDirectionCount} strong source and output edges shift x/y/diagonal direction histogram by more than ${QUALITY_RULES.maxEdgeDirectionDrift}.`,
     `- Edge map overlap: review when fewer than ${(QUALITY_RULES.minEdgeRecall * 100).toFixed(0)}% of strong source edges survive nearby, when more than ${(QUALITY_RULES.maxEdgeSpuriousRatio * 100).toFixed(0)}% of strong output edges are not near source edges, or when tolerant edge overlap drops below ${QUALITY_RULES.minEdgeJaccard}.`,
+    `- Regional edge map: review when any eligible 4x4 canvas tile keeps less than ${(QUALITY_RULES.minEdgeTileRecall * 100).toFixed(0)}% of strong source edges nearby, or when an eligible output tile has more than ${(QUALITY_RULES.maxEdgeTileSpuriousRatio * 100).toFixed(0)}% output-only strong edges.`,
     '',
   ]
 }
@@ -437,6 +445,10 @@ export function toMarkdown(summary) {
     'edgeRecall',
     'edgeSpuriousRatio',
     'edgeJaccard',
+    'sourceEdgeTileCount',
+    'outputEdgeTileCount',
+    'edgeTileRecallMin',
+    'edgeTileSpuriousMax',
     'repeatGridGap',
     'repeatVisualMae',
     'repeatVisualP95',
