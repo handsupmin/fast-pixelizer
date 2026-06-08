@@ -35,6 +35,8 @@ export const QUALITY_RULES = {
   maxExactCellColorAdjacencyDrift: 0,
   minExactCellColorDiagonalAdjacencyCount: 1,
   maxExactCellColorDiagonalAdjacencyDrift: 0,
+  minExactCellColorNeighborMaskCount: 1,
+  maxExactCellColorNeighborMaskDrift: 0,
   minExactCellColorQuadPatternCount: 1,
   maxExactCellColorQuadPatternDrift: 0,
   minExactCellColorRunCount: 1,

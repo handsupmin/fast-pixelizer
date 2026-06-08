@@ -91,6 +91,10 @@ export function summarize(results) {
       (sum, item) => sum + item.cellColorDiagonalAdjacencyDrift,
       0,
     ),
+    cellColorNeighborMaskDriftTotal: results.reduce(
+      (sum, item) => sum + item.cellColorNeighborMaskDrift,
+      0,
+    ),
     cellColorQuadPatternDriftTotal: results.reduce(
       (sum, item) => sum + item.cellColorQuadPatternDrift,
       0,
@@ -199,6 +203,7 @@ function criteriaMarkdown() {
     `- Rare exact-palette cell color: review when exact low-palette inputs with cell dominance at least ${QUALITY_RULES.minExactLowPaletteCellDominance} have any grid-cell color error above ${QUALITY_RULES.maxExactLowPaletteCellColorErrorMax}.`,
     `- Rare exact-palette cell alpha: review when exact low-palette inputs with cell dominance at least ${QUALITY_RULES.minExactLowPaletteCellDominance} have any grid-cell alpha error above ${QUALITY_RULES.maxExactLowPaletteCellAlphaErrorMax}.`,
     `- Exact cell color adjacencies: review when exact low-palette inputs with at least ${QUALITY_RULES.minExactCellColorAdjacencyCount} same-color orthogonal adjacency change count, or with at least ${QUALITY_RULES.minExactCellColorDiagonalAdjacencyCount} same-color diagonal adjacency change count.`,
+    `- Exact cell color neighbor masks: review when exact low-palette inputs with at least ${QUALITY_RULES.minExactCellColorNeighborMaskCount} visible color cell changes same-color N/E/S/W topology frequency.`,
     `- Exact cell color 2x2 patterns: review when exact low-palette inputs with at least ${QUALITY_RULES.minExactCellColorQuadPatternCount} 2x2 cell pattern changes pattern frequency.`,
     `- Exact cell color runs: review when exact low-palette inputs with at least ${QUALITY_RULES.minExactCellColorRunCount} same-color horizontal or vertical run changes length frequency.`,
     `- Exact cell color components: review when exact low-palette inputs with at least ${QUALITY_RULES.minExactCellColorComponentCount} color components change component count, area, bounds, holes, perimeter, or position between source cells and output grid, or when at least ${QUALITY_RULES.minExactSmallCellColorComponentCount} small color component changes count.`,
@@ -248,6 +253,9 @@ export function toMarkdown(summary) {
     'sourceCellColorDiagonalAdjacencyCount',
     'outputCellColorDiagonalAdjacencyCount',
     'cellColorDiagonalAdjacencyDrift',
+    'sourceCellColorNeighborMaskCount',
+    'outputCellColorNeighborMaskCount',
+    'cellColorNeighborMaskDrift',
     'sourceCellColorQuadPatternCount',
     'outputCellColorQuadPatternCount',
     'sourceCellColorDistinctQuadPatternCount',

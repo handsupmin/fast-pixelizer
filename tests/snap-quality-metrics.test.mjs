@@ -736,6 +736,21 @@ test('cell color quad patterns detect changed 2x2 corners', () => {
   assert.equal(metrics.cellColorQuadPatternDrift, 2)
 })
 
+test('cell color neighbor masks detect changed line topology', () => {
+  const transparent = [0, 0, 0, 0]
+  const red = [255, 0, 0, 255]
+  const sourceKeys = [red, red, red, transparent, transparent, transparent]
+  const outputKeys = [red, red, transparent, red, transparent, transparent]
+  const metrics = cellColorComponentMetrics(
+    makeCellImage(sourceKeys, 3, 2, 8),
+    makeCellGrid(outputKeys, 3, 2),
+  )
+
+  assert.equal(metrics.sourceCellColorNeighborMaskCount, 3)
+  assert.equal(metrics.outputCellColorNeighborMaskCount, 3)
+  assert.equal(metrics.cellColorNeighborMaskDrift, 4)
+})
+
 test('cell color runs detect split horizontal same-color strokes', () => {
   const transparent = [0, 0, 0, 0]
   const red = [255, 0, 0, 255]
@@ -877,6 +892,18 @@ test('quality classification reviews exact cell color diagonal adjacency drift',
   assert.ok(
     result.issues.some((issue) => issue.code === 'exact-cell-color-diagonal-adjacency-drift'),
   )
+})
+
+test('quality classification reviews exact cell color neighbor mask drift', () => {
+  const result = classifyMetrics({
+    cellColorNeighborMaskDrift: 4,
+    exactLowPaletteCellColorEligible: true,
+    outputCellColorNeighborMaskCount: 3,
+    sourceCellColorNeighborMaskCount: 3,
+  })
+
+  assert.equal(result.status, 'review')
+  assert.ok(result.issues.some((issue) => issue.code === 'exact-cell-color-neighbor-mask-drift'))
 })
 
 test('quality classification reviews exact cell color quad pattern drift', () => {

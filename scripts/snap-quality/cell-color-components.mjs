@@ -332,6 +332,42 @@ function adjacencyDrift(source, output) {
   return { diagonalDrift, orthogonalDrift }
 }
 
+function countNeighborMasks(keys, cols, rows) {
+  const masks = new Map()
+  let count = 0
+
+  for (let row = 0; row < rows; row++) {
+    for (let col = 0; col < cols; col++) {
+      const cell = row * cols + col
+      const color = keys[cell]
+      if (color < 0) continue
+
+      let mask = 0
+      if (row > 0 && keys[cell - cols] === color) mask |= 1
+      if (col + 1 < cols && keys[cell + 1] === color) mask |= 2
+      if (row + 1 < rows && keys[cell + cols] === color) mask |= 4
+      if (col > 0 && keys[cell - 1] === color) mask |= 8
+
+      const key = `${color}:${mask}`
+      masks.set(key, (masks.get(key) ?? 0) + 1)
+      count++
+    }
+  }
+
+  return { count, masks }
+}
+
+function neighborMaskDrift(source, output) {
+  const masks = new Set([...source.masks.keys(), ...output.masks.keys()])
+  let drift = 0
+
+  for (const mask of masks) {
+    drift += Math.abs((source.masks.get(mask) ?? 0) - (output.masks.get(mask) ?? 0))
+  }
+
+  return drift
+}
+
 function countQuadPatterns(keys, cols, rows) {
   const patterns = new Map()
   let count = 0
@@ -444,6 +480,8 @@ export function cellColorComponentMetrics(input, grid) {
   const sourceAdjacency = countSameColorAdjacency(sourceKeys, cols, rows)
   const outputAdjacency = countSameColorAdjacency(outputKeys, cols, rows)
   const adjacency = adjacencyDrift(sourceAdjacency, outputAdjacency)
+  const sourceNeighborMasks = countNeighborMasks(sourceKeys, cols, rows)
+  const outputNeighborMasks = countNeighborMasks(outputKeys, cols, rows)
   const sourceQuadPatterns = countQuadPatterns(sourceKeys, cols, rows)
   const outputQuadPatterns = countQuadPatterns(outputKeys, cols, rows)
   const sourceRuns = countSameColorRuns(sourceKeys, cols, rows)
@@ -459,6 +497,7 @@ export function cellColorComponentMetrics(input, grid) {
     cellColorComponentPositionDrift: componentPositionDrift(source, output),
     cellColorDiagonalAdjacencyDrift: adjacency.diagonalDrift,
     cellColorHorizontalRunDrift: runDrift(sourceRuns, outputRuns, 'horizontal'),
+    cellColorNeighborMaskDrift: neighborMaskDrift(sourceNeighborMasks, outputNeighborMasks),
     cellColorQuadPatternDrift: quadPatternDrift(sourceQuadPatterns, outputQuadPatterns),
     cellColorVerticalRunDrift: runDrift(sourceRuns, outputRuns, 'vertical'),
     outputCellColorAdjacencyCount: outputAdjacency.orthogonalCount,
@@ -467,6 +506,7 @@ export function cellColorComponentMetrics(input, grid) {
     outputCellColorDiagonalAdjacencyCount: outputAdjacency.diagonalCount,
     outputCellColorDistinctQuadPatternCount: outputQuadPatterns.patterns.size,
     outputCellColorHorizontalRunCount: outputRuns.horizontalCount,
+    outputCellColorNeighborMaskCount: outputNeighborMasks.count,
     outputCellColorQuadPatternCount: outputQuadPatterns.count,
     outputCellColorVerticalRunCount: outputRuns.verticalCount,
     outputSmallCellColorComponentCount: output.smallCount,
@@ -477,6 +517,7 @@ export function cellColorComponentMetrics(input, grid) {
     sourceCellColorDiagonalAdjacencyCount: sourceAdjacency.diagonalCount,
     sourceCellColorDistinctQuadPatternCount: sourceQuadPatterns.patterns.size,
     sourceCellColorHorizontalRunCount: sourceRuns.horizontalCount,
+    sourceCellColorNeighborMaskCount: sourceNeighborMasks.count,
     sourceCellColorQuadPatternCount: sourceQuadPatterns.count,
     sourceCellColorVerticalRunCount: sourceRuns.verticalCount,
     sourceSmallCellColorComponentCount: source.smallCount,

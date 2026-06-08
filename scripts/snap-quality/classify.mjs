@@ -301,6 +301,22 @@ export function classifyMetrics(metrics) {
   if (
     metrics.exactLowPaletteCellColorEligible &&
     Math.max(
+      metrics.sourceCellColorNeighborMaskCount ?? 0,
+      metrics.outputCellColorNeighborMaskCount ?? 0,
+    ) >= QUALITY_RULES.minExactCellColorNeighborMaskCount &&
+    (metrics.cellColorNeighborMaskDrift ?? 0) > QUALITY_RULES.maxExactCellColorNeighborMaskDrift
+  ) {
+    issues.push(
+      issue(
+        'review',
+        'exact-cell-color-neighbor-mask-drift',
+        `exact cell color neighbor mask drift ${metrics.cellColorNeighborMaskDrift}`,
+      ),
+    )
+  }
+  if (
+    metrics.exactLowPaletteCellColorEligible &&
+    Math.max(
       metrics.sourceCellColorQuadPatternCount ?? 0,
       metrics.outputCellColorQuadPatternCount ?? 0,
     ) >= QUALITY_RULES.minExactCellColorQuadPatternCount &&
@@ -935,6 +951,12 @@ export function objective(metrics) {
         : 0) - QUALITY_RULES.maxExactCellColorDiagonalAdjacencyDrift,
     ) *
       8 +
+    Math.max(
+      0,
+      (metrics.exactLowPaletteCellColorEligible ? (metrics.cellColorNeighborMaskDrift ?? 0) : 0) -
+        QUALITY_RULES.maxExactCellColorNeighborMaskDrift,
+    ) *
+      4 +
     Math.max(
       0,
       (metrics.exactLowPaletteCellColorEligible ? (metrics.cellColorQuadPatternDrift ?? 0) : 0) -
