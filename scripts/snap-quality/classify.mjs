@@ -212,6 +212,21 @@ export function classifyMetrics(metrics) {
       issue('review', 'line-edge-drift', `line edge ratio ${formatNum(metrics.lineEdgeRatio)}`),
     )
   }
+  if (metrics.edgeRecall < QUALITY_RULES.minEdgeRecall) {
+    issues.push(issue('review', 'edge-recall-loss', `edge recall ${formatNum(metrics.edgeRecall)}`))
+  }
+  if (metrics.edgeSpuriousRatio > QUALITY_RULES.maxEdgeSpuriousRatio) {
+    issues.push(
+      issue(
+        'review',
+        'spurious-edge-growth',
+        `spurious edge ratio ${formatNum(metrics.edgeSpuriousRatio)}`,
+      ),
+    )
+  }
+  if (metrics.edgeJaccard < QUALITY_RULES.minEdgeJaccard) {
+    issues.push(issue('review', 'edge-map-drift', `edge overlap ${formatNum(metrics.edgeJaccard)}`))
+  }
 
   if (issues.some((item) => item.severity === 'fail')) return { status: 'fail', issues }
   if (issues.length > 0) return { status: 'review', issues }
@@ -246,6 +261,9 @@ export function objective(metrics) {
     Math.max(0, metrics.shortAxisCells - QUALITY_RULES.maxShortAxisCells) * 10 +
     Math.max(0, metrics.sourceCellSize - QUALITY_RULES.maxSourceCellSizeReview) * 2 +
     Math.abs(1 - metrics.contrastRatio) * 10 +
-    Math.abs(1 - metrics.lineEdgeRatio) * 8
+    Math.abs(1 - metrics.lineEdgeRatio) * 8 +
+    Math.max(0, QUALITY_RULES.minEdgeRecall - metrics.edgeRecall) * 60 +
+    Math.max(0, metrics.edgeSpuriousRatio - QUALITY_RULES.maxEdgeSpuriousRatio) * 40 +
+    Math.max(0, QUALITY_RULES.minEdgeJaccard - metrics.edgeJaccard) * 40
   )
 }

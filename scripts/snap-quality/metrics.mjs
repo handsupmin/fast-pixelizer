@@ -1,4 +1,5 @@
 import { MAX_METRIC_SAMPLES } from './config.mjs'
+import { edgeOverlapStats } from './edge-overlap.mjs'
 import { resizeToInput } from './image-io.mjs'
 
 function grayAt(data, width, x, y) {
@@ -196,7 +197,7 @@ function lumaStats(data, width, height) {
   return { mean, stdDev: count > 0 ? Math.sqrt(Math.max(0, sumSq / count - mean * mean)) : 0 }
 }
 
-export async function preservationStats(input, result) {
+export async function preservationStats(input, result, options = {}) {
   const resized = await resizeToInput(result, input)
   const stride = Math.max(1, Math.floor((input.width * input.height) / MAX_METRIC_SAMPLES))
   const errors = []
@@ -230,6 +231,9 @@ export async function preservationStats(input, result) {
   const outputLuma = lumaStats(resized, input.width, input.height)
   const inputEdge = meanAxisGradient(input)
   const outputEdge = meanAxisGradient({ data: resized, width: input.width, height: input.height })
+  const edgeOverlap = options.edgeOverlap
+    ? edgeOverlapStats(input, resized)
+    : { edgeRecall: 1, edgeSpuriousRatio: 0, edgeJaccard: 1 }
 
   return {
     mae: count > 0 ? sum / count : 0,
@@ -238,6 +242,9 @@ export async function preservationStats(input, result) {
     alphaP95: alphaErrors.length > 0 ? alphaErrors[alphaP95Index] : 0,
     contrastRatio: inputLuma.stdDev > 0 ? outputLuma.stdDev / inputLuma.stdDev : 1,
     lineEdgeRatio: inputEdge > 0 ? outputEdge / inputEdge : 1,
+    edgeRecall: edgeOverlap.edgeRecall,
+    edgeSpuriousRatio: edgeOverlap.edgeSpuriousRatio,
+    edgeJaccard: edgeOverlap.edgeJaccard,
   }
 }
 

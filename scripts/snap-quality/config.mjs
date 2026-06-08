@@ -38,6 +38,9 @@ export const QUALITY_RULES = {
   maxContrastRatio: 1.8,
   minLineEdgeRatio: 0.3,
   maxLineEdgeRatio: 2.4,
+  minEdgeRecall: 0.65,
+  maxEdgeSpuriousRatio: 0.5,
+  minEdgeJaccard: 0.4,
 }
 
 export const KNOWN_EXPECTATIONS = [

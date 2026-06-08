@@ -28,6 +28,9 @@ export function summarize(results) {
     outputCellMaeMean: mean(results, 'outputCellMae'),
     cellColorDominanceMean: mean(results, 'cellColorDominance'),
     cellColorDominanceP05Mean: mean(results, 'cellColorDominanceP05'),
+    edgeRecallMean: mean(results, 'edgeRecall'),
+    edgeSpuriousRatioMean: mean(results, 'edgeSpuriousRatio'),
+    edgeJaccardMean: mean(results, 'edgeJaccard'),
     phaseAlignmentMean: mean(results, 'phaseAlignment'),
     axisPhaseAlignmentMinMean: mean(results, 'axisPhaseAlignmentMin'),
     lowPaletteRetentionMean: mean(results, 'lowPaletteRetention'),
@@ -72,6 +75,7 @@ function criteriaMarkdown() {
     `- Alpha preservation: review when alpha MAE exceeds ${QUALITY_RULES.maxAlphaMae} or p95 exceeds ${QUALITY_RULES.maxAlphaP95}.`,
     `- Contrast: review when snapped contrast ratio falls outside ${QUALITY_RULES.minContrastRatio}-${QUALITY_RULES.maxContrastRatio}.`,
     `- Line strength: review when resized snap edge strength falls outside ${QUALITY_RULES.minLineEdgeRatio}-${QUALITY_RULES.maxLineEdgeRatio}x the source edge strength.`,
+    `- Edge map overlap: review when fewer than ${(QUALITY_RULES.minEdgeRecall * 100).toFixed(0)}% of strong source edges survive nearby, when more than ${(QUALITY_RULES.maxEdgeSpuriousRatio * 100).toFixed(0)}% of strong output edges are not near source edges, or when tolerant edge overlap drops below ${QUALITY_RULES.minEdgeJaccard}.`,
     '',
   ]
 }
@@ -101,6 +105,9 @@ export function toMarkdown(summary) {
     'alphaP95',
     'contrastRatio',
     'lineEdgeRatio',
+    'edgeRecall',
+    'edgeSpuriousRatio',
+    'edgeJaccard',
     'repeatGridGap',
     'repeatVisualMae',
     'repeatVisualP95',

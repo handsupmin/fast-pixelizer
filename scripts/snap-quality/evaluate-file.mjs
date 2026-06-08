@@ -64,6 +64,9 @@ function toItem({ dataset, expected, input, metrics, name, original, resized, un
     alphaP95: formatNum(metrics.alphaP95),
     contrastRatio: formatNum(metrics.contrastRatio),
     lineEdgeRatio: formatNum(metrics.lineEdgeRatio),
+    edgeRecall: formatNum(metrics.edgeRecall),
+    edgeSpuriousRatio: formatNum(metrics.edgeSpuriousRatio),
+    edgeJaccard: formatNum(metrics.edgeJaccard),
     repeatGridGap: metrics.repeatGridGap,
     repeatVisualMae: formatNum(metrics.repeatVisualMae),
     repeatVisualP95: formatNum(metrics.repeatVisualP95),
@@ -106,7 +109,7 @@ async function buildMetrics(input, expected, snapshots, colorVariety) {
   const uniformity = cellUniformityMetrics(input, cols, rows)
   const dominance = cellColorDominanceMetrics(input, cols, rows)
   const outputUniformity = cellUniformityMetrics(original.result, cols, rows)
-  const preserve = await preservationStats(input, original.result)
+  const preserve = await preservationStats(input, original.result, { edgeOverlap: true })
   const repeatPreserve = await preservationStats(original.result, repeatOriginal)
   const deterministicPreserve = await preservationStats(original.result, deterministicOriginal)
   const inputRgbColorCount = uniqueRgbColorCount(input)
@@ -143,6 +146,9 @@ async function buildMetrics(input, expected, snapshots, colorVariety) {
       alphaP95: preserve.alphaP95,
       contrastRatio: preserve.contrastRatio,
       lineEdgeRatio: preserve.lineEdgeRatio,
+      edgeRecall: preserve.edgeRecall,
+      edgeSpuriousRatio: preserve.edgeSpuriousRatio,
+      edgeJaccard: preserve.edgeJaccard,
       squareCellError: Math.abs(original.result.width / cols / (original.result.height / rows) - 1),
       outputCoverage: outputCoverage(input, original.result),
       outputRgbPaletteOverage: Math.max(0, outputRgbColorCount - (colorVariety + 1)),
