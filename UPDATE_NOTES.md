@@ -1,5 +1,13 @@
 # Update Notes
 
+## 1.3.2
+
+- Expanded `npm run eval:snap-quality` with synthetic fixtures that have known ground-truth grids.
+- Added quality criteria for synthetic ground-truth miss, macro-grid under-detection, deterministic grid output, second-pass stability, output cell purity, p95 preservation loss, and contrast drift.
+- Improved `snap()` for blurred scaled pixel art by using a gated peak-spacing recovery path only when the current grid is clearly under-detected.
+- Improved uniform-cell detection for sparse same-color pixel art by selecting the shared run-length unit instead of large same-color regions.
+- Added regression tests for blurred scaled grid recovery and sparse same-color repeat stability.
+
 ## 1.3.1
 
 - Added `npm run eval:snap-quality` for model and demo fixture evaluation.

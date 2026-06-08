@@ -119,6 +119,55 @@ export function estimatePeriodicStep(profile: Float64Array, minLag = 2): StepEst
   return { step: bestLag, confidence: bestCorr }
 }
 
+export function estimatePeakStep(profile: Float64Array, minLag = 2): StepEstimate | null {
+  const maxLag = Math.min(256, Math.floor(profile.length / 3))
+  const startLag = Math.max(2, Math.min(maxLag, Math.ceil(minLag)))
+  if (maxLag < startLag) return null
+
+  const smoothed = smoothProfile(profile)
+  let mean = 0
+  for (let i = 0; i < smoothed.length; i++) mean += smoothed[i]
+  mean /= smoothed.length
+
+  let variance = 0
+  for (let i = 0; i < smoothed.length; i++) {
+    const delta = smoothed[i] - mean
+    variance += delta * delta
+  }
+
+  const threshold = mean + Math.sqrt(variance / smoothed.length) * 0.75
+  const peaks: number[] = []
+  for (let i = 1; i < smoothed.length - 1; i++) {
+    if (smoothed[i] < threshold) continue
+    if (smoothed[i] < smoothed[i - 1] || smoothed[i] < smoothed[i + 1]) continue
+    peaks.push(i)
+  }
+  if (peaks.length < 4) return null
+
+  const bins = new Float64Array(maxLag + 1)
+  let total = 0
+  for (let i = 1; i < peaks.length; i++) {
+    const distance = peaks[i] - peaks[i - 1]
+    if (distance < startLag || distance > maxLag) continue
+    bins[distance] += 1
+    total += 1
+  }
+  if (total === 0) return null
+
+  let bestLag = startLag
+  let bestCount = 0
+  for (let lag = startLag; lag <= maxLag; lag++) {
+    if (bins[lag] > bestCount) {
+      bestLag = lag
+      bestCount = bins[lag]
+    }
+  }
+
+  const confidence = bestCount / total
+  if (confidence < 0.3) return null
+  return { step: bestLag, confidence }
+}
+
 export function minimumPlausibleStep(width: number, height: number): number {
   return Math.max(2, Math.ceil(Math.min(width, height) / MAX_SHORT_AXIS_CELLS))
 }

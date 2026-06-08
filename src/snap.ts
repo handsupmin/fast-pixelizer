@@ -7,6 +7,7 @@ import {
   clampGridToPlausibleCells,
   computeColProfile,
   computeRowProfile,
+  estimatePeakStep,
   estimatePeriodicStep,
   minimumPlausibleStep,
   trimTinyEdgeCells,
@@ -73,6 +74,40 @@ function paintUniformCells(cells: Uint8ClampedArray, cols: number, rows: number,
   return { data: result, width, height }
 }
 
+function gridCountsFromStep(
+  colProfile: Float64Array,
+  rowProfile: Float64Array,
+  width: number,
+  height: number,
+  step: number,
+) {
+  const colCuts = trimTinyEdgeCells(walk(colProfile, step, width), step, width)
+  const rowCuts = trimTinyEdgeCells(walk(rowProfile, step, height), step, height)
+  return {
+    cols: Math.max(MIN_CELLS, colCuts.length - 1),
+    rows: Math.max(MIN_CELLS, rowCuts.length - 1),
+  }
+}
+
+function shouldUsePeakGrid(
+  width: number,
+  height: number,
+  current: { cols: number; rows: number },
+  candidate: { cols: number; rows: number },
+) {
+  const currentShortAxis = Math.min(current.cols, current.rows)
+  const candidateShortAxis = Math.min(candidate.cols, candidate.rows)
+  const candidateCellSize = Math.min(width / candidate.cols, height / candidate.rows)
+  const candidateAspectError = Math.abs(candidate.cols / candidate.rows / (width / height) - 1)
+
+  return (
+    currentShortAxis < 24 &&
+    candidateShortAxis > currentShortAxis * 1.8 &&
+    candidateCellSize >= minimumPlausibleStep(width, height) &&
+    candidateAspectError <= 0.05
+  )
+}
+
 /**
  * Detects the pixel grid in an existing pixel-art image and re-snaps it
  * to a clean, uniform grid. Fixes anti-aliasing artifacts, sub-pixel
@@ -122,6 +157,17 @@ export function snap(input: ImageLike, options?: SnapOptions): SnapResult {
       const sharedCount = Math.max(MIN_CELLS, Math.min(numCols, numRows))
       numCols = sharedCount
       numRows = sharedCount
+    }
+
+    const colPeakEstimate = estimatePeakStep(colProfile, minStep)
+    const rowPeakEstimate = estimatePeakStep(rowProfile, minStep)
+    if (colPeakEstimate && rowPeakEstimate) {
+      const peakStep = (colPeakEstimate.step + rowPeakEstimate.step) / 2
+      const peakGrid = gridCountsFromStep(colProfile, rowProfile, width, height, peakStep)
+      if (shouldUsePeakGrid(width, height, { cols: numCols, rows: numRows }, peakGrid)) {
+        numCols = peakGrid.cols
+        numRows = peakGrid.rows
+      }
     }
   }
 

@@ -78,23 +78,23 @@ function estimateAxisStep(histogram: Map<number, number>, limit: number): AxisEs
 
   let best: AxisEstimate | null = null
   const maxCandidate = Math.min(MAX_RUN_LENGTH, Math.floor(limit / MIN_CELLS))
+  let bestDivisibleConfidence = 0
   for (let step = 2; step <= maxCandidate; step++) {
     let divisibleRuns = 0
-    const exactRuns = histogram.get(step) ?? 0
     for (const [length, count] of entries) {
       if (length % step === 0) divisibleRuns += count
     }
 
     const divisibleConfidence = divisibleRuns / totalRuns
-    const exactConfidence = exactRuns / totalRuns
-    const confidence = divisibleConfidence * 0.65 + exactConfidence * 0.35
-    if (confidence < MIN_AXIS_CONFIDENCE) continue
+    if (divisibleConfidence < MIN_AXIS_CONFIDENCE) continue
+    const nearBest = divisibleConfidence >= bestDivisibleConfidence * 0.98
     if (
       best === null ||
-      confidence > best.confidence ||
-      (Math.abs(confidence - best.confidence) < 0.01 && step > best.step)
+      divisibleConfidence > bestDivisibleConfidence + 0.02 ||
+      (nearBest && step > best.step)
     ) {
-      best = { step, confidence }
+      best = { step, confidence: divisibleConfidence }
+      bestDivisibleConfidence = Math.max(bestDivisibleConfidence, divisibleConfidence)
     }
   }
 

@@ -16,6 +16,8 @@ As of `1.2.0`, repeated `snap()` runs stay stable on already-clean images and sq
 
 As of `1.3.1`, high-resolution generated images are also evaluated against model and demo fixtures so the detector avoids snapping to tiny texture noise while keeping already-uniform snap outputs idempotent.
 
+As of `1.3.2`, the quality loop also includes generated synthetic fixtures with known ground-truth grids, including blurred scaling, sparse same-color regions, rectangular grids, and transparent sprites.
+
 Recent regression examples:
 
 | Input                  | Previous           | `1.2.0`   |
@@ -36,9 +38,10 @@ Recent regression examples:
 3. **Periodicity detection** — recovers the repeating cell size even when visible boundaries are sparse
 4. **High-resolution plausibility guard** — avoids treating 1–2px generated texture as the real grid
 5. **Uniform-cell detection** — preserves already-snapped square-cell outputs on repeated runs
-6. **Lattice regularization** — rebuilds a globally uniform grid instead of letting local cut drift accumulate
-7. **Majority-vote resampling** — picks the dominant color per cell
-8. **Uniform re-rendering** — every cell gets the exact same pixel size
+6. **Gated peak recovery** — recovers blurred scaled pixel art only when the current grid is clearly under-detected
+7. **Lattice regularization** — rebuilds a globally uniform grid instead of letting local cut drift accumulate
+8. **Majority-vote resampling** — picks the dominant color per cell
+9. **Uniform re-rendering** — every cell gets the exact same pixel size
 
 No manual resolution input needed. The grid is auto-detected.
 
@@ -52,7 +55,7 @@ If you are generating new source images specifically for `snap()`, prefer Nano B
 
 ### Snap quality eval
 
-Run the model/demo quality loop with:
+Run the model/demo/synthetic quality loop with:
 
 ```bash
 npm run eval:snap-quality
@@ -65,13 +68,20 @@ Current criteria include:
 | Criterion           | What it catches                                                |
 | ------------------- | -------------------------------------------------------------- |
 | Aspect preservation | Crops or grids whose cell aspect drifts from the source ratio  |
+| Ground truth        | Synthetic fixtures whose known grid is missed                  |
 | Micro-grid snap     | Detectors that lock onto generated texture instead of cells    |
+| Macro-grid snap     | Detectors that under-detect a large same-color block as a cell |
 | Idempotence         | `snap(snap(image))` changing the detected grid                 |
+| Determinism         | Two snaps of the same source disagreeing on grid size          |
+| Output purity       | Snapped output cells that are not single-color or square       |
 | Boundary evidence   | Weak inferred boundaries compared with average image gradients |
 | Source disorder     | Images whose inferred cells are internally noisy or painterly  |
-| Preservation        | Excessive nearest-neighbor MAE against the original image      |
+| Preservation        | Excessive average or p95 error against the original image      |
+| Contrast            | Snapped output drifting too far from source contrast           |
 
 The June 2026 model/demo fixture run improved from `5 fail / 5 pass / 6 review` with total repeat gap `273` to `0 fail / 11 pass / 5 review` with repeat gap `0`.
+
+The expanded model/demo/synthetic run improved from `2 fail / 13 pass / 6 review`, expected-grid gap `78`, and repeat gap `54` to `0 fail / 15 pass / 6 review`, expected-grid gap `0`, and repeat gap `0`.
 
 ```ts
 import { snap } from 'fast-pixelizer'
@@ -211,11 +221,11 @@ Compatible with the browser's built-in `ImageData`, `node-canvas`, and raw pixel
 
 #### `options: PixelateOptions`
 
-| Option       | Type                      | Default      | Description                                                                                 |
-| ------------ | ------------------------- | ------------ | ------------------------------------------------------------------------------------------- |
-| `resolution` | `number \| { cols, rows }` | **required** | Grid size. `32` keeps legacy 32×32 output. `{ cols, rows }` enables rectangular grids.      |
-| `mode`       | `'clean' \| 'detail'`     | `'clean'`    | `'clean'` = most-frequent color per cell. `'detail'` = average color per cell.              |
-| `output`     | `'original' \| 'resized'` | `'original'` | `'original'` = same dimensions as input. `'resized'` = output is grid-sized.                |
+| Option       | Type                       | Default      | Description                                                                            |
+| ------------ | -------------------------- | ------------ | -------------------------------------------------------------------------------------- |
+| `resolution` | `number \| { cols, rows }` | **required** | Grid size. `32` keeps legacy 32×32 output. `{ cols, rows }` enables rectangular grids. |
+| `mode`       | `'clean' \| 'detail'`      | `'clean'`    | `'clean'` = most-frequent color per cell. `'detail'` = average color per cell.         |
+| `output`     | `'original' \| 'resized'`  | `'original'` | `'original'` = same dimensions as input. `'resized'` = output is grid-sized.           |
 
 #### `PixelateResult`
 

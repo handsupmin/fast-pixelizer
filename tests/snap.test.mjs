@@ -12,6 +12,39 @@ async function loadImage(file) {
   }
 }
 
+function makePattern(width, height, mode = 'dense') {
+  const data = new Uint8ClampedArray(width * height * 4)
+  for (let y = 0; y < height; y++) {
+    for (let x = 0; x < width; x++) {
+      const i = (y * width + x) * 4
+      const block = Math.floor(x / 5) + Math.floor(y / 7)
+      const seed = mode === 'sparse' ? block * 37 : x * 17 + y * 31 + block * 53
+      const value = seed % 256
+      data[i] = value
+      data[i + 1] = (value * 3 + x * 5) % 256
+      data[i + 2] = (value * 7 + y * 11) % 256
+      data[i + 3] = 255
+    }
+  }
+  return { data, width, height }
+}
+
+async function scaleImage(image, scale, kernel) {
+  const { data, info } = await sharp(Buffer.from(image.data), {
+    raw: { width: image.width, height: image.height, channels: 4 },
+  })
+    .resize(image.width * scale, image.height * scale, { kernel })
+    .ensureAlpha()
+    .raw()
+    .toBuffer({ resolveWithObject: true })
+
+  return {
+    data: new Uint8ClampedArray(data.buffer, data.byteOffset, data.byteLength),
+    width: info.width,
+    height: info.height,
+  }
+}
+
 async function detect(file) {
   const input = await loadImage(file)
   const result = snap(input)
@@ -19,6 +52,14 @@ async function detect(file) {
     detectedResolution: result.detectedResolution,
     cols: result.colCuts.length - 1,
     rows: result.rowCuts.length - 1,
+  }
+}
+
+function detectImage(input) {
+  const result = snap(input, { colorVariety: 64, output: 'resized' })
+  return {
+    cols: result.width,
+    rows: result.height,
   }
 }
 
@@ -62,8 +103,28 @@ test('square GPT pixel art collapses to an exact square grid', async () => {
 })
 
 test('uniform snap outputs keep the same grid when snapped again', async () => {
-  for (const file of ['examples/example-64-detail.png', 'examples/example-snap-after-with-grid.png']) {
+  for (const file of [
+    'examples/example-64-detail.png',
+    'examples/example-snap-after-with-grid.png',
+  ]) {
     const gap = await repeatGap(file)
     assert.equal(gap, 0, `expected repeated snap to preserve ${file}, got grid gap ${gap}`)
   }
+})
+
+test('blurred scaled pixel art recovers the source grid', async () => {
+  const input = await scaleImage(makePattern(64, 40), 6, 'cubic')
+  const grid = detectImage(input)
+
+  assert.deepEqual(grid, { cols: 64, rows: 40 })
+})
+
+test('sparse same-color pixel art stays stable on repeated snap', async () => {
+  const input = await scaleImage(makePattern(32, 32, 'sparse'), 10, 'nearest')
+  const first = snap(input, { colorVariety: 64, output: 'resized' })
+  const original = snap(input, { colorVariety: 64, output: 'original' })
+  const repeated = snap(original, { colorVariety: 64, output: 'resized' })
+
+  assert.equal(Math.abs(first.width - repeated.width) + Math.abs(first.height - repeated.height), 0)
+  assert.deepEqual({ cols: first.width, rows: first.height }, { cols: 32, rows: 32 })
 })
