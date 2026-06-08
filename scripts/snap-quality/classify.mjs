@@ -52,6 +52,20 @@ export function classifyMetrics(metrics) {
       ),
     )
   }
+  if (
+    (metrics.repeatVisualAlphaMae ?? 0) > QUALITY_RULES.maxRepeatVisualAlphaMae ||
+    (metrics.repeatVisualAlphaP95 ?? 0) > QUALITY_RULES.maxRepeatVisualAlphaP95
+  ) {
+    issues.push(
+      issue(
+        'fail',
+        'unstable-repeat-alpha',
+        `repeat alpha MAE ${formatNum(metrics.repeatVisualAlphaMae)}, p95 ${formatNum(
+          metrics.repeatVisualAlphaP95,
+        )}`,
+      ),
+    )
+  }
   if (metrics.stabilityDepthGap > 0) {
     issues.push(
       issue('fail', 'unstable-depth', `second repeat grid gap ${metrics.stabilityDepthGap}`),
@@ -72,6 +86,20 @@ export function classifyMetrics(metrics) {
         'non-deterministic-visuals',
         `same input visual MAE ${formatNum(metrics.determinismVisualMae)}, p95 ${formatNum(
           metrics.determinismVisualP95,
+        )}`,
+      ),
+    )
+  }
+  if (
+    (metrics.determinismVisualAlphaMae ?? 0) > QUALITY_RULES.maxDeterminismVisualAlphaMae ||
+    (metrics.determinismVisualAlphaP95 ?? 0) > QUALITY_RULES.maxDeterminismVisualAlphaP95
+  ) {
+    issues.push(
+      issue(
+        'fail',
+        'non-deterministic-alpha',
+        `same input alpha MAE ${formatNum(metrics.determinismVisualAlphaMae)}, p95 ${formatNum(
+          metrics.determinismVisualAlphaP95,
         )}`,
       ),
     )
@@ -1082,8 +1110,12 @@ export function objective(metrics) {
     metrics.stabilityDepthGap * 100 +
     metrics.repeatVisualMae * 80 +
     metrics.repeatVisualP95 * 20 +
+    (metrics.repeatVisualAlphaMae ?? 0) * 80 +
+    (metrics.repeatVisualAlphaP95 ?? 0) * 20 +
     metrics.determinismVisualMae * 80 +
     metrics.determinismVisualP95 * 20 +
+    (metrics.determinismVisualAlphaMae ?? 0) * 80 +
+    (metrics.determinismVisualAlphaP95 ?? 0) * 20 +
     metrics.expectedGridGap * 150 +
     metrics.aspectError * 50 +
     (metrics.cellAlphaErrorMean ?? 0) * 0.5 +

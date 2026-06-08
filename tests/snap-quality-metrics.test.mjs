@@ -1388,6 +1388,16 @@ test('quality classification fails when repeat snap changes visuals', () => {
   assert.ok(result.issues.some((issue) => issue.code === 'unstable-repeat-visuals'))
 })
 
+test('quality classification fails when repeat snap changes alpha only', () => {
+  const result = classifyMetrics({
+    repeatVisualAlphaMae: 0.01,
+    repeatVisualAlphaP95: 0,
+  })
+
+  assert.equal(result.status, 'fail')
+  assert.ok(result.issues.some((issue) => issue.code === 'unstable-repeat-alpha'))
+})
+
 test('quality classification fails when same input snap is visually non-deterministic', () => {
   const result = classifyMetrics({
     alphaMae: 0,
@@ -1440,6 +1450,16 @@ test('quality classification fails when same input snap is visually non-determin
 
   assert.equal(result.status, 'fail')
   assert.ok(result.issues.some((issue) => issue.code === 'non-deterministic-visuals'))
+})
+
+test('quality classification fails when same input snap changes alpha only', () => {
+  const result = classifyMetrics({
+    determinismVisualAlphaMae: 0,
+    determinismVisualAlphaP95: 1,
+  })
+
+  assert.equal(result.status, 'fail')
+  assert.ok(result.issues.some((issue) => issue.code === 'non-deterministic-alpha'))
 })
 
 test('quality classification reviews weak edge map overlap', () => {
