@@ -403,6 +403,9 @@ test('cell color error tracks representative source cell color drift', () => {
   const clean = cellColorErrorMetrics(makeChecker(64, 64, 8), makeChecker(8, 8, 1))
   const drifted = cellColorErrorMetrics(makeChecker(64, 64, 8), makeSolid(8, 8, 127))
 
+  assert.equal(clean.cellAlphaErrorMean, 0)
+  assert.equal(clean.cellAlphaErrorP95, 0)
+  assert.equal(clean.cellAlphaErrorMax, 0)
   assert.equal(clean.cellColorErrorMean, 0)
   assert.equal(clean.cellColorErrorP95, 0)
   assert.equal(clean.cellColorErrorMax, 0)
@@ -410,6 +413,17 @@ test('cell color error tracks representative source cell color drift', () => {
     drifted.cellColorErrorMean > 120,
     `expected high representative color error, got ${drifted.cellColorErrorMean}`,
   )
+})
+
+test('cell color error tracks representative source cell alpha drift', () => {
+  const source = makeCellImage([[96, 96, 96, 128]], 1, 1, 8)
+  const output = makeCellGrid([[96, 96, 96, 255]], 1, 1)
+  const stats = cellColorErrorMetrics(source, output)
+
+  assert.equal(stats.cellColorErrorMean, 0)
+  assert.equal(stats.cellAlphaErrorMean, 127)
+  assert.equal(stats.cellAlphaErrorP95, 127)
+  assert.equal(stats.cellAlphaErrorMax, 127)
 })
 
 test('palette dominance detects output color collapse beyond source dominance', () => {
@@ -489,6 +503,28 @@ test('quality classification fails when output alpha cells are not uniform', () 
 
   assert.equal(result.status, 'fail')
   assert.ok(result.issues.some((issue) => issue.code === 'non-uniform-output-alpha-cells'))
+})
+
+test('quality classification reviews representative alpha drift', () => {
+  const result = classifyMetrics({
+    cellAlphaErrorMean: 9,
+    cellAlphaErrorP95: 0,
+  })
+
+  assert.equal(result.status, 'review')
+  assert.ok(result.issues.some((issue) => issue.code === 'cell-alpha-drift'))
+})
+
+test('quality classification reviews exact low-palette alpha drift', () => {
+  const result = classifyMetrics({
+    cellAlphaErrorMax: 1,
+    cellAlphaErrorMean: 0,
+    cellAlphaErrorP95: 0,
+    exactLowPaletteCellColorEligible: true,
+  })
+
+  assert.equal(result.status, 'review')
+  assert.ok(result.issues.some((issue) => issue.code === 'rare-cell-alpha-drift'))
 })
 
 test('quality classification fails when repeat snap changes visuals', () => {

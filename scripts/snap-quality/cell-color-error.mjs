@@ -11,6 +11,8 @@ export function cellColorErrorMetrics(input, grid) {
   const rows = grid.height
   const cellCount = cols * rows
   const sums = new Float64Array(cellCount * 3)
+  const alphaSums = new Float64Array(cellCount)
+  const alphaCounts = new Uint32Array(cellCount)
   const counts = new Uint32Array(cellCount)
   const stride = Math.max(1, Math.floor((input.width * input.height) / MAX_METRIC_SAMPLES))
 
@@ -21,29 +23,46 @@ export function cellColorErrorMetrics(input, grid) {
     const row = Math.min(rows - 1, Math.floor((y * rows) / input.height))
     const cell = row * cols + col
     const inputIndex = pixel * 4
-    if (input.data[inputIndex + 3] === 0) continue
+    alphaSums[cell] += input.data[inputIndex + 3]
+    alphaCounts[cell]++
 
+    if (input.data[inputIndex + 3] === 0) continue
     counts[cell]++
     for (let ch = 0; ch < 3; ch++) sums[cell * 3 + ch] += input.data[inputIndex + ch]
   }
 
   const errors = []
+  const alphaErrors = []
   let sum = 0
+  let alphaSum = 0
   let max = 0
+  let alphaMax = 0
   for (let cell = 0; cell < cellCount; cell++) {
-    if (counts[cell] === 0) continue
     const outputIndex = cell * 4
-    let error = 0
-    for (let ch = 0; ch < 3; ch++) {
-      error += Math.abs(sums[cell * 3 + ch] / counts[cell] - grid.data[outputIndex + ch])
+
+    if (counts[cell] > 0) {
+      let error = 0
+      for (let ch = 0; ch < 3; ch++) {
+        error += Math.abs(sums[cell * 3 + ch] / counts[cell] - grid.data[outputIndex + ch])
+      }
+      error /= 3
+      errors.push(error)
+      sum += error
+      max = Math.max(max, error)
     }
-    error /= 3
-    errors.push(error)
-    sum += error
-    max = Math.max(max, error)
+
+    if (alphaCounts[cell] > 0) {
+      const alphaError = Math.abs(alphaSums[cell] / alphaCounts[cell] - grid.data[outputIndex + 3])
+      alphaErrors.push(alphaError)
+      alphaSum += alphaError
+      alphaMax = Math.max(alphaMax, alphaError)
+    }
   }
 
   return {
+    cellAlphaErrorMean: alphaErrors.length > 0 ? alphaSum / alphaErrors.length : 0,
+    cellAlphaErrorP95: percentile(alphaErrors, 0.95),
+    cellAlphaErrorMax: alphaMax,
     cellColorErrorMean: errors.length > 0 ? sum / errors.length : 0,
     cellColorErrorP95: percentile(errors, 0.95),
     cellColorErrorMax: max,

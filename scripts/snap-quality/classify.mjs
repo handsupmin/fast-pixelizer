@@ -228,6 +228,20 @@ export function classifyMetrics(metrics) {
     )
   }
   if (
+    (metrics.cellAlphaErrorMean ?? 0) > QUALITY_RULES.maxCellAlphaErrorMean ||
+    (metrics.cellAlphaErrorP95 ?? 0) > QUALITY_RULES.maxCellAlphaErrorP95
+  ) {
+    issues.push(
+      issue(
+        'review',
+        'cell-alpha-drift',
+        `cell alpha error mean ${formatNum(metrics.cellAlphaErrorMean)}, p95 ${formatNum(
+          metrics.cellAlphaErrorP95,
+        )}`,
+      ),
+    )
+  }
+  if (
     metrics.exactLowPaletteCellColorEligible &&
     metrics.cellColorErrorMax > QUALITY_RULES.maxExactLowPaletteCellColorErrorMax
   ) {
@@ -236,6 +250,18 @@ export function classifyMetrics(metrics) {
         'review',
         'rare-cell-color-drift',
         `exact low-palette max cell color error ${formatNum(metrics.cellColorErrorMax)}`,
+      ),
+    )
+  }
+  if (
+    metrics.exactLowPaletteCellColorEligible &&
+    (metrics.cellAlphaErrorMax ?? 0) > QUALITY_RULES.maxExactLowPaletteCellAlphaErrorMax
+  ) {
+    issues.push(
+      issue(
+        'review',
+        'rare-cell-alpha-drift',
+        `exact low-palette max cell alpha error ${formatNum(metrics.cellAlphaErrorMax)}`,
       ),
     )
   }
@@ -581,8 +607,16 @@ export function objective(metrics) {
     metrics.determinismVisualP95 * 20 +
     metrics.expectedGridGap * 150 +
     metrics.aspectError * 50 +
+    (metrics.cellAlphaErrorMean ?? 0) * 0.5 +
+    (metrics.cellAlphaErrorP95 ?? 0) * 0.2 +
     metrics.cellColorErrorMean * 0.5 +
     metrics.cellColorErrorP95 * 0.2 +
+    Math.max(
+      0,
+      (metrics.exactLowPaletteCellColorEligible ? (metrics.cellAlphaErrorMax ?? 0) : 0) -
+        QUALITY_RULES.maxExactLowPaletteCellAlphaErrorMax,
+    ) *
+      0.5 +
     Math.max(
       0,
       (metrics.exactLowPaletteCellColorEligible ? metrics.cellColorErrorMax : 0) -
