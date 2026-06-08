@@ -373,7 +373,17 @@ export async function preservationStats(input, result, options = {}) {
     : { edgeRecall: 1, edgeSpuriousRatio: 0, edgeJaccard: 1 }
   const alphaMask = options.alphaMask
     ? alphaMaskStats(input, resized)
-    : { alphaCoverageRatio: 1, alphaMaskIou: 1, alphaBBoxDriftPx: 0, alphaBBoxDriftRatio: 0 }
+    : {
+        alphaCoverageRatio: 1,
+        alphaEdgeCount: 0,
+        alphaEdgeJaccard: 1,
+        alphaEdgeRecall: 1,
+        alphaEdgeSpuriousRatio: 0,
+        alphaMaskIou: 1,
+        alphaBBoxDriftPx: 0,
+        alphaBBoxDriftRatio: 0,
+        outputAlphaEdgeCount: 0,
+      }
 
   return {
     mae: count > 0 ? sum / count : 0,
@@ -386,6 +396,11 @@ export async function preservationStats(input, result, options = {}) {
     alphaMaskIou: alphaMask.alphaMaskIou,
     alphaBBoxDriftPx: alphaMask.alphaBBoxDriftPx,
     alphaBBoxDriftRatio: alphaMask.alphaBBoxDriftRatio,
+    alphaEdgeCount: alphaMask.alphaEdgeCount,
+    outputAlphaEdgeCount: alphaMask.outputAlphaEdgeCount,
+    alphaEdgeRecall: alphaMask.alphaEdgeRecall,
+    alphaEdgeSpuriousRatio: alphaMask.alphaEdgeSpuriousRatio,
+    alphaEdgeJaccard: alphaMask.alphaEdgeJaccard,
     inputChromaMean: inputChroma.mean,
     outputChromaMean: outputChroma.mean,
     chromaRatio: inputChroma.mean > 0 ? outputChroma.mean / inputChroma.mean : 1,

@@ -106,6 +106,31 @@ function makeLowPaletteSprite(cols, rows) {
   return image
 }
 
+function makeTransparentLowPaletteSprite(cols, rows) {
+  const palette = {
+    outline: [15, 18, 24, 255],
+    skin: [229, 181, 103, 255],
+    cloth: [73, 135, 112, 255],
+    highlight: [244, 231, 151, 255],
+    shadow: [82, 43, 58, 255],
+  }
+  const image = { data: new Uint8ClampedArray(cols * rows * 4), width: cols, height: rows }
+  paintRect(image, 12, 6, 22, 17, palette.outline)
+  paintRect(image, 13, 7, 21, 16, palette.skin)
+  paintRect(image, 15, 9, 18, 12, palette.highlight)
+  paintRect(image, 18, 10, 19, 11, palette.outline)
+  paintRect(image, 11, 16, 24, 25, palette.outline)
+  paintRect(image, 12, 17, 23, 24, palette.cloth)
+  paintRect(image, 14, 19, 17, 23, palette.shadow)
+  paintRect(image, 9, 18, 12, 21, palette.outline)
+  paintRect(image, 23, 18, 26, 21, palette.outline)
+  paintRect(image, 13, 24, 16, 28, palette.outline)
+  paintRect(image, 20, 24, 23, 28, palette.outline)
+  paintLine(image, 6, 15, 12, 19, palette.outline)
+  paintLine(image, 23, 19, 30, 14, palette.outline)
+  return image
+}
+
 async function writeScaled(file, image, scale, kernel) {
   await sharp(Buffer.from(image.data), {
     raw: { width: image.width, height: image.height, channels: 4 },
@@ -244,6 +269,13 @@ export async function generateSyntheticDataset(outDir) {
       scale: 8,
       kernel: 'nearest',
       expected: { cols: 48, rows: 32 },
+    },
+    {
+      file: 'transparent-sprite-32x32-scale8.png',
+      image: makeTransparentLowPaletteSprite(32, 32),
+      scale: 8,
+      kernel: 'nearest',
+      expected: { cols: 32, rows: 32 },
     },
     {
       file: 'non-integer-48x32-to-360x240.png',

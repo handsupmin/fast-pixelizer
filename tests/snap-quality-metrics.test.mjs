@@ -104,6 +104,15 @@ function makeTransparentBox(width, height, left, top, right, bottom) {
   return { data, width, height }
 }
 
+function clearAlphaRect(image, left, top, right, bottom) {
+  for (let y = top; y < bottom; y++) {
+    for (let x = left; x < right; x++) {
+      image.data[(y * image.width + x) * 4 + 3] = 0
+    }
+  }
+  return image
+}
+
 function makeColorGrid(cols, rows, cellSize) {
   const width = cols * cellSize
   const data = new Uint8ClampedArray(width * rows * cellSize * 4)
@@ -220,6 +229,29 @@ test('alpha mask stats detect shifted transparent silhouettes', () => {
     `expected shifted IoU below 0.8, got ${drifted.alphaMaskIou}`,
   )
   assert.equal(drifted.alphaBBoxDriftPx, 4)
+})
+
+test('alpha edge stats detect lost transparent cutouts with high mask IoU', () => {
+  const source = clearAlphaRect(makeTransparentBox(64, 64, 16, 16, 48, 48), 31, 24, 32, 40)
+  const filled = makeTransparentBox(64, 64, 16, 16, 48, 48)
+  const stats = alphaMaskStats(source, filled.data)
+
+  assert.ok(
+    stats.alphaCoverageRatio < 1.02,
+    `expected coverage inside tolerance, got ${stats.alphaCoverageRatio}`,
+  )
+  assert.ok(
+    stats.alphaMaskIou > 0.98,
+    `expected mask IoU inside tolerance, got ${stats.alphaMaskIou}`,
+  )
+  assert.ok(
+    stats.alphaEdgeRecall < 0.9,
+    `expected edge recall below 0.9, got ${stats.alphaEdgeRecall}`,
+  )
+  assert.ok(
+    stats.alphaEdgeJaccard < 0.9,
+    `expected edge overlap below 0.9, got ${stats.alphaEdgeJaccard}`,
+  )
 })
 
 test('cell color dominance separates clean and ambiguous cells', () => {
@@ -509,6 +541,32 @@ test('quality classification reviews alpha silhouette drift', () => {
   assert.ok(result.issues.some((issue) => issue.code === 'alpha-coverage-drift'))
   assert.ok(result.issues.some((issue) => issue.code === 'alpha-mask-drift'))
   assert.ok(result.issues.some((issue) => issue.code === 'alpha-bounds-drift'))
+})
+
+test('quality classification reviews alpha edge drift', () => {
+  const result = classifyMetrics({
+    alphaEdgeCount: 128,
+    alphaEdgeJaccard: 0.7,
+    alphaEdgeRecall: 0.8,
+    alphaEdgeSpuriousRatio: 0,
+    outputAlphaEdgeCount: 128,
+  })
+
+  assert.equal(result.status, 'review')
+  assert.ok(result.issues.some((issue) => issue.code === 'alpha-edge-loss'))
+})
+
+test('quality classification reviews spurious alpha edge growth', () => {
+  const result = classifyMetrics({
+    alphaEdgeCount: 128,
+    alphaEdgeJaccard: 1,
+    alphaEdgeRecall: 1,
+    alphaEdgeSpuriousRatio: 0.2,
+    outputAlphaEdgeCount: 128,
+  })
+
+  assert.equal(result.status, 'review')
+  assert.ok(result.issues.some((issue) => issue.code === 'spurious-alpha-edge-growth'))
 })
 
 test('quality classification reviews cell representative color drift', () => {

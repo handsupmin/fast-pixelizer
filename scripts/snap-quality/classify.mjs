@@ -346,6 +346,33 @@ export function classifyMetrics(metrics) {
     )
   }
   if (
+    metrics.alphaEdgeCount >= QUALITY_RULES.minAlphaEdgeCount &&
+    (metrics.alphaEdgeRecall < QUALITY_RULES.minAlphaEdgeRecall ||
+      metrics.alphaEdgeJaccard < QUALITY_RULES.minAlphaEdgeJaccard)
+  ) {
+    issues.push(
+      issue(
+        'review',
+        'alpha-edge-loss',
+        `alpha edge recall ${formatNum(metrics.alphaEdgeRecall)}, overlap ${formatNum(
+          metrics.alphaEdgeJaccard,
+        )}`,
+      ),
+    )
+  }
+  if (
+    metrics.outputAlphaEdgeCount >= QUALITY_RULES.minAlphaEdgeCount &&
+    metrics.alphaEdgeSpuriousRatio > QUALITY_RULES.maxAlphaEdgeSpuriousRatio
+  ) {
+    issues.push(
+      issue(
+        'review',
+        'spurious-alpha-edge-growth',
+        `alpha edge spurious ratio ${formatNum(metrics.alphaEdgeSpuriousRatio)}`,
+      ),
+    )
+  }
+  if (
     metrics.contrastRatio < QUALITY_RULES.minContrastRatio ||
     metrics.contrastRatio > QUALITY_RULES.maxContrastRatio
   ) {
@@ -432,6 +459,10 @@ export function objective(metrics) {
     Math.abs(1 - metrics.alphaCoverageRatio) * 80 +
     Math.max(0, QUALITY_RULES.minAlphaMaskIou - metrics.alphaMaskIou) * 120 +
     Math.max(0, metrics.alphaBBoxDriftRatio - QUALITY_RULES.maxAlphaBBoxDriftRatio) * 200 +
+    Math.max(0, QUALITY_RULES.minAlphaEdgeRecall - (metrics.alphaEdgeRecall ?? 1)) * 70 +
+    Math.max(0, (metrics.alphaEdgeSpuriousRatio ?? 0) - QUALITY_RULES.maxAlphaEdgeSpuriousRatio) *
+      50 +
+    Math.max(0, QUALITY_RULES.minAlphaEdgeJaccard - (metrics.alphaEdgeJaccard ?? 1)) * 60 +
     metrics.outputCellMae * 500 +
     metrics.outputRgbPaletteOverage * 50 +
     Math.max(0, metrics.outputColorDominance - QUALITY_RULES.maxOutputColorDominance) *

@@ -1,4 +1,6 @@
 const VISIBLE_ALPHA_THRESHOLD = 16
+const ALPHA_EDGE_THRESHOLD = 16
+const EDGE_TOLERANCE_PX = 1
 
 function emptyBounds(width, height) {
   return {
@@ -25,6 +27,81 @@ function bboxDrift(inputBounds, outputBounds, hasInput, hasOutput, width, height
     Math.abs(inputBounds.maxX - outputBounds.maxX),
     Math.abs(inputBounds.maxY - outputBounds.maxY),
   )
+}
+
+function alphaAt(data, width, x, y) {
+  return data[(y * width + x) * 4 + 3]
+}
+
+function alphaEdgeMap(data, width, height) {
+  const map = new Uint8Array(width * height)
+  let count = 0
+
+  for (let y = 1; y < height - 1; y++) {
+    for (let x = 1; x < width - 1; x++) {
+      const dx = Math.abs(alphaAt(data, width, x + 1, y) - alphaAt(data, width, x - 1, y))
+      const dy = Math.abs(alphaAt(data, width, x, y + 1) - alphaAt(data, width, x, y - 1))
+      if (Math.max(dx, dy) < ALPHA_EDGE_THRESHOLD) continue
+
+      map[y * width + x] = 1
+      count++
+    }
+  }
+
+  return { count, map }
+}
+
+function hasNearbyEdge(map, width, height, x, y) {
+  for (
+    let yy = Math.max(1, y - EDGE_TOLERANCE_PX);
+    yy <= Math.min(height - 2, y + EDGE_TOLERANCE_PX);
+    yy++
+  ) {
+    for (
+      let xx = Math.max(1, x - EDGE_TOLERANCE_PX);
+      xx <= Math.min(width - 2, x + EDGE_TOLERANCE_PX);
+      xx++
+    ) {
+      if (map[yy * width + xx] === 1) return true
+    }
+  }
+  return false
+}
+
+function alphaEdgeStats(input, resized) {
+  const { width, height } = input
+  if (width < 3 || height < 3) {
+    return {
+      alphaEdgeCount: 0,
+      alphaEdgeJaccard: 1,
+      alphaEdgeRecall: 1,
+      alphaEdgeSpuriousRatio: 0,
+      outputAlphaEdgeCount: 0,
+    }
+  }
+
+  const source = alphaEdgeMap(input.data, width, height)
+  const output = alphaEdgeMap(resized, width, height)
+  let matched = 0
+  let outputOnly = 0
+
+  for (let y = 1; y < height - 1; y++) {
+    for (let x = 1; x < width - 1; x++) {
+      const index = y * width + x
+      if (source.map[index] === 1 && hasNearbyEdge(output.map, width, height, x, y)) matched++
+      if (output.map[index] === 1 && !hasNearbyEdge(source.map, width, height, x, y)) {
+        outputOnly++
+      }
+    }
+  }
+
+  return {
+    alphaEdgeCount: source.count,
+    alphaEdgeJaccard: source.count + outputOnly > 0 ? matched / (source.count + outputOnly) : 1,
+    alphaEdgeRecall: source.count > 0 ? matched / source.count : 1,
+    alphaEdgeSpuriousRatio: output.count > 0 ? outputOnly / output.count : 0,
+    outputAlphaEdgeCount: output.count,
+  }
 }
 
 export function alphaMaskStats(input, resized) {
@@ -66,6 +143,7 @@ export function alphaMaskStats(input, resized) {
 
   return {
     alphaCoverageRatio: inputCount > 0 ? outputCount / inputCount : outputCount > 0 ? 0 : 1,
+    ...alphaEdgeStats(input, resized),
     alphaMaskIou: union > 0 ? intersection / union : 1,
     alphaBBoxDriftPx: driftPx,
     alphaBBoxDriftRatio: driftPx / Math.max(width, height),
