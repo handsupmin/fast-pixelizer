@@ -52,6 +52,8 @@ function componentStats(keys, cols, rows) {
 
     const key = keys[cell]
     let size = 0
+    let sumX = 0
+    let sumY = 0
     seen[cell] = 1
     stack.push(cell)
 
@@ -60,6 +62,8 @@ function componentStats(keys, cols, rows) {
       size++
       const x = index % cols
       const y = Math.floor(index / cols)
+      sumX += x
+      sumY += y
 
       for (const [nx, ny] of [
         [x + 1, y],
@@ -78,9 +82,9 @@ function componentStats(keys, cols, rows) {
 
     count++
     if (size <= smallLimit) smallCount++
-    const sizes = byColor.get(key) ?? []
-    sizes.push(size)
-    byColor.set(key, sizes)
+    const components = byColor.get(key) ?? []
+    components.push({ size, x: sumX / size, y: sumY / size })
+    byColor.set(key, components)
   }
 
   return { byColor, count, smallCount }
@@ -91,11 +95,37 @@ function componentAreaDrift(source, output) {
   let drift = 0
 
   for (const color of colors) {
-    const sourceSizes = [...(source.byColor.get(color) ?? [])].sort((a, b) => b - a)
-    const outputSizes = [...(output.byColor.get(color) ?? [])].sort((a, b) => b - a)
+    const sourceSizes = [...(source.byColor.get(color) ?? [])]
+      .map((component) => component.size)
+      .sort((a, b) => b - a)
+    const outputSizes = [...(output.byColor.get(color) ?? [])]
+      .map((component) => component.size)
+      .sort((a, b) => b - a)
     const sizeCount = Math.max(sourceSizes.length, outputSizes.length)
     for (let index = 0; index < sizeCount; index++) {
       drift += Math.abs((sourceSizes[index] ?? 0) - (outputSizes[index] ?? 0))
+    }
+  }
+
+  return drift
+}
+
+function sortComponents(components) {
+  return [...components].sort((a, b) => b.size - a.size || a.y - b.y || a.x - b.x)
+}
+
+function componentPositionDrift(source, output) {
+  const colors = new Set([...source.byColor.keys(), ...output.byColor.keys()])
+  let drift = 0
+
+  for (const color of colors) {
+    const sourceComponents = sortComponents(source.byColor.get(color) ?? [])
+    const outputComponents = sortComponents(output.byColor.get(color) ?? [])
+    const componentCount = Math.min(sourceComponents.length, outputComponents.length)
+    for (let index = 0; index < componentCount; index++) {
+      drift +=
+        Math.abs(sourceComponents[index].x - outputComponents[index].x) +
+        Math.abs(sourceComponents[index].y - outputComponents[index].y)
     }
   }
 
@@ -111,6 +141,7 @@ export function cellColorComponentMetrics(input, grid) {
   return {
     cellColorComponentAreaDrift: componentAreaDrift(source, output),
     cellColorComponentCountDrift: Math.abs(source.count - output.count),
+    cellColorComponentPositionDrift: componentPositionDrift(source, output),
     outputCellColorComponentCount: output.count,
     outputSmallCellColorComponentCount: output.smallCount,
     smallCellColorComponentCountDrift: Math.abs(source.smallCount - output.smallCount),
