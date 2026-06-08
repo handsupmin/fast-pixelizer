@@ -54,6 +54,10 @@ function componentStats(keys, cols, rows) {
     let size = 0
     let sumX = 0
     let sumY = 0
+    let left = cols
+    let right = -1
+    let top = rows
+    let bottom = -1
     seen[cell] = 1
     stack.push(cell)
 
@@ -64,6 +68,10 @@ function componentStats(keys, cols, rows) {
       const y = Math.floor(index / cols)
       sumX += x
       sumY += y
+      left = Math.min(left, x)
+      right = Math.max(right, x)
+      top = Math.min(top, y)
+      bottom = Math.max(bottom, y)
 
       for (const [nx, ny] of [
         [x + 1, y],
@@ -83,7 +91,7 @@ function componentStats(keys, cols, rows) {
     count++
     if (size <= smallLimit) smallCount++
     const components = byColor.get(key) ?? []
-    components.push({ size, x: sumX / size, y: sumY / size })
+    components.push({ bottom, left, right, size, top, x: sumX / size, y: sumY / size })
     byColor.set(key, components)
   }
 
@@ -132,6 +140,26 @@ function componentPositionDrift(source, output) {
   return drift
 }
 
+function componentBBoxDrift(source, output) {
+  const colors = new Set([...source.byColor.keys(), ...output.byColor.keys()])
+  let drift = 0
+
+  for (const color of colors) {
+    const sourceComponents = sortComponents(source.byColor.get(color) ?? [])
+    const outputComponents = sortComponents(output.byColor.get(color) ?? [])
+    const componentCount = Math.min(sourceComponents.length, outputComponents.length)
+    for (let index = 0; index < componentCount; index++) {
+      drift +=
+        Math.abs(sourceComponents[index].left - outputComponents[index].left) +
+        Math.abs(sourceComponents[index].right - outputComponents[index].right) +
+        Math.abs(sourceComponents[index].top - outputComponents[index].top) +
+        Math.abs(sourceComponents[index].bottom - outputComponents[index].bottom)
+    }
+  }
+
+  return drift
+}
+
 export function cellColorComponentMetrics(input, grid) {
   const cols = grid.width
   const rows = grid.height
@@ -140,6 +168,7 @@ export function cellColorComponentMetrics(input, grid) {
 
   return {
     cellColorComponentAreaDrift: componentAreaDrift(source, output),
+    cellColorComponentBBoxDrift: componentBBoxDrift(source, output),
     cellColorComponentCountDrift: Math.abs(source.count - output.count),
     cellColorComponentPositionDrift: componentPositionDrift(source, output),
     outputCellColorComponentCount: output.count,

@@ -511,6 +511,28 @@ test('cell color components detect same-size component position drift', () => {
   assert.equal(metrics.cellColorComponentPositionDrift, 1)
 })
 
+test('cell color components detect same-area same-center bounds drift', () => {
+  const transparent = [0, 0, 0, 0]
+  const red = [255, 0, 0, 255]
+  const sourceKeys = Array.from({ length: 16 }, () => transparent)
+  sourceKeys[1] = red
+  sourceKeys[5] = red
+  sourceKeys[9] = red
+  const outputKeys = Array.from({ length: 16 }, () => transparent)
+  outputKeys[4] = red
+  outputKeys[5] = red
+  outputKeys[6] = red
+  const metrics = cellColorComponentMetrics(
+    makeCellImage(sourceKeys, 4, 4, 8),
+    makeCellGrid(outputKeys, 4, 4),
+  )
+
+  assert.equal(metrics.cellColorComponentCountDrift, 0)
+  assert.equal(metrics.cellColorComponentAreaDrift, 0)
+  assert.equal(metrics.cellColorComponentPositionDrift, 0)
+  assert.equal(metrics.cellColorComponentBBoxDrift, 4)
+})
+
 test('cell transitions distinguish retained, removed, and spurious boundaries', () => {
   const input = makeChecker(64, 64, 8)
   const retained = cellTransitionMetrics(input, makeChecker(8, 8, 1))
@@ -577,6 +599,7 @@ test('quality classification reviews exact cell color component area drift', () 
 test('quality classification reviews exact cell color component position drift', () => {
   const result = classifyMetrics({
     cellColorComponentAreaDrift: 0,
+    cellColorComponentBBoxDrift: 0,
     cellColorComponentCountDrift: 0,
     cellColorComponentPositionDrift: 1,
     exactLowPaletteCellColorEligible: true,
@@ -588,6 +611,21 @@ test('quality classification reviews exact cell color component position drift',
   assert.ok(
     result.issues.some((issue) => issue.code === 'exact-cell-color-component-position-drift'),
   )
+})
+
+test('quality classification reviews exact cell color component bounds drift', () => {
+  const result = classifyMetrics({
+    cellColorComponentAreaDrift: 0,
+    cellColorComponentBBoxDrift: 1,
+    cellColorComponentCountDrift: 0,
+    cellColorComponentPositionDrift: 0,
+    exactLowPaletteCellColorEligible: true,
+    outputCellColorComponentCount: 2,
+    sourceCellColorComponentCount: 2,
+  })
+
+  assert.equal(result.status, 'review')
+  assert.ok(result.issues.some((issue) => issue.code === 'exact-cell-color-component-bounds-drift'))
 })
 
 test('quality classification fails when repeat snap changes visuals', () => {

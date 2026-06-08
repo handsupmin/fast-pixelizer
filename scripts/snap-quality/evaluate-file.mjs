@@ -64,6 +64,7 @@ function toItem({ dataset, expected, input, metrics, name, original, resized, un
     exactLowPaletteCellColorEligible: metrics.exactLowPaletteCellColorEligible,
     cellColorComponentCountDrift: metrics.cellColorComponentCountDrift,
     cellColorComponentAreaDrift: metrics.cellColorComponentAreaDrift,
+    cellColorComponentBBoxDrift: metrics.cellColorComponentBBoxDrift,
     cellColorComponentPositionDrift: formatNum(metrics.cellColorComponentPositionDrift),
     smallCellColorComponentCountDrift: metrics.smallCellColorComponentCountDrift,
     sourceCellColorComponentCount: metrics.sourceCellColorComponentCount,
@@ -207,6 +208,7 @@ async function buildMetrics(input, expected, snapshots, colorVariety) {
     : {
         cellColorComponentCountDrift: 0,
         cellColorComponentAreaDrift: 0,
+        cellColorComponentBBoxDrift: 0,
         cellColorComponentPositionDrift: 0,
         outputCellColorComponentCount: 0,
         outputSmallCellColorComponentCount: 0,
@@ -243,6 +245,7 @@ async function buildMetrics(input, expected, snapshots, colorVariety) {
       exactLowPaletteCellColorEligible,
       cellColorComponentCountDrift: colorComponents.cellColorComponentCountDrift,
       cellColorComponentAreaDrift: colorComponents.cellColorComponentAreaDrift,
+      cellColorComponentBBoxDrift: colorComponents.cellColorComponentBBoxDrift,
       cellColorComponentPositionDrift: colorComponents.cellColorComponentPositionDrift,
       smallCellColorComponentCountDrift: colorComponents.smallCellColorComponentCountDrift,
       sourceCellColorComponentCount: colorComponents.sourceCellColorComponentCount,

@@ -297,6 +297,20 @@ export function classifyMetrics(metrics) {
     metrics.exactLowPaletteCellColorEligible &&
     Math.max(metrics.sourceCellColorComponentCount, metrics.outputCellColorComponentCount) >=
       QUALITY_RULES.minExactCellColorComponentCount &&
+    (metrics.cellColorComponentBBoxDrift ?? 0) > QUALITY_RULES.maxExactCellColorComponentBBoxDrift
+  ) {
+    issues.push(
+      issue(
+        'review',
+        'exact-cell-color-component-bounds-drift',
+        `exact cell color component bounds drift ${metrics.cellColorComponentBBoxDrift}`,
+      ),
+    )
+  }
+  if (
+    metrics.exactLowPaletteCellColorEligible &&
+    Math.max(metrics.sourceCellColorComponentCount, metrics.outputCellColorComponentCount) >=
+      QUALITY_RULES.minExactCellColorComponentCount &&
     (metrics.cellColorComponentPositionDrift ?? 0) >
       QUALITY_RULES.maxExactCellColorComponentPositionDrift
   ) {
@@ -664,6 +678,12 @@ export function objective(metrics) {
       0,
       (metrics.exactLowPaletteCellColorEligible ? (metrics.cellColorComponentAreaDrift ?? 0) : 0) -
         QUALITY_RULES.maxExactCellColorComponentAreaDrift,
+    ) *
+      2 +
+    Math.max(
+      0,
+      (metrics.exactLowPaletteCellColorEligible ? (metrics.cellColorComponentBBoxDrift ?? 0) : 0) -
+        QUALITY_RULES.maxExactCellColorComponentBBoxDrift,
     ) *
       2 +
     Math.max(

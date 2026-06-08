@@ -77,6 +77,10 @@ export function summarize(results) {
       (sum, item) => sum + item.cellColorComponentAreaDrift,
       0,
     ),
+    cellColorComponentBBoxDriftTotal: results.reduce(
+      (sum, item) => sum + item.cellColorComponentBBoxDrift,
+      0,
+    ),
     cellColorComponentPositionDriftMean: mean(results, 'cellColorComponentPositionDrift'),
     smallCellColorComponentCountDriftTotal: results.reduce(
       (sum, item) => sum + item.smallCellColorComponentCountDrift,
@@ -141,7 +145,7 @@ function criteriaMarkdown() {
     `- Cell representative alpha: review when snapped grid-cell alpha differs from source cell average by mean > ${QUALITY_RULES.maxCellAlphaErrorMean} or p95 > ${QUALITY_RULES.maxCellAlphaErrorP95}.`,
     `- Rare exact-palette cell color: review when exact low-palette inputs with cell dominance at least ${QUALITY_RULES.minExactLowPaletteCellDominance} have any grid-cell color error above ${QUALITY_RULES.maxExactLowPaletteCellColorErrorMax}.`,
     `- Rare exact-palette cell alpha: review when exact low-palette inputs with cell dominance at least ${QUALITY_RULES.minExactLowPaletteCellDominance} have any grid-cell alpha error above ${QUALITY_RULES.maxExactLowPaletteCellAlphaErrorMax}.`,
-    `- Exact cell color components: review when exact low-palette inputs with at least ${QUALITY_RULES.minExactCellColorComponentCount} color components change component count, component area, or component position between source cells and output grid, or when at least ${QUALITY_RULES.minExactSmallCellColorComponentCount} small color component changes count.`,
+    `- Exact cell color components: review when exact low-palette inputs with at least ${QUALITY_RULES.minExactCellColorComponentCount} color components change component count, component area, component bounds, or component position between source cells and output grid, or when at least ${QUALITY_RULES.minExactSmallCellColorComponentCount} small color component changes count.`,
     `- Cell transitions: review when at least ${QUALITY_RULES.minCellTransitionCount} source cell-adjacency transitions retain less than ${(QUALITY_RULES.minCellTransitionRetention * 100).toFixed(0)}% of their strength, or when output-only transitions exceed ${(QUALITY_RULES.maxCellTransitionSpuriousRatio * 100).toFixed(0)}% of output transition strength.`,
     `- Axis cell transitions: review when either horizontal or vertical cell-adjacency transitions breach the same cell transition limits.`,
     `- Source disorder: review when intra-cell source MAE exceeds ${QUALITY_RULES.highCellMae}.`,
@@ -184,6 +188,7 @@ export function toMarkdown(summary) {
     'outputCellColorComponentCount',
     'cellColorComponentCountDrift',
     'cellColorComponentAreaDrift',
+    'cellColorComponentBBoxDrift',
     'cellColorComponentPositionDrift',
     'sourceSmallCellColorComponentCount',
     'outputSmallCellColorComponentCount',

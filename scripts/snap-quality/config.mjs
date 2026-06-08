@@ -34,6 +34,7 @@ export const QUALITY_RULES = {
   minExactCellColorComponentCount: 2,
   maxExactCellColorComponentCountDrift: 0,
   maxExactCellColorComponentAreaDrift: 0,
+  maxExactCellColorComponentBBoxDrift: 0,
   maxExactCellColorComponentPositionDrift: 0,
   minExactSmallCellColorComponentCount: 1,
   maxExactSmallCellColorComponentCountDrift: 0,
