@@ -222,6 +222,7 @@ export function summarize(results) {
     axisPhaseAlignmentMinMean: mean(results, 'axisPhaseAlignmentMin'),
     lowPaletteRetentionMean: mean(results, 'lowPaletteRetention'),
     outputCoverageMean: mean(results, 'outputCoverage'),
+    outputExpansionMax: results.reduce((max, item) => Math.max(max, item.outputExpansion ?? 1), 1),
     lineEdgeRatioMean: mean(results, 'lineEdgeRatio'),
     sourceCellSizeMean: mean(results, 'sourceCellSize'),
   }
@@ -259,6 +260,7 @@ function criteriaMarkdown() {
     `- Low-palette coverage: review when limited-palette inputs move visible RGB coverage by more than ${(QUALITY_RULES.maxLowPaletteCoverageDrift * 100).toFixed(0)}% or retain less than ${(QUALITY_RULES.minLowPaletteCoverageRetention * 100).toFixed(0)}% of source RGB coverage.`,
     `- Regional low-palette coverage: review when any eligible canvas tile moves visible RGB coverage by more than ${(QUALITY_RULES.maxLowPaletteTileCoverageDrift * 100).toFixed(0)}% or retains less than ${(QUALITY_RULES.minLowPaletteTileCoverageRetention * 100).toFixed(0)}% of source RGB coverage.`,
     `- Output coverage: review when original-size snap output keeps less than ${(QUALITY_RULES.minOutputCoverage * 100).toFixed(0)}% of the input canvas on either axis.`,
+    `- Output expansion: review when original-size snap output grows beyond ${QUALITY_RULES.maxOutputExpansion}x of the input canvas on either axis.`,
     `- Boundary evidence: review when inferred grid boundaries are weaker than ${QUALITY_RULES.minEdgeAlignment}x the average axis gradient.`,
     `- Axis boundary evidence: review when either axis is weaker than ${QUALITY_RULES.minAxisEdgeAlignment}x the average axis gradient.`,
     `- Phase alignment: review when inferred grid boundaries score below ${QUALITY_RULES.minPhaseAlignment} against nearby gradient peaks.`,
@@ -312,6 +314,7 @@ export function toMarkdown(summary) {
     'input',
     'output',
     'outputCoverage',
+    'outputExpansion',
     'grid',
     'expectedGrid',
     'longAxisCells',

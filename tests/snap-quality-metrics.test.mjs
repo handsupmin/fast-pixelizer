@@ -1772,6 +1772,17 @@ test('quality classification reviews regional alpha preservation loss', () => {
   assert.ok(result.issues.some((issue) => issue.code === 'regional-alpha-preservation-loss'))
 })
 
+test('quality classification reviews original-size output expansion', () => {
+  const result = classifyMetrics({
+    outputCoverage: 1,
+    outputExpansion: 1.06,
+  })
+
+  assert.equal(result.status, 'review')
+  assert.ok(result.issues.some((issue) => issue.code === 'output-expansion'))
+  assert.ok(!result.issues.some((issue) => issue.code === 'output-shrink'))
+})
+
 test('quality classification reviews alpha preservation outliers hidden by p95', () => {
   const result = classifyMetrics({
     alphaMae: 0,

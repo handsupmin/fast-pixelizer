@@ -209,6 +209,11 @@ export function classifyMetrics(metrics) {
       issue('review', 'output-shrink', `output coverage ${formatNum(metrics.outputCoverage)}`),
     )
   }
+  if ((metrics.outputExpansion ?? 1) > QUALITY_RULES.maxOutputExpansion) {
+    issues.push(
+      issue('review', 'output-expansion', `output expansion ${formatNum(metrics.outputExpansion)}`),
+    )
+  }
   if (metrics.squareCellError > QUALITY_RULES.maxOutputSquareCellError) {
     issues.push(
       issue(
@@ -1397,6 +1402,7 @@ export function objective(metrics) {
     ) *
       40 +
     Math.max(0, QUALITY_RULES.minOutputCoverage - metrics.outputCoverage) * 50 +
+    Math.max(0, (metrics.outputExpansion ?? 1) - QUALITY_RULES.maxOutputExpansion) * 50 +
     Math.max(0, 1 - metrics.edgeAlignment) * 25 +
     Math.max(0, 1 - metrics.axisEdgeAlignmentMin) * 15 +
     Math.max(0, 1 - metrics.phaseAlignment) * 15 +

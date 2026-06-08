@@ -41,6 +41,10 @@ function outputCoverage(input, result) {
   return Math.min(result.width / input.width, result.height / input.height)
 }
 
+function outputExpansion(input, result) {
+  return Math.max(result.width / input.width, result.height / input.height)
+}
+
 function toItem({ dataset, expected, input, metrics, name, original, resized, uniformity }) {
   const classification = classifyMetrics(metrics)
   return {
@@ -49,6 +53,7 @@ function toItem({ dataset, expected, input, metrics, name, original, resized, un
     input: `${input.width}x${input.height}`,
     output: `${original.result.width}x${original.result.height}`,
     outputCoverage: formatNum(metrics.outputCoverage),
+    outputExpansion: formatNum(metrics.outputExpansion),
     grid: `${metrics.cols}x${metrics.rows}`,
     expectedGrid: expected ? `${expected.cols}x${expected.rows}` : '',
     longAxisCells: metrics.longAxisCells,
@@ -575,6 +580,7 @@ async function buildMetrics(input, expected, snapshots, colorVariety) {
       edgeTileSpuriousMax: preserve.edgeTileSpuriousMax,
       squareCellError: Math.abs(original.result.width / cols / (original.result.height / rows) - 1),
       outputCoverage: outputCoverage(input, original.result),
+      outputExpansion: outputExpansion(input, original.result),
       outputRgbPaletteOverage: Math.max(0, outputRgbColorCount - (colorVariety + 1)),
       inputColorDominance: paletteDominance.inputColorDominance,
       outputColorDominance: paletteDominance.outputColorDominance,
