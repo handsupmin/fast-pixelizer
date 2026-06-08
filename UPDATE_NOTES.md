@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+## 1.3.6
+
+- Improved `snap()` on exact scaled pixel art whose edge cells were partially cropped by using visible run counts to preserve the source grid.
+- Added a partial-edge-crop synthetic fixture with a known `48x32` grid.
+
 ## 1.3.5
 
 - Improved `snap()` on square sprites with wide transparent padding by preferring a high-confidence uniform-cell grid over a coarser exact-transition candidate.

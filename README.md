@@ -24,6 +24,8 @@ As of `1.3.4`, the detector also recovers exact square pixelate outputs whose or
 
 As of `1.3.5`, the eval criteria additionally track boundary phase alignment, alpha preservation, RGB palette budget, low-palette retention, output coverage, and transparent padding. The detector now prefers a high-confidence uniform grid over a coarser transition grid when large transparent margins would otherwise dominate square sprites.
 
+As of `1.3.6`, the uniform-cell detector also counts visible runs per sampled line, so partially cropped edge cells no longer make exact scaled pixel art under-count the source grid.
+
 Recent regression examples:
 
 | Input                  | Previous           | `1.2.0`   |
@@ -47,9 +49,10 @@ Recent regression examples:
 6. **Gated peak recovery** — recovers blurred scaled pixel art only when the current grid is clearly under-detected
 7. **Exact transition recovery** — recovers clean square pixelate outputs with uneven original-size cell widths
 8. **Transparent-padding arbitration** — keeps high-confidence uniform grids when transparent margins create stronger coarse transitions
-9. **Lattice regularization** — rebuilds a globally uniform grid instead of letting local cut drift accumulate
-10. **Majority-vote resampling** — picks the dominant color per cell
-11. **Uniform re-rendering** — every cell gets the exact same pixel size
+9. **Edge-crop run counting** — preserves visible source-grid counts when edge cells are partially cropped
+10. **Lattice regularization** — rebuilds a globally uniform grid instead of letting local cut drift accumulate
+11. **Majority-vote resampling** — picks the dominant color per cell
+12. **Uniform re-rendering** — every cell gets the exact same pixel size
 
 No manual resolution input needed. The grid is auto-detected.
 
@@ -84,6 +87,7 @@ Current criteria include:
 | Output purity       | Snapped output cells that are not single-color or square       |
 | Output coverage     | Original-size snap output shrinking too far from input size    |
 | Transparent padding | Large transparent sprite margins causing coarse grid selection |
+| Partial edge crop   | Cropped edge cells causing the visible source grid to shrink   |
 | Palette budget      | Snapped RGB colors exceeding the requested color variety       |
 | Palette retention   | Limited-palette inputs losing too many original RGB colors     |
 | Boundary evidence   | Weak inferred boundaries compared with average image gradients |
@@ -100,6 +104,8 @@ The expanded model/demo/synthetic run improved from `2 fail / 13 pass / 6 review
 The `1.3.3` fixture expansion keeps the same hard failures at `0` across `24` fixtures: `0 fail / 17 pass / 7 review`, expected-grid gap `0`, and repeat gap `0`. A newly covered non-square scale case, a `40x40` source stretched to `320x240`, changed from `5x4` in `1.3.2` to the expected `40x40`.
 
 The `1.3.5` transparent-padding run keeps hard failures at `0` across `27` images: `0 fail / 22 pass / 5 review`, expected-grid gap `0`, and repeat gap `0`. A `32x32` sprite with an 8-cell transparent border changed from `4x4` to the expected `32x32`.
+
+The `1.3.6` partial-edge-crop run keeps hard failures at `0` across `28` images: `0 fail / 22 pass / 6 review`, expected-grid gap `0`, and repeat gap `0`. A `48x32` source cropped seven scaled pixels from every edge changed from `46x30` to the expected `48x32`.
 
 ```ts
 import { snap } from 'fast-pixelizer'

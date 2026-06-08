@@ -52,6 +52,21 @@ async function writeScaled(file, image, scale, kernel) {
     .toFile(file)
 }
 
+async function writeScaledCrop(file, image, scale, kernel, crop) {
+  await sharp(Buffer.from(image.data), {
+    raw: { width: image.width, height: image.height, channels: 4 },
+  })
+    .resize(image.width * scale, image.height * scale, { fit: 'fill', kernel })
+    .extract({
+      left: crop.left,
+      top: crop.top,
+      width: image.width * scale - crop.left - crop.right,
+      height: image.height * scale - crop.top - crop.bottom,
+    })
+    .png()
+    .toFile(file)
+}
+
 async function writeResized(file, image, width, height, kernel) {
   await sharp(Buffer.from(image.data), {
     raw: { width: image.width, height: image.height, channels: 4 },
@@ -149,6 +164,14 @@ export async function generateSyntheticDataset(outDir) {
       expected: { cols: 40, rows: 40 },
     },
     {
+      file: 'partial-edge-crop-48x32-scale8.png',
+      image: makeLowResPattern(48, 32, 'dense'),
+      scale: 8,
+      kernel: 'nearest',
+      crop: { left: 7, top: 7, right: 7, bottom: 7 },
+      expected: { cols: 48, rows: 32 },
+    },
+    {
       file: 'jpeg-48x32-scale8-q45.jpg',
       image: makeLowResPattern(48, 32, 'dense'),
       scale: 8,
@@ -161,6 +184,8 @@ export async function generateSyntheticDataset(outDir) {
   for (const fixture of fixtures) {
     const file = path.join(dir, fixture.file)
     if (fixture.quality) await writeJpeg(file, fixture.image, fixture.scale, fixture.quality)
+    else if (fixture.crop)
+      await writeScaledCrop(file, fixture.image, fixture.scale, fixture.kernel, fixture.crop)
     else if (fixture.width && fixture.height)
       await writeResized(file, fixture.image, fixture.width, fixture.height, fixture.kernel)
     else await writeScaled(file, fixture.image, fixture.scale, fixture.kernel)

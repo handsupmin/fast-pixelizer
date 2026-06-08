@@ -2,6 +2,7 @@ import { MIN_CELLS, minimumPlausibleStep } from './snap-profile'
 
 interface AxisEstimate {
   step: number
+  cells: number
   confidence: number
 }
 
@@ -9,6 +10,11 @@ export interface UniformGridEstimate {
   cols: number
   rows: number
   confidence: number
+}
+
+interface AxisRunSummary {
+  histogram: Map<number, number>
+  maxRunCount: number
 }
 
 const MAX_SAMPLE_LINES = 128
@@ -33,46 +39,60 @@ function addRun(histogram: Map<number, number>, length: number): void {
 
 function collectHorizontalRuns(data: Uint8ClampedArray, width: number, height: number) {
   const histogram = new Map<number, number>()
+  let maxRunCount = 0
   const yStep = Math.max(1, Math.floor(height / MAX_SAMPLE_LINES))
 
   for (let y = 0; y < height; y += yStep) {
     let runStart = 0
+    let runCount = 1
     let current = pixelKey(data, y * width * 4)
     for (let x = 1; x < width; x++) {
       const key = pixelKey(data, (y * width + x) * 4)
       if (key === current) continue
       addRun(histogram, x - runStart)
+      runCount++
       runStart = x
       current = key
     }
     addRun(histogram, width - runStart)
+    maxRunCount = Math.max(maxRunCount, runCount)
   }
 
-  return histogram
+  return { histogram, maxRunCount }
 }
 
 function collectVerticalRuns(data: Uint8ClampedArray, width: number, height: number) {
   const histogram = new Map<number, number>()
+  let maxRunCount = 0
   const xStep = Math.max(1, Math.floor(width / MAX_SAMPLE_LINES))
 
   for (let x = 0; x < width; x += xStep) {
     let runStart = 0
+    let runCount = 1
     let current = pixelKey(data, x * 4)
     for (let y = 1; y < height; y++) {
       const key = pixelKey(data, (y * width + x) * 4)
       if (key === current) continue
       addRun(histogram, y - runStart)
+      runCount++
       runStart = y
       current = key
     }
     addRun(histogram, height - runStart)
+    maxRunCount = Math.max(maxRunCount, runCount)
   }
 
-  return histogram
+  return { histogram, maxRunCount }
 }
 
-function estimateAxisStep(histogram: Map<number, number>, limit: number): AxisEstimate | null {
-  const entries = [...histogram.entries()]
+function estimateCells(limit: number, step: number, maxRunCount: number): number {
+  const geometricCells = Math.round(limit / step)
+  const edgeCropLimit = Math.ceil(limit / step) + 1
+  return Math.max(geometricCells, Math.min(maxRunCount, edgeCropLimit))
+}
+
+function estimateAxisStep(summary: AxisRunSummary, limit: number): AxisEstimate | null {
+  const entries = [...summary.histogram.entries()]
   const totalRuns = entries.reduce((sum, [, count]) => sum + count, 0)
   if (totalRuns < MIN_TOTAL_RUNS) return null
 
@@ -93,7 +113,11 @@ function estimateAxisStep(histogram: Map<number, number>, limit: number): AxisEs
       divisibleConfidence > bestDivisibleConfidence + 0.02 ||
       (nearBest && step > best.step)
     ) {
-      best = { step, confidence: divisibleConfidence }
+      best = {
+        step,
+        cells: estimateCells(limit, step, summary.maxRunCount),
+        confidence: divisibleConfidence,
+      }
       bestDivisibleConfidence = Math.max(bestDivisibleConfidence, divisibleConfidence)
     }
   }
@@ -113,8 +137,8 @@ export function detectUniformCellGrid(
   const minCellSize = Math.min(horizontal.step, vertical.step)
   if (minCellSize <= minimumPlausibleStep(width, height)) return null
 
-  const cols = Math.max(MIN_CELLS, Math.round(width / horizontal.step))
-  const rows = Math.max(MIN_CELLS, Math.round(height / vertical.step))
+  const cols = Math.max(MIN_CELLS, horizontal.cells)
+  const rows = Math.max(MIN_CELLS, vertical.cells)
   const confidence = Math.min(horizontal.confidence, vertical.confidence)
   return { cols, rows, confidence }
 }

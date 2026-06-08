@@ -10,7 +10,7 @@ Build an objective loop for model-generated "pixel art" and package demo images,
 | ------------------ | ----------------------------------------------------------- | ----: |
 | Model examples     | `/Users/sangmin/sources/mono-pix/src/assets/examples`       |     5 |
 | Demo examples      | `examples/`                                                 |    11 |
-| Synthetic fixtures | generated under `.tmp/snap-quality-eval-*/synthetic-source` |    11 |
+| Synthetic fixtures | generated under `.tmp/snap-quality-eval-*/synthetic-source` |    12 |
 
 The model examples use the prompt `탑뷰 도트 중세 판타지 용사 파티의 모험 픽셀아트 그려줘`.
 
@@ -28,6 +28,7 @@ The model examples use the prompt `탑뷰 도트 중세 판타지 용사 파티�
 | Output purity       | snapped output cells are not single-color or square                | Verifies the core promise of snap output                            |
 | Output coverage     | original-size output keeps less than `90%` of input on either axis | Flags snap results that visually shrink too far                     |
 | Transparent padding | known-grid transparent-border sprite misses its expected grid      | Prevents transparent margins from being mistaken for coarse cells   |
+| Partial edge crop   | known-grid source with cropped edge cells misses its expected grid | Prevents partial edge cells from shrinking the visible source grid  |
 | Palette budget      | snapped RGB palette exceeds `colorVariety + 1`                     | Catches accidental color explosion while allowing transparency      |
 | Palette retention   | limited-palette input keeps less than `95%` of its RGB colors      | Catches color collapse on already-indexed or hand-authored sprites  |
 | Boundary evidence   | inferred boundaries are weaker than `0.6x` average axis gradient   | Flags weak or hallucinated grids                                    |
@@ -58,16 +59,19 @@ The model examples use the prompt `탑뷰 도트 중세 판타지 용사 파티�
 17. Added output-coverage metrics for original-size snap results.
 18. Added a transparent-border known-grid synthetic fixture.
 19. Changed square-grid candidate selection to prefer high-confidence uniform-cell grids over much coarser exact-transition grids.
+20. Added a partial-edge-crop known-grid synthetic fixture.
+21. Changed uniform-cell detection to use visible run counts when edge cells are partially cropped.
 
 ## Rejected Experiments
 
-| Experiment                                              | Result                                                                                                                                                          |
-| ------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Peak-spacing estimate mixed with raw/quantized profiles | Improved one Midjourney case but increased model objective and repeat gap overall, so it was discarded.                                                         |
-| Smallest strong autocorrelation lag                     | Fixed some snap-after repeats but broke `example-32-clean` and worsened aggregate objective, so it was discarded.                                               |
-| Unrestricted uniform-grid fast path                     | Reduced repeat gap but over-detected several demo/model inputs as `256x256`, so it was narrowed to cells larger than the high-res plausible minimum.            |
-| Ungated peak-spacing recovery                           | Helped blurred synthetic input but previously caused model/demo regressions, so the accepted version only runs when the current grid is clearly under-detected. |
-| Axis-specific periodic profile steps                    | Fixed one non-square scale hypothesis but regressed Midjourney to `406x95`, Seedream to `428x207`, and `example-64-clean` to `19x19`, so it was discarded.      |
+| Experiment                                              | Result                                                                                                                                                                                               |
+| ------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Peak-spacing estimate mixed with raw/quantized profiles | Improved one Midjourney case but increased model objective and repeat gap overall, so it was discarded.                                                                                              |
+| Smallest strong autocorrelation lag                     | Fixed some snap-after repeats but broke `example-32-clean` and worsened aggregate objective, so it was discarded.                                                                                    |
+| Unrestricted uniform-grid fast path                     | Reduced repeat gap but over-detected several demo/model inputs as `256x256`, so it was narrowed to cells larger than the high-res plausible minimum.                                                 |
+| Ungated peak-spacing recovery                           | Helped blurred synthetic input but previously caused model/demo regressions, so the accepted version only runs when the current grid is clearly under-detected.                                      |
+| Axis-specific periodic profile steps                    | Fixed one non-square scale hypothesis but regressed Midjourney to `406x95`, Seedream to `428x207`, and `example-64-clean` to `19x19`, so it was discarded.                                           |
+| Rounded original output cell size                       | Improved output coverage mean from `0.9671` to `0.9851`, but worsened objective mean from `35.2438` to `35.3416` and non-integer fixture objective from `39.3218` to `45.7799`, so it was discarded. |
 
 ## Results
 
@@ -213,8 +217,23 @@ Transparent-padding check:
 | ------------------------------------- | ------ | ------- | -------- | ---------: | ------ |
 | `transparent-border-32x32-scale8.png` | `4x4`  | `32x32` | `32x32`  |  `56 -> 0` | `pass` |
 
+After partial-edge-crop recovery:
+
+| Scope              | Status counts                 | Objective mean | Repeat gap total | Expected-grid gap total | Output coverage mean |
+| ------------------ | ----------------------------- | -------------: | ---------------: | ----------------------: | -------------------: |
+| Overall            | `0 fail / 22 pass / 6 review` |      `35.2438` |              `0` |                     `0` |             `0.9671` |
+| Model examples     | `0 fail / 4 pass / 1 review`  |      `45.2232` |              `0` |                     `0` |             `0.9661` |
+| Demo examples      | `0 fail / 9 pass / 2 review`  |      `24.3586` |              `0` |                     `0` |             `0.9688` |
+| Synthetic fixtures | `0 fail / 9 pass / 3 review`  |      `41.0639` |              `0` |                     `0` |             `0.9659` |
+
+Partial-edge-crop check:
+
+| Fixture                              | Before  | After   | Expected | Gap change | Status   |
+| ------------------------------------ | ------- | ------- | -------- | ---------: | -------- |
+| `partial-edge-crop-48x32-scale8.png` | `46x30` | `48x32` | `48x32`  |   `4 -> 0` | `review` |
+
 Final detailed output is written by:
 
 ```bash
-npm run eval:snap-quality -- --out-dir .tmp/snap-quality-eval-transparent-padding
+npm run eval:snap-quality -- --out-dir .tmp/snap-quality-eval-partial-edge-crop
 ```

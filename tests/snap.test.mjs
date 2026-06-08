@@ -78,6 +78,22 @@ async function resizeImage(image, width, height, kernel) {
   }
 }
 
+async function cropImage(image, left, top, width, height) {
+  const { data, info } = await sharp(Buffer.from(image.data), {
+    raw: { width: image.width, height: image.height, channels: 4 },
+  })
+    .extract({ left, top, width, height })
+    .ensureAlpha()
+    .raw()
+    .toBuffer({ resolveWithObject: true })
+
+  return {
+    data: new Uint8ClampedArray(data.buffer, data.byteOffset, data.byteLength),
+    width: info.width,
+    height: info.height,
+  }
+}
+
 async function detect(file) {
   const input = await loadImage(file)
   const result = snap(input)
@@ -174,6 +190,14 @@ test('transparent padded pixel art keeps the full source grid', async () => {
   const grid = detectImage(input)
 
   assert.deepEqual(grid, { cols: 32, rows: 32 })
+})
+
+test('partially cropped edge cells keep the visible source grid', async () => {
+  const scaled = await scaleImage(makePattern(48, 32), 8, 'nearest')
+  const input = await cropImage(scaled, 7, 7, scaled.width - 14, scaled.height - 14)
+  const grid = detectImage(input)
+
+  assert.deepEqual(grid, { cols: 48, rows: 32 })
 })
 
 test('package 64px clean example recovers its generated source grid', async () => {
