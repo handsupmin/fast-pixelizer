@@ -384,6 +384,33 @@ export function classifyMetrics(metrics) {
     )
   }
   if (
+    metrics.alphaSemitransparentPixelCount >= QUALITY_RULES.minAlphaSemitransparentPixelCount &&
+    metrics.alphaSemitransparentRetention < QUALITY_RULES.minAlphaSemitransparentRetention
+  ) {
+    issues.push(
+      issue(
+        'review',
+        'alpha-semitransparency-loss',
+        `alpha semitransparent retention ${formatNum(metrics.alphaSemitransparentRetention)}`,
+      ),
+    )
+  }
+  if (
+    metrics.outputAlphaSemitransparentPixelCount >=
+      QUALITY_RULES.minAlphaSemitransparentPixelCount &&
+    metrics.alphaSemitransparentSpuriousRatio > QUALITY_RULES.maxAlphaSemitransparentSpuriousRatio
+  ) {
+    issues.push(
+      issue(
+        'review',
+        'spurious-alpha-semitransparency',
+        `alpha semitransparent spurious ratio ${formatNum(
+          metrics.alphaSemitransparentSpuriousRatio,
+        )}`,
+      ),
+    )
+  }
+  if (
     metrics.alphaEdgeCount >= QUALITY_RULES.minAlphaEdgeCount &&
     (metrics.alphaEdgeRecall < QUALITY_RULES.minAlphaEdgeRecall ||
       metrics.alphaEdgeJaccard < QUALITY_RULES.minAlphaEdgeJaccard)
@@ -511,6 +538,17 @@ export function objective(metrics) {
     Math.max(
       0,
       (metrics.alphaSmallComponentCountDrift ?? 0) - QUALITY_RULES.maxAlphaSmallComponentCountDrift,
+    ) *
+      35 +
+    Math.max(
+      0,
+      QUALITY_RULES.minAlphaSemitransparentRetention - (metrics.alphaSemitransparentRetention ?? 1),
+    ) *
+      45 +
+    Math.max(
+      0,
+      (metrics.alphaSemitransparentSpuriousRatio ?? 0) -
+        QUALITY_RULES.maxAlphaSemitransparentSpuriousRatio,
     ) *
       35 +
     Math.max(0, QUALITY_RULES.minAlphaEdgeRecall - (metrics.alphaEdgeRecall ?? 1)) * 70 +

@@ -113,6 +113,15 @@ function clearAlphaRect(image, left, top, right, bottom) {
   return image
 }
 
+function setAlphaRect(image, left, top, right, bottom, alpha) {
+  for (let y = top; y < bottom; y++) {
+    for (let x = left; x < right; x++) {
+      image.data[(y * image.width + x) * 4 + 3] = alpha
+    }
+  }
+  return image
+}
+
 function makeColorGrid(cols, rows, cellSize) {
   const width = cols * cellSize
   const data = new Uint8ClampedArray(width * rows * cellSize * 4)
@@ -277,6 +286,21 @@ test('alpha component stats detect lost detached details with high mask IoU', ()
   assert.equal(stats.alphaSmallComponentCount, 1)
   assert.equal(stats.outputAlphaSmallComponentCount, 0)
   assert.equal(stats.alphaSmallComponentCountDrift, 1)
+})
+
+test('alpha semitransparency stats detect collapsed rare shadows with low alpha MAE', async () => {
+  const source = setAlphaRect(makeSolid(64, 64, 96), 4, 4, 8, 8, 128)
+  const output = makeSolid(64, 64, 96)
+  const stats = await preservationStats(source, output, { alphaMask: true })
+
+  assert.ok(stats.alphaMae < 1, `expected low alpha MAE, got ${stats.alphaMae}`)
+  assert.equal(stats.alphaP95, 0)
+  assert.equal(stats.alphaCoverageRatio, 1)
+  assert.equal(stats.alphaMaskIou, 1)
+  assert.equal(stats.alphaSemitransparentPixelCount, 16)
+  assert.equal(stats.outputAlphaSemitransparentPixelCount, 0)
+  assert.equal(stats.alphaSemitransparentRetention, 0)
+  assert.equal(stats.alphaSemitransparentSpuriousRatio, 0)
 })
 
 test('cell color dominance separates clean and ambiguous cells', () => {
@@ -607,6 +631,19 @@ test('quality classification reviews alpha component count drift', () => {
   assert.equal(result.status, 'review')
   assert.ok(result.issues.some((issue) => issue.code === 'alpha-component-drift'))
   assert.ok(result.issues.some((issue) => issue.code === 'alpha-small-component-drift'))
+})
+
+test('quality classification reviews alpha semitransparency drift', () => {
+  const result = classifyMetrics({
+    alphaSemitransparentPixelCount: 16,
+    alphaSemitransparentRetention: 0.9,
+    alphaSemitransparentSpuriousRatio: 0.2,
+    outputAlphaSemitransparentPixelCount: 16,
+  })
+
+  assert.equal(result.status, 'review')
+  assert.ok(result.issues.some((issue) => issue.code === 'alpha-semitransparency-loss'))
+  assert.ok(result.issues.some((issue) => issue.code === 'spurious-alpha-semitransparency'))
 })
 
 test('quality classification reviews cell representative color drift', () => {

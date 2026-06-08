@@ -1,4 +1,6 @@
 const VISIBLE_ALPHA_THRESHOLD = 16
+const SEMITRANSPARENT_ALPHA_MIN = 16
+const SEMITRANSPARENT_ALPHA_MAX = 239
 const ALPHA_EDGE_THRESHOLD = 16
 const EDGE_TOLERANCE_PX = 1
 const SMALL_COMPONENT_AREA_RATIO = 0.01
@@ -32,6 +34,10 @@ function bboxDrift(inputBounds, outputBounds, hasInput, hasOutput, width, height
 
 function alphaAt(data, width, x, y) {
   return data[(y * width + x) * 4 + 3]
+}
+
+function isSemitransparent(alpha) {
+  return alpha > SEMITRANSPARENT_ALPHA_MIN && alpha < SEMITRANSPARENT_ALPHA_MAX
 }
 
 function alphaEdgeMap(data, width, height) {
@@ -102,6 +108,36 @@ function alphaEdgeStats(input, resized) {
     alphaEdgeRecall: source.count > 0 ? matched / source.count : 1,
     alphaEdgeSpuriousRatio: output.count > 0 ? outputOnly / output.count : 0,
     outputAlphaEdgeCount: output.count,
+  }
+}
+
+function alphaSemitransparentStats(input, resized) {
+  const { width, height } = input
+  let sourceCount = 0
+  let outputCount = 0
+  let retained = 0
+  let outputOnly = 0
+
+  for (let pixel = 0; pixel < width * height; pixel++) {
+    const i = pixel * 4
+    const source = isSemitransparent(input.data[i + 3])
+    const output = isSemitransparent(resized[i + 3])
+
+    if (source) {
+      sourceCount++
+      if (output) retained++
+    }
+    if (output) {
+      outputCount++
+      if (!source) outputOnly++
+    }
+  }
+
+  return {
+    alphaSemitransparentPixelCount: sourceCount,
+    alphaSemitransparentRetention: sourceCount > 0 ? retained / sourceCount : 1,
+    alphaSemitransparentSpuriousRatio: outputCount > 0 ? outputOnly / outputCount : 0,
+    outputAlphaSemitransparentPixelCount: outputCount,
   }
 }
 
@@ -205,6 +241,7 @@ export function alphaMaskStats(input, resized) {
   return {
     alphaCoverageRatio: inputCount > 0 ? outputCount / inputCount : outputCount > 0 ? 0 : 1,
     ...alphaComponentStats(input, resized),
+    ...alphaSemitransparentStats(input, resized),
     ...alphaEdgeStats(input, resized),
     alphaMaskIou: union > 0 ? intersection / union : 1,
     alphaBBoxDriftPx: driftPx,
