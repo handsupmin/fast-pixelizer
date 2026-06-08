@@ -83,7 +83,7 @@ For release candidates, compare visual output against a published baseline befor
 npm run compare:examples -- --before 1.3.6 --after local
 ```
 
-The comparison uses the same default model/demo image sets as the quality eval and writes `summary.json`, `index.html`, `contact-sheet.png`, and per-image before/after/diff PNGs under `.tmp/example-version-compare/`. Use this as the visual gate for checking whether candidate changes preserve natural line extraction on existing examples instead of silently trading one artifact for another.
+The comparison uses the same default model/demo image sets as the quality eval and writes `summary.json`, `index.html`, `contact-sheet.png`, and per-image before/after/diff PNGs under `.tmp/example-version-compare/`. It skips generated `clean`/`detail` pixelate examples by default; pass `--include-pixelate-examples` only when those outputs are relevant. Use this as the visual gate for checking whether candidate changes preserve natural line extraction on existing examples instead of silently trading one artifact for another.
 
 Current criteria include:
 
@@ -103,11 +103,14 @@ Current criteria include:
 | Palette budget      | Snapped RGB colors exceeding the requested color variety       |
 | Palette retention   | Limited-palette inputs losing too many original RGB colors     |
 | Boundary evidence   | Weak inferred boundaries compared with average image gradients |
+| Axis boundary floor | One weak axis being hidden by a strong average boundary score  |
 | Phase alignment     | Inferred boundaries shifted away from nearby gradient peaks    |
+| Axis phase floor    | One phase-misaligned axis being hidden by the other axis       |
 | Source disorder     | Images whose inferred cells are internally noisy or painterly  |
 | Preservation        | Excessive average or p95 error against the original image      |
 | Alpha preservation  | Excessive average or p95 alpha error against the source        |
 | Contrast            | Snapped output drifting too far from source contrast           |
+| Line strength       | Snapped output over-softening or over-sharpening visible edges |
 
 The June 2026 model/demo fixture run improved from `5 fail / 5 pass / 6 review` with total repeat gap `273` to `0 fail / 11 pass / 5 review` with repeat gap `0`.
 

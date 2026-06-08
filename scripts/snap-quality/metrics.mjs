@@ -53,29 +53,35 @@ export function meanAxisGradient(input) {
 }
 
 export function gridBoundaryGradient(input, cols, rows) {
-  const { data, width, height } = input
+  const signals = gridBoundarySignals(input, cols, rows)
+  return signals.mean
+}
+
+function axisBoundaryGradient(input, axis, cells, limit, stride) {
   let sum = 0
   let count = 0
-  const yStride = Math.max(1, Math.floor(height / 768))
-  const xStride = Math.max(1, Math.floor(width / 768))
 
-  for (let col = 1; col < cols; col++) {
-    const x = Math.min(width - 2, Math.max(1, Math.round((col * width) / cols)))
-    for (let y = 0; y < height; y += yStride) {
-      sum += Math.abs(grayAt(data, width, x + 1, y) - grayAt(data, width, x - 1, y))
-      count++
-    }
-  }
-
-  for (let row = 1; row < rows; row++) {
-    const y = Math.min(height - 2, Math.max(1, Math.round((row * height) / rows)))
-    for (let x = 0; x < width; x += xStride) {
-      sum += Math.abs(grayAt(data, width, x, y + 1) - grayAt(data, width, x, y - 1))
-      count++
-    }
+  for (let index = 1; index < cells; index++) {
+    const position = Math.min(limit - 2, Math.max(1, Math.round((index * limit) / cells)))
+    sum += axisGradientAt(input, axis, position, stride)
+    count++
   }
 
   return count > 0 ? sum / count : 0
+}
+
+export function gridBoundarySignals(input, cols, rows) {
+  const { width, height } = input
+  const yStride = Math.max(1, Math.floor(height / 768))
+  const xStride = Math.max(1, Math.floor(width / 768))
+  const x = axisBoundaryGradient(input, 'x', cols, width, yStride)
+  const y = axisBoundaryGradient(input, 'y', rows, height, xStride)
+  return {
+    mean: (x + y) / 2,
+    min: Math.min(x, y),
+    x,
+    y,
+  }
 }
 
 function axisPhaseAlignment(input, axis, cells, limit, stride) {
@@ -100,11 +106,20 @@ function axisPhaseAlignment(input, axis, cells, limit, stride) {
 }
 
 export function gridPhaseAlignment(input, cols, rows) {
+  return gridPhaseSignals(input, cols, rows).mean
+}
+
+export function gridPhaseSignals(input, cols, rows) {
   const xStride = Math.max(1, Math.floor(input.height / 512))
   const yStride = Math.max(1, Math.floor(input.width / 512))
-  const xAlignment = axisPhaseAlignment(input, 'x', cols, input.width, xStride)
-  const yAlignment = axisPhaseAlignment(input, 'y', rows, input.height, yStride)
-  return (xAlignment + yAlignment) / 2
+  const x = axisPhaseAlignment(input, 'x', cols, input.width, xStride)
+  const y = axisPhaseAlignment(input, 'y', rows, input.height, yStride)
+  return {
+    mean: (x + y) / 2,
+    min: Math.min(x, y),
+    x,
+    y,
+  }
 }
 
 export function cellUniformityMetrics(input, cols, rows) {
@@ -213,6 +228,8 @@ export async function preservationStats(input, result) {
   const alphaP95Index = Math.min(alphaErrors.length - 1, Math.floor(alphaErrors.length * 0.95))
   const inputLuma = lumaStats(input.data, input.width, input.height)
   const outputLuma = lumaStats(resized, input.width, input.height)
+  const inputEdge = meanAxisGradient(input)
+  const outputEdge = meanAxisGradient({ data: resized, width: input.width, height: input.height })
 
   return {
     mae: count > 0 ? sum / count : 0,
@@ -220,6 +237,7 @@ export async function preservationStats(input, result) {
     alphaMae: alphaCount > 0 ? alphaSum / alphaCount : 0,
     alphaP95: alphaErrors.length > 0 ? alphaErrors[alphaP95Index] : 0,
     contrastRatio: inputLuma.stdDev > 0 ? outputLuma.stdDev / inputLuma.stdDev : 1,
+    lineEdgeRatio: inputEdge > 0 ? outputEdge / inputEdge : 1,
   }
 }
 

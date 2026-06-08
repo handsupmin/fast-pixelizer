@@ -10,6 +10,7 @@ import { listImages, loadImage, writePng } from './snap-quality/image-io.mjs'
 const execFileAsync = promisify(execFile)
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..')
 const DEFAULT_OUT_DIR = path.join(ROOT, '.tmp/example-version-compare')
+const PIXELATE_EXAMPLE_RE = /^example-(32|64)-(clean|detail)\.png$/
 
 function parseDataset(value) {
   const separator = value.indexOf('=')
@@ -23,6 +24,7 @@ function parseArgs(argv) {
     before: '',
     colorVariety: 64,
     datasets: defaultDatasets(),
+    includePixelateExamples: false,
     outDir: DEFAULT_OUT_DIR,
     output: 'original',
   }
@@ -35,6 +37,7 @@ function parseArgs(argv) {
     else if (arg === '--dataset') args.datasets.push(parseDataset(argv[++i]))
     else if (arg === '--examples-dir')
       args.datasets = [{ name: 'demo-examples', dir: path.resolve(argv[++i]) }]
+    else if (arg === '--include-pixelate-examples') args.includePixelateExamples = true
     else if (arg === '--no-default-datasets') args.datasets = []
     else if (arg === '--out-dir') args.outDir = path.resolve(argv[++i])
     else if (arg === '--output') args.output = argv[++i]
@@ -50,6 +53,10 @@ function parseArgs(argv) {
   }
   if (args.datasets.length === 0) throw new Error('At least one dataset is required')
   return args
+}
+
+function shouldSkipImage(file, options) {
+  return !options.includePixelateExamples && PIXELATE_EXAMPLE_RE.test(path.basename(file))
 }
 
 function normalizeSpec(spec) {
@@ -168,9 +175,18 @@ export async function compareExampleVersions(argv) {
   const before = await loadSnap(options.before, options.outDir)
   const after = await loadSnap(options.after, options.outDir)
   const items = []
+  const skipped = []
 
   for (const dataset of options.datasets) {
     for (const file of await listImages(dataset.dir)) {
+      if (shouldSkipImage(file, options)) {
+        skipped.push({
+          dataset: dataset.name,
+          file: path.basename(file),
+          reason: 'pixelate-example',
+        })
+        continue
+      }
       const input = await loadImage(file)
       const name = path.basename(file)
       const slug = `${safeName(dataset.name)}-${safeName(path.parse(name).name)}`
@@ -197,7 +213,10 @@ export async function compareExampleVersions(argv) {
         diff: { changedPixels: diff.changedPixels, mae: diff.mae },
         file: name,
         files: Object.fromEntries(
-          Object.entries(absFiles).map(([key, value]) => [key, path.relative(options.outDir, value)]),
+          Object.entries(absFiles).map(([key, value]) => [
+            key,
+            path.relative(options.outDir, value),
+          ]),
         ),
         input: `${input.width}x${input.height}`,
         same:
@@ -214,29 +233,37 @@ export async function compareExampleVersions(argv) {
     aggregate: {
       changed: items.filter((item) => !item.same).length,
       count: items.length,
-      maeMean: Number(
-        (items.reduce((sum, item) => sum + item.diff.mae, 0) / items.length).toFixed(4),
-      ),
+      skipped: skipped.length,
+      maeMean:
+        items.length > 0
+          ? Number((items.reduce((sum, item) => sum + item.diff.mae, 0) / items.length).toFixed(4))
+          : 0,
     },
     before,
     colorVariety: options.colorVariety,
     generatedAt: new Date().toISOString(),
     items,
     output: options.output,
+    skipped,
   }
   delete summary.before.snap
   delete summary.after.snap
-  await fs.writeFile(path.join(options.outDir, 'summary.json'), `${JSON.stringify(summary, null, 2)}\n`)
+  await fs.writeFile(
+    path.join(options.outDir, 'summary.json'),
+    `${JSON.stringify(summary, null, 2)}\n`,
+  )
   await fs.writeFile(path.join(options.outDir, 'index.html'), renderHtml(summary))
   await writeContactSheet(summary, path.join(options.outDir, 'contact-sheet.png'))
-  console.table(items.map((item) => ({
-    dataset: item.dataset,
-    file: item.file,
-    before: item.before.grid,
-    after: item.after.grid,
-    changedPixels: item.diff.changedPixels,
-    mae: item.diff.mae,
-  })))
+  console.table(
+    items.map((item) => ({
+      dataset: item.dataset,
+      file: item.file,
+      before: item.before.grid,
+      after: item.after.grid,
+      changedPixels: item.diff.changedPixels,
+      mae: item.diff.mae,
+    })),
+  )
   console.log(`Wrote ${path.relative(ROOT, options.outDir)}/index.html`)
 }
 

@@ -16,7 +16,9 @@ export const QUALITY_RULES = {
   maxRepeatGridGapRate: 0.01,
   maxExpectedGridGap: 0,
   minEdgeAlignment: 0.6,
+  minAxisEdgeAlignment: 0.35,
   minPhaseAlignment: 0.5,
+  minAxisPhaseAlignment: 0.35,
   highCellMae: 18,
   maxPreservationMae: 38,
   maxPreservationP95: 86,
@@ -29,6 +31,8 @@ export const QUALITY_RULES = {
   minOutputCoverage: 0.9,
   minContrastRatio: 0.45,
   maxContrastRatio: 1.8,
+  minLineEdgeRatio: 0.3,
+  maxLineEdgeRatio: 2.4,
 }
 
 export const KNOWN_EXPECTATIONS = [

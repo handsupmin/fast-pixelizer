@@ -94,12 +94,30 @@ export function classifyMetrics(metrics) {
       issue('review', 'weak-boundaries', `edge alignment ${formatNum(metrics.edgeAlignment)}`),
     )
   }
+  if (metrics.axisEdgeAlignmentMin < QUALITY_RULES.minAxisEdgeAlignment) {
+    issues.push(
+      issue(
+        'review',
+        'weak-axis-boundaries',
+        `min axis edge alignment ${formatNum(metrics.axisEdgeAlignmentMin)}`,
+      ),
+    )
+  }
   if (metrics.phaseAlignment < QUALITY_RULES.minPhaseAlignment) {
     issues.push(
       issue(
         'review',
         'phase-misaligned-grid',
         `phase alignment ${formatNum(metrics.phaseAlignment)}`,
+      ),
+    )
+  }
+  if (metrics.axisPhaseAlignmentMin < QUALITY_RULES.minAxisPhaseAlignment) {
+    issues.push(
+      issue(
+        'review',
+        'axis-phase-misaligned-grid',
+        `min axis phase alignment ${formatNum(metrics.axisPhaseAlignmentMin)}`,
       ),
     )
   }
@@ -149,6 +167,14 @@ export function classifyMetrics(metrics) {
       issue('review', 'contrast-drift', `contrast ratio ${formatNum(metrics.contrastRatio)}`),
     )
   }
+  if (
+    metrics.lineEdgeRatio < QUALITY_RULES.minLineEdgeRatio ||
+    metrics.lineEdgeRatio > QUALITY_RULES.maxLineEdgeRatio
+  ) {
+    issues.push(
+      issue('review', 'line-edge-drift', `line edge ratio ${formatNum(metrics.lineEdgeRatio)}`),
+    )
+  }
 
   if (issues.some((item) => item.severity === 'fail')) return { status: 'fail', issues }
   if (issues.length > 0) return { status: 'review', issues }
@@ -171,10 +197,13 @@ export function objective(metrics) {
     Math.max(0, QUALITY_RULES.minLowPaletteRetention - metrics.lowPaletteRetention) * 50 +
     Math.max(0, QUALITY_RULES.minOutputCoverage - metrics.outputCoverage) * 50 +
     Math.max(0, 1 - metrics.edgeAlignment) * 25 +
+    Math.max(0, 1 - metrics.axisEdgeAlignmentMin) * 15 +
     Math.max(0, 1 - metrics.phaseAlignment) * 15 +
+    Math.max(0, 1 - metrics.axisPhaseAlignmentMin) * 10 +
     Math.max(0, QUALITY_RULES.minSourceCellSize - metrics.sourceCellSize) * 500 +
     Math.max(0, metrics.shortAxisCells - QUALITY_RULES.maxShortAxisCells) * 10 +
     Math.max(0, metrics.sourceCellSize - QUALITY_RULES.maxSourceCellSizeReview) * 2 +
-    Math.abs(1 - metrics.contrastRatio) * 10
+    Math.abs(1 - metrics.contrastRatio) * 10 +
+    Math.abs(1 - metrics.lineEdgeRatio) * 8
   )
 }

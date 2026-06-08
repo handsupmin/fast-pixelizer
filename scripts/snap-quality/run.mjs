@@ -14,8 +14,8 @@ import { generateSyntheticDataset } from './synthetic.mjs'
 import { listImages, loadImage, writePng } from './image-io.mjs'
 import {
   cellUniformityMetrics,
-  gridBoundaryGradient,
-  gridPhaseAlignment,
+  gridBoundarySignals,
+  gridPhaseSignals,
   meanAxisGradient,
   preservationStats,
   uniqueColorCount,
@@ -99,7 +99,8 @@ async function evaluateFile(file, dataset, options, expectations) {
   const targetAspect = expected ? expected.cols / expected.rows : input.width / input.height
   const gridAspect = cols / rows
   const fullGradient = meanAxisGradient(input)
-  const boundaryGradient = gridBoundaryGradient(input, cols, rows)
+  const boundary = gridBoundarySignals(input, cols, rows)
+  const phase = gridPhaseSignals(input, cols, rows)
   const uniformity = cellUniformityMetrics(input, cols, rows)
   const outputUniformity = cellUniformityMetrics(original.result, cols, rows)
   const preserve = await preservationStats(input, original.result)
@@ -125,8 +126,10 @@ async function evaluateFile(file, dataset, options, expectations) {
     stabilityDepthGap: gridGap(repeatAgain, repeat),
     determinismGridGap: gridGap(deterministic, resized.result),
     expectedGridGap: expected ? Math.abs(cols - expected.cols) + Math.abs(rows - expected.rows) : 0,
-    edgeAlignment: boundaryGradient / (fullGradient + 1e-9),
-    phaseAlignment: gridPhaseAlignment(input, cols, rows),
+    edgeAlignment: boundary.mean / (fullGradient + 1e-9),
+    axisEdgeAlignmentMin: boundary.min / (fullGradient + 1e-9),
+    phaseAlignment: phase.mean,
+    axisPhaseAlignmentMin: phase.min,
     cellMae: uniformity.cellMae,
     outputCellMae: outputUniformity.cellMae,
     preservationMae: preserve.mae,
@@ -134,6 +137,7 @@ async function evaluateFile(file, dataset, options, expectations) {
     alphaMae: preserve.alphaMae,
     alphaP95: preserve.alphaP95,
     contrastRatio: preserve.contrastRatio,
+    lineEdgeRatio: preserve.lineEdgeRatio,
     squareCellError: Math.abs(outputCellWidth / outputCellHeight - 1),
     outputCoverage,
     outputRgbPaletteOverage: Math.max(0, outputRgbColorCount - (options.colorVariety + 1)),
@@ -153,7 +157,9 @@ async function evaluateFile(file, dataset, options, expectations) {
     squareCellError: formatNum(metrics.squareCellError),
     aspectError: formatNum(metrics.aspectError),
     edgeAlignment: formatNum(metrics.edgeAlignment),
+    axisEdgeAlignmentMin: formatNum(metrics.axisEdgeAlignmentMin),
     phaseAlignment: formatNum(metrics.phaseAlignment),
+    axisPhaseAlignmentMin: formatNum(metrics.axisPhaseAlignmentMin),
     cellMae: formatNum(metrics.cellMae),
     cellStdDev: formatNum(uniformity.cellStdDev),
     outputCellMae: formatNum(metrics.outputCellMae),
@@ -162,6 +168,7 @@ async function evaluateFile(file, dataset, options, expectations) {
     alphaMae: formatNum(metrics.alphaMae),
     alphaP95: formatNum(metrics.alphaP95),
     contrastRatio: formatNum(metrics.contrastRatio),
+    lineEdgeRatio: formatNum(metrics.lineEdgeRatio),
     repeatGridGap: metrics.repeatGridGap,
     stabilityDepthGap: metrics.stabilityDepthGap,
     determinismGridGap: metrics.determinismGridGap,

@@ -53,7 +53,11 @@ img{display:block;width:100%;height:auto;image-rendering:pixelated;background:#e
 </head>
 <body><main><div class="head"><div><h1>fast-pixelizer example comparison</h1><p class="meta">${escapeHtml(
     summary.before.spec,
-  )} -> ${escapeHtml(summary.after.spec)}</p></div><p class="meta">output: ${summary.output}<br />colorVariety: ${summary.colorVariety}<br />changed: ${summary.aggregate.changed}/${summary.aggregate.count}</p></div>${sections}</main></body>
+  )} -> ${escapeHtml(summary.after.spec)}</p></div><p class="meta">output: ${
+    summary.output
+  }<br />colorVariety: ${summary.colorVariety}<br />changed: ${summary.aggregate.changed}/${
+    summary.aggregate.count
+  }<br />skipped: ${summary.aggregate.skipped}</p></div>${sections}</main></body>
 </html>`
 }
 
