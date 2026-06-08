@@ -316,6 +316,38 @@ export function classifyMetrics(metrics) {
   }
   if (
     metrics.exactLowPaletteCellColorEligible &&
+    Math.max(
+      metrics.sourceCellColorHorizontalRunCount ?? 0,
+      metrics.outputCellColorHorizontalRunCount ?? 0,
+    ) >= QUALITY_RULES.minExactCellColorRunCount &&
+    (metrics.cellColorHorizontalRunDrift ?? 0) > QUALITY_RULES.maxExactCellColorRunDrift
+  ) {
+    issues.push(
+      issue(
+        'review',
+        'exact-cell-color-horizontal-run-drift',
+        `exact cell color horizontal run drift ${metrics.cellColorHorizontalRunDrift}`,
+      ),
+    )
+  }
+  if (
+    metrics.exactLowPaletteCellColorEligible &&
+    Math.max(
+      metrics.sourceCellColorVerticalRunCount ?? 0,
+      metrics.outputCellColorVerticalRunCount ?? 0,
+    ) >= QUALITY_RULES.minExactCellColorRunCount &&
+    (metrics.cellColorVerticalRunDrift ?? 0) > QUALITY_RULES.maxExactCellColorRunDrift
+  ) {
+    issues.push(
+      issue(
+        'review',
+        'exact-cell-color-vertical-run-drift',
+        `exact cell color vertical run drift ${metrics.cellColorVerticalRunDrift}`,
+      ),
+    )
+  }
+  if (
+    metrics.exactLowPaletteCellColorEligible &&
     Math.max(metrics.sourceCellColorComponentCount, metrics.outputCellColorComponentCount) >=
       QUALITY_RULES.minExactCellColorComponentCount &&
     metrics.cellColorComponentCountDrift > QUALITY_RULES.maxExactCellColorComponentCountDrift
@@ -907,6 +939,18 @@ export function objective(metrics) {
       0,
       (metrics.exactLowPaletteCellColorEligible ? (metrics.cellColorQuadPatternDrift ?? 0) : 0) -
         QUALITY_RULES.maxExactCellColorQuadPatternDrift,
+    ) *
+      4 +
+    Math.max(
+      0,
+      (metrics.exactLowPaletteCellColorEligible ? (metrics.cellColorHorizontalRunDrift ?? 0) : 0) -
+        QUALITY_RULES.maxExactCellColorRunDrift,
+    ) *
+      4 +
+    Math.max(
+      0,
+      (metrics.exactLowPaletteCellColorEligible ? (metrics.cellColorVerticalRunDrift ?? 0) : 0) -
+        QUALITY_RULES.maxExactCellColorRunDrift,
     ) *
       4 +
     Math.max(

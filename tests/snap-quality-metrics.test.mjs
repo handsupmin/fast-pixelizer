@@ -736,6 +736,38 @@ test('cell color quad patterns detect changed 2x2 corners', () => {
   assert.equal(metrics.cellColorQuadPatternDrift, 2)
 })
 
+test('cell color runs detect split horizontal same-color strokes', () => {
+  const transparent = [0, 0, 0, 0]
+  const red = [255, 0, 0, 255]
+  const sourceKeys = [red, red, red, transparent]
+  const outputKeys = [red, red, transparent, red]
+  const metrics = cellColorComponentMetrics(
+    makeCellImage(sourceKeys, 4, 1, 8),
+    makeCellGrid(outputKeys, 4, 1),
+  )
+
+  assert.equal(metrics.sourceCellColorHorizontalRunCount, 1)
+  assert.equal(metrics.outputCellColorHorizontalRunCount, 2)
+  assert.equal(metrics.cellColorHorizontalRunDrift, 3)
+  assert.equal(metrics.cellColorVerticalRunDrift, 0)
+})
+
+test('cell color runs detect split vertical same-color strokes', () => {
+  const transparent = [0, 0, 0, 0]
+  const red = [255, 0, 0, 255]
+  const sourceKeys = [red, red, red, transparent]
+  const outputKeys = [red, red, transparent, red]
+  const metrics = cellColorComponentMetrics(
+    makeCellImage(sourceKeys, 1, 4, 8),
+    makeCellGrid(outputKeys, 1, 4),
+  )
+
+  assert.equal(metrics.sourceCellColorVerticalRunCount, 1)
+  assert.equal(metrics.outputCellColorVerticalRunCount, 2)
+  assert.equal(metrics.cellColorVerticalRunDrift, 3)
+  assert.equal(metrics.cellColorHorizontalRunDrift, 0)
+})
+
 test('cell transitions distinguish retained, removed, and spurious boundaries', () => {
   const input = makeChecker(64, 64, 8)
   const retained = cellTransitionMetrics(input, makeChecker(8, 8, 1))
@@ -857,6 +889,30 @@ test('quality classification reviews exact cell color quad pattern drift', () =>
 
   assert.equal(result.status, 'review')
   assert.ok(result.issues.some((issue) => issue.code === 'exact-cell-color-quad-pattern-drift'))
+})
+
+test('quality classification reviews exact cell color horizontal run drift', () => {
+  const result = classifyMetrics({
+    cellColorHorizontalRunDrift: 3,
+    exactLowPaletteCellColorEligible: true,
+    outputCellColorHorizontalRunCount: 2,
+    sourceCellColorHorizontalRunCount: 1,
+  })
+
+  assert.equal(result.status, 'review')
+  assert.ok(result.issues.some((issue) => issue.code === 'exact-cell-color-horizontal-run-drift'))
+})
+
+test('quality classification reviews exact cell color vertical run drift', () => {
+  const result = classifyMetrics({
+    cellColorVerticalRunDrift: 3,
+    exactLowPaletteCellColorEligible: true,
+    outputCellColorVerticalRunCount: 2,
+    sourceCellColorVerticalRunCount: 1,
+  })
+
+  assert.equal(result.status, 'review')
+  assert.ok(result.issues.some((issue) => issue.code === 'exact-cell-color-vertical-run-drift'))
 })
 
 test('quality classification reviews exact cell color component position drift', () => {

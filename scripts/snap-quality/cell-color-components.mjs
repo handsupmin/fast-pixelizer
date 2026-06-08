@@ -361,6 +361,78 @@ function quadPatternDrift(source, output) {
   return drift
 }
 
+function createRunStats() {
+  return {
+    horizontalCount: 0,
+    horizontalRuns: new Map(),
+    verticalCount: 0,
+    verticalRuns: new Map(),
+  }
+}
+
+function addRun(stats, axis, color, length) {
+  if (color < 0 || length <= 0) return
+  const key = `${color}:${length}`
+  if (axis === 'horizontal') {
+    stats.horizontalRuns.set(key, (stats.horizontalRuns.get(key) ?? 0) + 1)
+    stats.horizontalCount++
+  } else {
+    stats.verticalRuns.set(key, (stats.verticalRuns.get(key) ?? 0) + 1)
+    stats.verticalCount++
+  }
+}
+
+function countSameColorRuns(keys, cols, rows) {
+  const stats = createRunStats()
+
+  for (let row = 0; row < rows; row++) {
+    let current = -1
+    let length = 0
+    for (let col = 0; col < cols; col++) {
+      const color = keys[row * cols + col]
+      if (color === current) {
+        length++
+        continue
+      }
+      addRun(stats, 'horizontal', current, length)
+      current = color
+      length = 1
+    }
+    addRun(stats, 'horizontal', current, length)
+  }
+
+  for (let col = 0; col < cols; col++) {
+    let current = -1
+    let length = 0
+    for (let row = 0; row < rows; row++) {
+      const color = keys[row * cols + col]
+      if (color === current) {
+        length++
+        continue
+      }
+      addRun(stats, 'vertical', current, length)
+      current = color
+      length = 1
+    }
+    addRun(stats, 'vertical', current, length)
+  }
+
+  return stats
+}
+
+function runDrift(source, output, axis) {
+  const sourceRuns = axis === 'horizontal' ? source.horizontalRuns : source.verticalRuns
+  const outputRuns = axis === 'horizontal' ? output.horizontalRuns : output.verticalRuns
+  const runs = new Set([...sourceRuns.keys(), ...outputRuns.keys()])
+  let drift = 0
+
+  for (const run of runs) {
+    drift += Math.abs((sourceRuns.get(run) ?? 0) - (outputRuns.get(run) ?? 0))
+  }
+
+  return drift
+}
+
 export function cellColorComponentMetrics(input, grid) {
   const cols = grid.width
   const rows = grid.height
@@ -374,6 +446,8 @@ export function cellColorComponentMetrics(input, grid) {
   const adjacency = adjacencyDrift(sourceAdjacency, outputAdjacency)
   const sourceQuadPatterns = countQuadPatterns(sourceKeys, cols, rows)
   const outputQuadPatterns = countQuadPatterns(outputKeys, cols, rows)
+  const sourceRuns = countSameColorRuns(sourceKeys, cols, rows)
+  const outputRuns = countSameColorRuns(outputKeys, cols, rows)
 
   return {
     cellColorAdjacencyDrift: adjacency.orthogonalDrift,
@@ -384,13 +458,17 @@ export function cellColorComponentMetrics(input, grid) {
     cellColorComponentPerimeterDrift: componentPerimeterDrift(source, output),
     cellColorComponentPositionDrift: componentPositionDrift(source, output),
     cellColorDiagonalAdjacencyDrift: adjacency.diagonalDrift,
+    cellColorHorizontalRunDrift: runDrift(sourceRuns, outputRuns, 'horizontal'),
     cellColorQuadPatternDrift: quadPatternDrift(sourceQuadPatterns, outputQuadPatterns),
+    cellColorVerticalRunDrift: runDrift(sourceRuns, outputRuns, 'vertical'),
     outputCellColorAdjacencyCount: outputAdjacency.orthogonalCount,
     outputCellColorComponentCount: output.count,
     outputCellColorComponentHoleCount: holes.outputCount,
     outputCellColorDiagonalAdjacencyCount: outputAdjacency.diagonalCount,
     outputCellColorDistinctQuadPatternCount: outputQuadPatterns.patterns.size,
+    outputCellColorHorizontalRunCount: outputRuns.horizontalCount,
     outputCellColorQuadPatternCount: outputQuadPatterns.count,
+    outputCellColorVerticalRunCount: outputRuns.verticalCount,
     outputSmallCellColorComponentCount: output.smallCount,
     smallCellColorComponentCountDrift: Math.abs(source.smallCount - output.smallCount),
     sourceCellColorAdjacencyCount: sourceAdjacency.orthogonalCount,
@@ -398,7 +476,9 @@ export function cellColorComponentMetrics(input, grid) {
     sourceCellColorComponentHoleCount: holes.sourceCount,
     sourceCellColorDiagonalAdjacencyCount: sourceAdjacency.diagonalCount,
     sourceCellColorDistinctQuadPatternCount: sourceQuadPatterns.patterns.size,
+    sourceCellColorHorizontalRunCount: sourceRuns.horizontalCount,
     sourceCellColorQuadPatternCount: sourceQuadPatterns.count,
+    sourceCellColorVerticalRunCount: sourceRuns.verticalCount,
     sourceSmallCellColorComponentCount: source.smallCount,
   }
 }
