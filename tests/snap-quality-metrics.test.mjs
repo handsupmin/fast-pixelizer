@@ -750,6 +750,40 @@ test('cell color boundary pairs detect changed diagonal color contacts', () => {
   assert.equal(metrics.cellColorBoundaryPairDrift, 0)
 })
 
+test('cell color boundary runs detect split horizontal color contacts', () => {
+  const transparent = [0, 0, 0, 0]
+  const red = [255, 0, 0, 255]
+  const blue = [0, 0, 255, 255]
+  const sourceKeys = [red, red, red, red, transparent, blue, blue, blue, blue, transparent]
+  const outputKeys = [red, red, transparent, red, red, blue, blue, transparent, blue, blue]
+  const metrics = cellColorComponentMetrics(
+    makeCellImage(sourceKeys, 5, 2, 8),
+    makeCellGrid(outputKeys, 5, 2),
+  )
+
+  assert.equal(metrics.sourceCellColorBoundaryHorizontalRunCount, 1)
+  assert.equal(metrics.outputCellColorBoundaryHorizontalRunCount, 2)
+  assert.equal(metrics.cellColorBoundaryHorizontalRunDrift, 3)
+  assert.equal(metrics.cellColorBoundaryVerticalRunDrift, 0)
+})
+
+test('cell color boundary runs detect split vertical color contacts', () => {
+  const transparent = [0, 0, 0, 0]
+  const red = [255, 0, 0, 255]
+  const blue = [0, 0, 255, 255]
+  const sourceKeys = [red, blue, red, blue, red, blue, red, blue, transparent, transparent]
+  const outputKeys = [red, blue, red, blue, transparent, transparent, red, blue, red, blue]
+  const metrics = cellColorComponentMetrics(
+    makeCellImage(sourceKeys, 2, 5, 8),
+    makeCellGrid(outputKeys, 2, 5),
+  )
+
+  assert.equal(metrics.sourceCellColorBoundaryVerticalRunCount, 1)
+  assert.equal(metrics.outputCellColorBoundaryVerticalRunCount, 2)
+  assert.equal(metrics.cellColorBoundaryVerticalRunDrift, 3)
+  assert.equal(metrics.cellColorBoundaryHorizontalRunDrift, 0)
+})
+
 test('cell color quad patterns detect changed 2x2 corners', () => {
   const transparent = [0, 0, 0, 0]
   const red = [255, 0, 0, 255]
@@ -980,6 +1014,34 @@ test('quality classification reviews exact cell color diagonal boundary pair dri
   assert.equal(result.status, 'review')
   assert.ok(
     result.issues.some((issue) => issue.code === 'exact-cell-color-diagonal-boundary-pair-drift'),
+  )
+})
+
+test('quality classification reviews exact cell color horizontal boundary run drift', () => {
+  const result = classifyMetrics({
+    cellColorBoundaryHorizontalRunDrift: 3,
+    exactLowPaletteCellColorEligible: true,
+    outputCellColorBoundaryHorizontalRunCount: 2,
+    sourceCellColorBoundaryHorizontalRunCount: 1,
+  })
+
+  assert.equal(result.status, 'review')
+  assert.ok(
+    result.issues.some((issue) => issue.code === 'exact-cell-color-boundary-horizontal-run-drift'),
+  )
+})
+
+test('quality classification reviews exact cell color vertical boundary run drift', () => {
+  const result = classifyMetrics({
+    cellColorBoundaryVerticalRunDrift: 3,
+    exactLowPaletteCellColorEligible: true,
+    outputCellColorBoundaryVerticalRunCount: 2,
+    sourceCellColorBoundaryVerticalRunCount: 1,
+  })
+
+  assert.equal(result.status, 'review')
+  assert.ok(
+    result.issues.some((issue) => issue.code === 'exact-cell-color-boundary-vertical-run-drift'),
   )
 })
 

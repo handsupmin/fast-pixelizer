@@ -334,6 +334,40 @@ export function classifyMetrics(metrics) {
   if (
     metrics.exactLowPaletteCellColorEligible &&
     Math.max(
+      metrics.sourceCellColorBoundaryHorizontalRunCount ?? 0,
+      metrics.outputCellColorBoundaryHorizontalRunCount ?? 0,
+    ) >= QUALITY_RULES.minExactCellColorBoundaryRunCount &&
+    (metrics.cellColorBoundaryHorizontalRunDrift ?? 0) >
+      QUALITY_RULES.maxExactCellColorBoundaryRunDrift
+  ) {
+    issues.push(
+      issue(
+        'review',
+        'exact-cell-color-boundary-horizontal-run-drift',
+        `exact cell color horizontal boundary run drift ${metrics.cellColorBoundaryHorizontalRunDrift}`,
+      ),
+    )
+  }
+  if (
+    metrics.exactLowPaletteCellColorEligible &&
+    Math.max(
+      metrics.sourceCellColorBoundaryVerticalRunCount ?? 0,
+      metrics.outputCellColorBoundaryVerticalRunCount ?? 0,
+    ) >= QUALITY_RULES.minExactCellColorBoundaryRunCount &&
+    (metrics.cellColorBoundaryVerticalRunDrift ?? 0) >
+      QUALITY_RULES.maxExactCellColorBoundaryRunDrift
+  ) {
+    issues.push(
+      issue(
+        'review',
+        'exact-cell-color-boundary-vertical-run-drift',
+        `exact cell color vertical boundary run drift ${metrics.cellColorBoundaryVerticalRunDrift}`,
+      ),
+    )
+  }
+  if (
+    metrics.exactLowPaletteCellColorEligible &&
+    Math.max(
       metrics.sourceCellColorNeighborMaskCount ?? 0,
       metrics.outputCellColorNeighborMaskCount ?? 0,
     ) >= QUALITY_RULES.minExactCellColorNeighborMaskCount &&
@@ -1027,6 +1061,20 @@ export function objective(metrics) {
       (metrics.exactLowPaletteCellColorEligible
         ? (metrics.cellColorDiagonalBoundaryPairDrift ?? 0)
         : 0) - QUALITY_RULES.maxExactCellColorDiagonalBoundaryPairDrift,
+    ) *
+      4 +
+    Math.max(
+      0,
+      (metrics.exactLowPaletteCellColorEligible
+        ? (metrics.cellColorBoundaryHorizontalRunDrift ?? 0)
+        : 0) - QUALITY_RULES.maxExactCellColorBoundaryRunDrift,
+    ) *
+      4 +
+    Math.max(
+      0,
+      (metrics.exactLowPaletteCellColorEligible
+        ? (metrics.cellColorBoundaryVerticalRunDrift ?? 0)
+        : 0) - QUALITY_RULES.maxExactCellColorBoundaryRunDrift,
     ) *
       4 +
     Math.max(
