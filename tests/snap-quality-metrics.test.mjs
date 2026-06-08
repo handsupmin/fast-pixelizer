@@ -62,6 +62,21 @@ function makeRgbSolid(width, height, red, green, blue) {
   return { data, width, height }
 }
 
+function makeRgbSplit(width, height, splitX, left, right) {
+  const data = new Uint8ClampedArray(width * height * 4)
+  for (let y = 0; y < height; y++) {
+    for (let x = 0; x < width; x++) {
+      const i = (y * width + x) * 4
+      const color = x < splitX ? left : right
+      data[i] = color[0]
+      data[i + 1] = color[1]
+      data[i + 2] = color[2]
+      data[i + 3] = 255
+    }
+  }
+  return { data, width, height }
+}
+
 function makePatchedSolid(width, height, value, patch) {
   const image = makeSolid(width, height, value)
   for (let y = patch.top; y < patch.bottom; y++) {
@@ -164,6 +179,15 @@ test('hue error detects color direction drift', async () => {
   assert.equal(stats.hueSampleCount, 4096)
   assert.equal(stats.hueErrorMean, 120)
   assert.equal(stats.hueErrorP95, 120)
+})
+
+test('rgb coverage drift tracks low-palette color area changes', async () => {
+  const source = makeRgbSplit(64, 64, 32, [0, 0, 0], [255, 255, 255])
+  const output = makeRgbSplit(64, 64, 16, [0, 0, 0], [255, 255, 255])
+  const stats = await preservationStats(source, output)
+
+  assert.equal(stats.rgbCoverageDrift, 0.25)
+  assert.equal(stats.rgbCoverageRetention, 0.75)
 })
 
 test('edge overlap distinguishes preserved and removed line positions', () => {
@@ -1051,6 +1075,17 @@ test('quality classification reviews chroma drift on colorful inputs', () => {
 
   assert.equal(result.status, 'review')
   assert.ok(result.issues.some((issue) => issue.code === 'chroma-drift'))
+})
+
+test('quality classification reviews low-palette coverage drift', () => {
+  const result = classifyMetrics({
+    lowPaletteCoverageDrift: 0.04,
+    lowPaletteCoverageEligible: true,
+    lowPaletteCoverageRetention: 0.96,
+  })
+
+  assert.equal(result.status, 'review')
+  assert.ok(result.issues.some((issue) => issue.code === 'low-palette-coverage-drift'))
 })
 
 test('quality classification reviews hue drift on colorful inputs', () => {

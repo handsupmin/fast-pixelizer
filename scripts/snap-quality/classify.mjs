@@ -129,6 +129,21 @@ export function classifyMetrics(metrics) {
       ),
     )
   }
+  if (
+    metrics.lowPaletteCoverageEligible &&
+    (metrics.lowPaletteCoverageDrift > QUALITY_RULES.maxLowPaletteCoverageDrift ||
+      metrics.lowPaletteCoverageRetention < QUALITY_RULES.minLowPaletteCoverageRetention)
+  ) {
+    issues.push(
+      issue(
+        'review',
+        'low-palette-coverage-drift',
+        `low-palette coverage drift ${formatNum(
+          metrics.lowPaletteCoverageDrift,
+        )}, retention ${formatNum(metrics.lowPaletteCoverageRetention)}`,
+      ),
+    )
+  }
   if (metrics.outputCoverage < QUALITY_RULES.minOutputCoverage) {
     issues.push(
       issue('review', 'output-shrink', `output coverage ${formatNum(metrics.outputCoverage)}`),
@@ -426,6 +441,13 @@ export function objective(metrics) {
       Math.max(0, metrics.paletteUtilizationTarget - QUALITY_RULES.minPaletteUtilizationTarget) *
       0.5 +
     Math.max(0, QUALITY_RULES.minLowPaletteRetention - metrics.lowPaletteRetention) * 50 +
+    Math.max(0, (metrics.lowPaletteCoverageDrift ?? 0) - QUALITY_RULES.maxLowPaletteCoverageDrift) *
+      80 +
+    Math.max(
+      0,
+      QUALITY_RULES.minLowPaletteCoverageRetention - (metrics.lowPaletteCoverageRetention ?? 1),
+    ) *
+      80 +
     Math.max(0, QUALITY_RULES.minOutputCoverage - metrics.outputCoverage) * 50 +
     Math.max(0, 1 - metrics.edgeAlignment) * 25 +
     Math.max(0, 1 - metrics.axisEdgeAlignmentMin) * 15 +

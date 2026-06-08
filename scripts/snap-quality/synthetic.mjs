@@ -43,6 +43,69 @@ function makeLowResPattern(cols, rows, mode) {
   return { data, width: cols, height: rows }
 }
 
+function paintRect(image, left, top, right, bottom, color) {
+  for (let y = Math.max(0, top); y < Math.min(image.height, bottom); y++) {
+    for (let x = Math.max(0, left); x < Math.min(image.width, right); x++) {
+      const i = (y * image.width + x) * 4
+      image.data[i] = color[0]
+      image.data[i + 1] = color[1]
+      image.data[i + 2] = color[2]
+      image.data[i + 3] = color[3] ?? 255
+    }
+  }
+}
+
+function paintLine(image, x0, y0, x1, y1, color) {
+  const dx = Math.abs(x1 - x0)
+  const dy = -Math.abs(y1 - y0)
+  const sx = x0 < x1 ? 1 : -1
+  const sy = y0 < y1 ? 1 : -1
+  let error = dx + dy
+  let x = x0
+  let y = y0
+
+  while (true) {
+    paintRect(image, x, y, x + 1, y + 1, color)
+    if (x === x1 && y === y1) break
+    const doubled = error * 2
+    if (doubled >= dy) {
+      error += dy
+      x += sx
+    }
+    if (doubled <= dx) {
+      error += dx
+      y += sy
+    }
+  }
+}
+
+function makeLowPaletteSprite(cols, rows) {
+  const palette = {
+    background: [22, 24, 35, 255],
+    outline: [8, 10, 16, 255],
+    shadow: [71, 76, 97, 255],
+    body: [137, 166, 108, 255],
+    highlight: [232, 218, 139, 255],
+    accent: [183, 72, 82, 255],
+  }
+  const image = { data: new Uint8ClampedArray(cols * rows * 4), width: cols, height: rows }
+  paintRect(image, 0, 0, cols, rows, palette.background)
+  paintRect(image, 4, 25, 44, 28, palette.shadow)
+  paintRect(image, 15, 8, 31, 23, palette.outline)
+  paintRect(image, 16, 9, 30, 22, palette.body)
+  paintRect(image, 18, 11, 23, 15, palette.highlight)
+  paintRect(image, 25, 12, 27, 14, palette.outline)
+  paintRect(image, 20, 18, 22, 20, palette.accent)
+  paintRect(image, 24, 18, 26, 20, palette.accent)
+  paintRect(image, 14, 21, 18, 24, palette.outline)
+  paintRect(image, 28, 21, 32, 24, palette.outline)
+  paintLine(image, 7, 21, 17, 13, palette.outline)
+  paintLine(image, 8, 21, 18, 13, palette.highlight)
+  paintLine(image, 31, 13, 40, 8, palette.outline)
+  paintLine(image, 31, 14, 41, 9, palette.highlight)
+  return image
+}
+
 async function writeScaled(file, image, scale, kernel) {
   await sharp(Buffer.from(image.data), {
     raw: { width: image.width, height: image.height, channels: 4 },
@@ -171,6 +234,13 @@ export async function generateSyntheticDataset(outDir) {
     {
       file: 'indexed-8-color-48x32-scale8.png',
       image: makeLowResPattern(48, 32, 'indexed-8'),
+      scale: 8,
+      kernel: 'nearest',
+      expected: { cols: 48, rows: 32 },
+    },
+    {
+      file: 'low-palette-sprite-48x32-scale8.png',
+      image: makeLowPaletteSprite(48, 32),
       scale: 8,
       kernel: 'nearest',
       expected: { cols: 48, rows: 32 },

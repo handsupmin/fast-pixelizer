@@ -54,6 +54,8 @@ export const QUALITY_RULES = {
   minPaletteUtilizationTarget: 16,
   minOutputPaletteUtilization: 0.5,
   minLowPaletteRetention: 0.95,
+  maxLowPaletteCoverageDrift: 0.03,
+  minLowPaletteCoverageRetention: 0.97,
   minOutputCoverage: 0.9,
   minContrastRatio: 0.45,
   maxContrastRatio: 1.8,

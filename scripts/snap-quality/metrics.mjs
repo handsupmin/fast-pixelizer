@@ -218,6 +218,14 @@ function chromaAt(data, index) {
   )
 }
 
+function rgbKey(data, index) {
+  return (data[index] << 16) | (data[index + 1] << 8) | data[index + 2]
+}
+
+function increment(map, key) {
+  map.set(key, (map.get(key) ?? 0) + 1)
+}
+
 function hueAt(data, index) {
   const r = data[index] / 255
   const g = data[index + 1] / 255
@@ -256,6 +264,36 @@ function tilePreservationValues(tileSums, tileCounts) {
   return values
 }
 
+function rgbCoverageStats(inputColors, inputCount, outputColors, outputCount) {
+  if (inputCount === 0) {
+    return {
+      rgbCoverageDrift: outputCount > 0 ? 1 : 0,
+      rgbCoverageRetention: outputCount > 0 ? 0 : 1,
+    }
+  }
+  if (outputCount === 0) {
+    return {
+      rgbCoverageDrift: 1,
+      rgbCoverageRetention: 0,
+    }
+  }
+
+  const keys = new Set([...inputColors.keys(), ...outputColors.keys()])
+  let drift = 0
+  let retained = 0
+  for (const key of keys) {
+    const inputValue = inputColors.get(key) ?? 0
+    const outputValue = outputColors.get(key) ?? 0
+    drift += Math.abs(inputValue / inputCount - outputValue / outputCount)
+    if (inputValue > 0) retained += Math.min(inputValue, outputValue)
+  }
+
+  return {
+    rgbCoverageDrift: drift / 2,
+    rgbCoverageRetention: retained / inputCount,
+  }
+}
+
 export async function preservationStats(input, result, options = {}) {
   const resized = await resizeToInput(result, input)
   const stride = Math.max(1, Math.floor((input.width * input.height) / MAX_METRIC_SAMPLES))
@@ -263,6 +301,8 @@ export async function preservationStats(input, result, options = {}) {
   const tileSums = new Float64Array(tileGrid * tileGrid)
   const tileCounts = new Uint32Array(tileGrid * tileGrid)
   const hueMinChroma = options.hueMinChroma ?? 16
+  const inputRgbCoverage = new Map()
+  const outputRgbCoverage = new Map()
   const hueErrors = []
   const errors = []
   const alphaErrors = []
@@ -270,11 +310,21 @@ export async function preservationStats(input, result, options = {}) {
   let alphaSum = 0
   let count = 0
   let alphaCount = 0
+  let inputRgbCoverageCount = 0
+  let outputRgbCoverageCount = 0
 
   for (let pixel = 0; pixel < input.width * input.height; pixel += stride) {
     const x = pixel % input.width
     const y = Math.floor(pixel / input.width)
     const i = pixel * 4
+    if (input.data[i + 3] > 0) {
+      increment(inputRgbCoverage, rgbKey(input.data, i))
+      inputRgbCoverageCount++
+    }
+    if (resized[i + 3] > 0) {
+      increment(outputRgbCoverage, rgbKey(resized, i))
+      outputRgbCoverageCount++
+    }
     let pixelError = 0
     for (let ch = 0; ch < 3; ch++) {
       const channelError = Math.abs(input.data[i + ch] - resized[i + ch])
@@ -312,6 +362,12 @@ export async function preservationStats(input, result, options = {}) {
   const outputChroma = chromaStats(resized, input.width, input.height)
   const inputEdge = meanAxisGradient(input)
   const outputEdge = meanAxisGradient({ data: resized, width: input.width, height: input.height })
+  const rgbCoverage = rgbCoverageStats(
+    inputRgbCoverage,
+    inputRgbCoverageCount,
+    outputRgbCoverage,
+    outputRgbCoverageCount,
+  )
   const edgeOverlap = options.edgeOverlap
     ? edgeOverlapStats(input, resized)
     : { edgeRecall: 1, edgeSpuriousRatio: 0, edgeJaccard: 1 }
@@ -333,6 +389,8 @@ export async function preservationStats(input, result, options = {}) {
     inputChromaMean: inputChroma.mean,
     outputChromaMean: outputChroma.mean,
     chromaRatio: inputChroma.mean > 0 ? outputChroma.mean / inputChroma.mean : 1,
+    rgbCoverageDrift: rgbCoverage.rgbCoverageDrift,
+    rgbCoverageRetention: rgbCoverage.rgbCoverageRetention,
     hueErrorMean:
       hueErrors.length > 0
         ? hueErrors.reduce((total, value) => total + value, 0) / hueErrors.length

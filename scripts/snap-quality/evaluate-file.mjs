@@ -93,6 +93,9 @@ function toItem({ dataset, expected, input, metrics, name, original, resized, un
     inputChromaMean: formatNum(metrics.inputChromaMean),
     outputChromaMean: formatNum(metrics.outputChromaMean),
     chromaRatio: formatNum(metrics.chromaRatio),
+    lowPaletteCoverageDrift: formatNum(metrics.lowPaletteCoverageDrift),
+    lowPaletteCoverageRetention: formatNum(metrics.lowPaletteCoverageRetention),
+    lowPaletteCoverageEligible: metrics.lowPaletteCoverageEligible,
     hueErrorMean: formatNum(metrics.hueErrorMean),
     hueErrorP95: formatNum(metrics.hueErrorP95),
     hueSampleCount: metrics.hueSampleCount,
@@ -161,6 +164,8 @@ async function buildMetrics(input, expected, snapshots, colorVariety) {
   const deterministicPreserve = await preservationStats(original.result, deterministicOriginal)
   const inputRgbColorCount = uniqueRgbColorCount(input)
   const outputRgbColorCount = uniqueRgbColorCount(resized.result)
+  const lowPaletteCoverageEligible =
+    inputRgbColorCount > 0 && inputRgbColorCount <= colorVariety + 1
   const paletteDominance = paletteDominanceMetrics(input, resized.result)
   const paletteUtilization = paletteUtilizationMetrics(input, resized.result, colorVariety)
 
@@ -220,6 +225,9 @@ async function buildMetrics(input, expected, snapshots, colorVariety) {
       inputChromaMean: preserve.inputChromaMean,
       outputChromaMean: preserve.outputChromaMean,
       chromaRatio: preserve.chromaRatio,
+      lowPaletteCoverageDrift: lowPaletteCoverageEligible ? preserve.rgbCoverageDrift : 0,
+      lowPaletteCoverageRetention: lowPaletteCoverageEligible ? preserve.rgbCoverageRetention : 1,
+      lowPaletteCoverageEligible,
       hueErrorMean: preserve.hueErrorMean,
       hueErrorP95: preserve.hueErrorP95,
       hueSampleCount: preserve.hueSampleCount,
