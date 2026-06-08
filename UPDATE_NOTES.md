@@ -7,6 +7,7 @@
 - Added known-grid expectations for package-generated `32x32` and `64x64` demo pixelate examples.
 - Improved `snap()` on exact square pixelate outputs by detecting raw transition grids before falling back to noisier profile estimates.
 - Expanded snap quality eval with low-palette retention metrics and an 8-color indexed synthetic fixture.
+- Expanded snap quality eval with output-coverage metrics for original-size snap results.
 
 ## 1.3.3
 

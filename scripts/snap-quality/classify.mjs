@@ -75,6 +75,11 @@ export function classifyMetrics(metrics) {
       ),
     )
   }
+  if (metrics.outputCoverage < QUALITY_RULES.minOutputCoverage) {
+    issues.push(
+      issue('review', 'output-shrink', `output coverage ${formatNum(metrics.outputCoverage)}`),
+    )
+  }
   if (metrics.squareCellError > QUALITY_RULES.maxOutputSquareCellError) {
     issues.push(
       issue(
@@ -164,6 +169,7 @@ export function objective(metrics) {
     metrics.outputCellMae * 500 +
     metrics.outputRgbPaletteOverage * 50 +
     Math.max(0, QUALITY_RULES.minLowPaletteRetention - metrics.lowPaletteRetention) * 50 +
+    Math.max(0, QUALITY_RULES.minOutputCoverage - metrics.outputCoverage) * 50 +
     Math.max(0, 1 - metrics.edgeAlignment) * 25 +
     Math.max(0, 1 - metrics.phaseAlignment) * 15 +
     Math.max(0, QUALITY_RULES.minSourceCellSize - metrics.sourceCellSize) * 500 +

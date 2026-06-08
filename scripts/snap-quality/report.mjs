@@ -24,6 +24,7 @@ export function summarize(results) {
     outputCellMaeMean: mean(results, 'outputCellMae'),
     phaseAlignmentMean: mean(results, 'phaseAlignment'),
     lowPaletteRetentionMean: mean(results, 'lowPaletteRetention'),
+    outputCoverageMean: mean(results, 'outputCoverage'),
     sourceCellSizeMean: mean(results, 'sourceCellSize'),
   }
 }
@@ -50,6 +51,7 @@ function criteriaMarkdown() {
     `- Output purity: fail when snapped output cells are not single-color or square.`,
     `- Palette budget: fail when snapped RGB colors exceed colorVariety plus transparency allowance by more than ${QUALITY_RULES.maxOutputRgbPaletteOverage}.`,
     `- Low-palette retention: review when limited-palette inputs keep less than ${(QUALITY_RULES.minLowPaletteRetention * 100).toFixed(0)}% of their RGB colors.`,
+    `- Output coverage: review when original-size snap output keeps less than ${(QUALITY_RULES.minOutputCoverage * 100).toFixed(0)}% of the input canvas on either axis.`,
     `- Boundary evidence: review when inferred grid boundaries are weaker than ${QUALITY_RULES.minEdgeAlignment}x the average axis gradient.`,
     `- Phase alignment: review when inferred grid boundaries score below ${QUALITY_RULES.minPhaseAlignment} against nearby gradient peaks.`,
     `- Source disorder: review when intra-cell source MAE exceeds ${QUALITY_RULES.highCellMae}.`,
@@ -65,6 +67,8 @@ export function toMarkdown(summary) {
     'dataset',
     'file',
     'input',
+    'output',
+    'outputCoverage',
     'grid',
     'expectedGrid',
     'sourceCellSize',

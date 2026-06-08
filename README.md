@@ -20,7 +20,7 @@ As of `1.3.2`, the quality loop also includes generated synthetic fixtures with 
 
 As of `1.3.3`, the synthetic coverage also includes JPEG compression, non-integer scaling, and non-square scaled pixels, so a square source grid stretched with different X/Y scale factors can still be recovered.
 
-The unreleased eval criteria additionally track boundary phase alignment, alpha preservation, RGB palette budget, and low-palette retention so future snap changes can catch shifted grids, broken transparency, accidental palette expansion, and color collapse.
+The unreleased eval criteria additionally track boundary phase alignment, alpha preservation, RGB palette budget, low-palette retention, and output coverage so future snap changes can catch shifted grids, broken transparency, accidental palette expansion, color collapse, and excessive canvas shrink.
 
 The unreleased detector also recovers exact square pixelate outputs whose original-size render uses uneven `5px/6px` cell widths, fixing package-generated `64×64` examples that previously snapped to `39×39` or `66×66`.
 
@@ -81,6 +81,7 @@ Current criteria include:
 | Idempotence         | `snap(snap(image))` changing the detected grid                 |
 | Determinism         | Two snaps of the same source disagreeing on grid size          |
 | Output purity       | Snapped output cells that are not single-color or square       |
+| Output coverage     | Original-size snap output shrinking too far from input size    |
 | Palette budget      | Snapped RGB colors exceeding the requested color variety       |
 | Palette retention   | Limited-palette inputs losing too many original RGB colors     |
 | Boundary evidence   | Weak inferred boundaries compared with average image gradients |

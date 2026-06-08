@@ -105,6 +105,10 @@ async function evaluateFile(file, dataset, options, expectations) {
   const preserve = await preservationStats(input, original.result)
   const outputCellWidth = original.result.width / cols
   const outputCellHeight = original.result.height / rows
+  const outputCoverage = Math.min(
+    original.result.width / input.width,
+    original.result.height / input.height,
+  )
   const inputRgbColorCount = uniqueRgbColorCount(input)
   const outputRgbColorCount = uniqueRgbColorCount(resized.result)
   const lowPaletteRetention =
@@ -131,6 +135,7 @@ async function evaluateFile(file, dataset, options, expectations) {
     alphaP95: preserve.alphaP95,
     contrastRatio: preserve.contrastRatio,
     squareCellError: Math.abs(outputCellWidth / outputCellHeight - 1),
+    outputCoverage,
     outputRgbPaletteOverage: Math.max(0, outputRgbColorCount - (options.colorVariety + 1)),
     lowPaletteRetention,
   }
@@ -140,6 +145,7 @@ async function evaluateFile(file, dataset, options, expectations) {
     file: name,
     input: `${input.width}x${input.height}`,
     output: `${original.result.width}x${original.result.height}`,
+    outputCoverage: formatNum(metrics.outputCoverage),
     grid: `${cols}x${rows}`,
     expectedGrid: expected ? `${expected.cols}x${expected.rows}` : '',
     detectedResolution: original.result.detectedResolution,
