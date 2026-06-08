@@ -203,6 +203,30 @@ export function classifyMetrics(metrics) {
       ),
     )
   }
+  if (
+    metrics.sourceCellTransitionCount >= QUALITY_RULES.minCellTransitionCount &&
+    metrics.cellTransitionRetention < QUALITY_RULES.minCellTransitionRetention
+  ) {
+    issues.push(
+      issue(
+        'review',
+        'cell-transition-loss',
+        `cell transition retention ${formatNum(metrics.cellTransitionRetention)}`,
+      ),
+    )
+  }
+  if (
+    metrics.outputCellTransitionCount >= QUALITY_RULES.minCellTransitionCount &&
+    metrics.cellTransitionSpuriousRatio > QUALITY_RULES.maxCellTransitionSpuriousRatio
+  ) {
+    issues.push(
+      issue(
+        'review',
+        'spurious-cell-transitions',
+        `cell transition spurious ratio ${formatNum(metrics.cellTransitionSpuriousRatio)}`,
+      ),
+    )
+  }
   if (metrics.cellMae > QUALITY_RULES.highCellMae) {
     issues.push(issue('review', 'noisy-cells', `cell MAE ${formatNum(metrics.cellMae)}`))
   }
@@ -334,6 +358,13 @@ export function objective(metrics) {
     Math.max(0, 1 - metrics.phaseAlignment) * 15 +
     Math.max(0, 1 - metrics.axisPhaseAlignmentMin) * 10 +
     Math.max(0, QUALITY_RULES.minCellColorDominance - metrics.cellColorDominance) * 120 +
+    Math.max(0, QUALITY_RULES.minCellTransitionRetention - metrics.cellTransitionRetention) * 50 +
+    Math.max(
+      0,
+      metrics.cellTransitionSpuriousRatio - QUALITY_RULES.maxCellTransitionSpuriousRatio,
+    ) *
+      40 +
+    metrics.cellTransitionErrorMean * 0.1 +
     Math.max(0, QUALITY_RULES.minSourceCellSize - metrics.sourceCellSize) * 500 +
     Math.max(0, metrics.shortAxisCells - QUALITY_RULES.maxShortAxisCells) * 10 +
     Math.max(0, metrics.sourceCellSize - QUALITY_RULES.maxSourceCellSizeReview) * 2 +

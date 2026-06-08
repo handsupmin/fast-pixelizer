@@ -5,6 +5,7 @@ import { snap } from '../../dist/index.js'
 import { classifyMetrics, formatNum, objective } from './classify.mjs'
 import { cellColorDominanceMetrics } from './cell-dominance.mjs'
 import { cellColorErrorMetrics } from './cell-color-error.mjs'
+import { cellTransitionMetrics } from './cell-transition.mjs'
 import { loadImage, writePng } from './image-io.mjs'
 import { paletteDominanceMetrics } from './palette-dominance.mjs'
 import { paletteUtilizationMetrics } from './palette-utilization.mjs'
@@ -61,6 +62,11 @@ function toItem({ dataset, expected, input, metrics, name, original, resized, un
     cellColorErrorMean: formatNum(metrics.cellColorErrorMean),
     cellColorErrorP95: formatNum(metrics.cellColorErrorP95),
     cellColorErrorMax: formatNum(metrics.cellColorErrorMax),
+    cellTransitionRetention: formatNum(metrics.cellTransitionRetention),
+    cellTransitionSpuriousRatio: formatNum(metrics.cellTransitionSpuriousRatio),
+    cellTransitionErrorMean: formatNum(metrics.cellTransitionErrorMean),
+    sourceCellTransitionCount: metrics.sourceCellTransitionCount,
+    outputCellTransitionCount: metrics.outputCellTransitionCount,
     cellMae: formatNum(metrics.cellMae),
     cellStdDev: formatNum(uniformity.cellStdDev),
     outputCellMae: formatNum(metrics.outputCellMae),
@@ -127,6 +133,7 @@ async function buildMetrics(input, expected, snapshots, colorVariety) {
   const uniformity = cellUniformityMetrics(input, cols, rows)
   const dominance = cellColorDominanceMetrics(input, cols, rows)
   const colorError = cellColorErrorMetrics(input, resized.result)
+  const transitions = cellTransitionMetrics(input, resized.result)
   const outputUniformity = cellUniformityMetrics(original.result, cols, rows)
   const preserve = await preservationStats(input, original.result, {
     alphaMask: true,
@@ -165,6 +172,11 @@ async function buildMetrics(input, expected, snapshots, colorVariety) {
       cellColorErrorMean: colorError.cellColorErrorMean,
       cellColorErrorP95: colorError.cellColorErrorP95,
       cellColorErrorMax: colorError.cellColorErrorMax,
+      cellTransitionRetention: transitions.cellTransitionRetention,
+      cellTransitionSpuriousRatio: transitions.cellTransitionSpuriousRatio,
+      cellTransitionErrorMean: transitions.cellTransitionErrorMean,
+      sourceCellTransitionCount: transitions.sourceCellTransitionCount,
+      outputCellTransitionCount: transitions.outputCellTransitionCount,
       cellMae: uniformity.cellMae,
       outputCellMae: outputUniformity.cellMae,
       preservationMae: preserve.mae,

@@ -6,6 +6,7 @@ import { classifyMetrics } from '../scripts/snap-quality/classify.mjs'
 import { cellColorDominanceMetrics } from '../scripts/snap-quality/cell-dominance.mjs'
 import { edgeOverlapStats } from '../scripts/snap-quality/edge-overlap.mjs'
 import { gridBoundarySignals, preservationStats } from '../scripts/snap-quality/metrics.mjs'
+import { cellTransitionMetrics } from '../scripts/snap-quality/cell-transition.mjs'
 import { paletteDominanceMetrics } from '../scripts/snap-quality/palette-dominance.mjs'
 import { paletteUtilizationMetrics } from '../scripts/snap-quality/palette-utilization.mjs'
 
@@ -186,6 +187,21 @@ test('palette utilization detects underused output palette on rich inputs', () =
     drifted.outputPaletteUtilization < 0.02,
     `expected collapsed palette utilization below 0.02, got ${drifted.outputPaletteUtilization}`,
   )
+})
+
+test('cell transitions distinguish retained, removed, and spurious boundaries', () => {
+  const input = makeChecker(64, 64, 8)
+  const retained = cellTransitionMetrics(input, makeChecker(8, 8, 1))
+  const removed = cellTransitionMetrics(input, makeSolid(8, 8, 0))
+  const spurious = cellTransitionMetrics(makeSolid(64, 64, 255), makeChecker(8, 8, 1))
+
+  assert.equal(retained.cellTransitionRetention, 1)
+  assert.equal(retained.cellTransitionSpuriousRatio, 0)
+  assert.equal(retained.cellTransitionErrorMean, 0)
+  assert.ok(removed.cellTransitionRetention < 0.01)
+  assert.equal(removed.outputCellTransitionCount, 0)
+  assert.equal(spurious.sourceCellTransitionCount, 0)
+  assert.equal(spurious.cellTransitionSpuriousRatio, 1)
 })
 
 test('quality classification fails when repeat snap changes visuals', () => {
@@ -568,4 +584,122 @@ test('quality classification reviews underused palette on rich inputs', () => {
 
   assert.equal(result.status, 'review')
   assert.ok(result.issues.some((issue) => issue.code === 'palette-underused'))
+})
+
+test('quality classification reviews lost cell transitions', () => {
+  const result = classifyMetrics({
+    alphaMae: 0,
+    alphaBBoxDriftPx: 0,
+    alphaBBoxDriftRatio: 0,
+    alphaCoverageRatio: 1,
+    alphaMaskIou: 1,
+    alphaP95: 0,
+    aspectError: 0,
+    axisEdgeAlignmentMin: 1,
+    axisPhaseAlignmentMin: 1,
+    cellMae: 0,
+    cellColorDominance: 1,
+    cellColorDominanceP05: 1,
+    cellColorErrorMax: 0,
+    cellColorErrorMean: 0,
+    cellColorErrorP95: 0,
+    cellTransitionErrorMean: 60,
+    cellTransitionRetention: 0.4,
+    cellTransitionSpuriousRatio: 0,
+    cols: 32,
+    contrastRatio: 1,
+    determinismGridGap: 0,
+    determinismVisualMae: 0,
+    determinismVisualP95: 0,
+    edgeAlignment: 1,
+    edgeJaccard: 1,
+    edgeRecall: 1,
+    edgeSpuriousRatio: 0,
+    expectedGridGap: 0,
+    lineEdgeRatio: 1,
+    lowPaletteRetention: 1,
+    outputCellMae: 0,
+    outputCellTransitionCount: 0,
+    outputCoverage: 1,
+    outputColorDominance: 0.5,
+    outputPaletteColorCount: 32,
+    outputPaletteUtilization: 1,
+    outputRgbPaletteOverage: 0,
+    paletteDominanceDelta: 0,
+    paletteUtilizationGap: 0,
+    paletteUtilizationTarget: 32,
+    preservationMae: 0,
+    preservationP95: 0,
+    repeatGridGap: 0,
+    repeatVisualMae: 0,
+    repeatVisualP95: 0,
+    rows: 32,
+    shortAxisCells: 32,
+    sourceCellSize: 8,
+    sourceCellTransitionCount: 64,
+    squareCellError: 0,
+    stabilityDepthGap: 0,
+  })
+
+  assert.equal(result.status, 'review')
+  assert.ok(result.issues.some((issue) => issue.code === 'cell-transition-loss'))
+})
+
+test('quality classification reviews spurious cell transitions', () => {
+  const result = classifyMetrics({
+    alphaMae: 0,
+    alphaBBoxDriftPx: 0,
+    alphaBBoxDriftRatio: 0,
+    alphaCoverageRatio: 1,
+    alphaMaskIou: 1,
+    alphaP95: 0,
+    aspectError: 0,
+    axisEdgeAlignmentMin: 1,
+    axisPhaseAlignmentMin: 1,
+    cellMae: 0,
+    cellColorDominance: 1,
+    cellColorDominanceP05: 1,
+    cellColorErrorMax: 0,
+    cellColorErrorMean: 0,
+    cellColorErrorP95: 0,
+    cellTransitionErrorMean: 60,
+    cellTransitionRetention: 1,
+    cellTransitionSpuriousRatio: 0.6,
+    cols: 32,
+    contrastRatio: 1,
+    determinismGridGap: 0,
+    determinismVisualMae: 0,
+    determinismVisualP95: 0,
+    edgeAlignment: 1,
+    edgeJaccard: 1,
+    edgeRecall: 1,
+    edgeSpuriousRatio: 0,
+    expectedGridGap: 0,
+    lineEdgeRatio: 1,
+    lowPaletteRetention: 1,
+    outputCellMae: 0,
+    outputCellTransitionCount: 64,
+    outputCoverage: 1,
+    outputColorDominance: 0.5,
+    outputPaletteColorCount: 32,
+    outputPaletteUtilization: 1,
+    outputRgbPaletteOverage: 0,
+    paletteDominanceDelta: 0,
+    paletteUtilizationGap: 0,
+    paletteUtilizationTarget: 32,
+    preservationMae: 0,
+    preservationP95: 0,
+    repeatGridGap: 0,
+    repeatVisualMae: 0,
+    repeatVisualP95: 0,
+    rows: 32,
+    shortAxisCells: 32,
+    sourceCellSize: 8,
+    sourceCellTransitionCount: 0,
+    squareCellError: 0,
+    stabilityDepthGap: 0,
+  })
+
+  assert.equal(result.status, 'review')
+  assert.ok(result.issues.some((issue) => issue.code === 'spurious-cell-transitions'))
 })
