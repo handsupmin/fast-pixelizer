@@ -58,6 +58,7 @@ function componentStats(keys, cols, rows) {
     let right = -1
     let top = rows
     let bottom = -1
+    let perimeter = 0
     seen[cell] = 1
     stack.push(cell)
 
@@ -79,9 +80,16 @@ function componentStats(keys, cols, rows) {
         [x, y + 1],
         [x, y - 1],
       ]) {
-        if (nx < 0 || ny < 0 || nx >= cols || ny >= rows) continue
+        if (nx < 0 || ny < 0 || nx >= cols || ny >= rows) {
+          perimeter++
+          continue
+        }
         const next = ny * cols + nx
-        if (seen[next] === 1 || keys[next] !== key) continue
+        if (keys[next] !== key) {
+          perimeter++
+          continue
+        }
+        if (seen[next] === 1) continue
 
         seen[next] = 1
         stack.push(next)
@@ -91,7 +99,7 @@ function componentStats(keys, cols, rows) {
     count++
     if (size <= smallLimit) smallCount++
     const components = byColor.get(key) ?? []
-    components.push({ bottom, left, right, size, top, x: sumX / size, y: sumY / size })
+    components.push({ bottom, left, perimeter, right, size, top, x: sumX / size, y: sumY / size })
     byColor.set(key, components)
   }
 
@@ -160,6 +168,24 @@ function componentBBoxDrift(source, output) {
   return drift
 }
 
+function componentPerimeterDrift(source, output) {
+  const colors = new Set([...source.byColor.keys(), ...output.byColor.keys()])
+  let drift = 0
+
+  for (const color of colors) {
+    const sourceComponents = sortComponents(source.byColor.get(color) ?? [])
+    const outputComponents = sortComponents(output.byColor.get(color) ?? [])
+    const componentCount = Math.max(sourceComponents.length, outputComponents.length)
+    for (let index = 0; index < componentCount; index++) {
+      drift += Math.abs(
+        (sourceComponents[index]?.perimeter ?? 0) - (outputComponents[index]?.perimeter ?? 0),
+      )
+    }
+  }
+
+  return drift
+}
+
 export function cellColorComponentMetrics(input, grid) {
   const cols = grid.width
   const rows = grid.height
@@ -170,6 +196,7 @@ export function cellColorComponentMetrics(input, grid) {
     cellColorComponentAreaDrift: componentAreaDrift(source, output),
     cellColorComponentBBoxDrift: componentBBoxDrift(source, output),
     cellColorComponentCountDrift: Math.abs(source.count - output.count),
+    cellColorComponentPerimeterDrift: componentPerimeterDrift(source, output),
     cellColorComponentPositionDrift: componentPositionDrift(source, output),
     outputCellColorComponentCount: output.count,
     outputSmallCellColorComponentCount: output.smallCount,

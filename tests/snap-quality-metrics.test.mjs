@@ -185,6 +185,18 @@ function makeCellGrid(keys, cols, rows) {
   return { data, width: cols, height: rows }
 }
 
+function makeAlphaCells(width, height, cells) {
+  const data = new Uint8ClampedArray(width * height * 4)
+  for (const [x, y] of cells) {
+    const i = (y * width + x) * 4
+    data[i] = 255
+    data[i + 1] = 255
+    data[i + 2] = 255
+    data[i + 3] = 255
+  }
+  return { data, width, height }
+}
+
 test('grid boundary signals expose a weak axis instead of hiding it in the mean', () => {
   const signals = gridBoundarySignals(makeVerticalStripes(64, 64, 8), 8, 8)
 
@@ -385,6 +397,38 @@ test('alpha component stats detect same-area same-center bounds drift', () => {
   assert.equal(stats.alphaComponentBBoxDrift, 4)
 })
 
+test('alpha component stats detect same-area same-center same-bounds perimeter drift', () => {
+  const source = makeAlphaCells(4, 4, [
+    [3, 0],
+    [1, 1],
+    [2, 1],
+    [3, 1],
+    [0, 2],
+    [1, 2],
+    [2, 2],
+    [0, 3],
+  ])
+  const output = makeAlphaCells(4, 4, [
+    [2, 0],
+    [1, 1],
+    [2, 1],
+    [3, 1],
+    [0, 2],
+    [1, 2],
+    [3, 2],
+    [0, 3],
+  ])
+  const stats = alphaMaskStats(source, output.data)
+
+  assert.equal(stats.alphaComponentCount, 1)
+  assert.equal(stats.outputAlphaComponentCount, 1)
+  assert.equal(stats.alphaComponentCountDrift, 0)
+  assert.equal(stats.alphaComponentAreaDrift, 0)
+  assert.equal(stats.alphaComponentBBoxDrift, 0)
+  assert.equal(stats.alphaComponentPositionDrift, 0)
+  assert.equal(stats.alphaComponentPerimeterDrift, 2)
+})
+
 test('alpha semitransparency stats detect collapsed rare shadows with low alpha MAE', async () => {
   const source = setAlphaRect(makeSolid(64, 64, 96), 4, 4, 8, 8, 128)
   const output = makeSolid(64, 64, 96)
@@ -578,6 +622,25 @@ test('cell color components detect same-area same-center bounds drift', () => {
   assert.equal(metrics.cellColorComponentBBoxDrift, 4)
 })
 
+test('cell color components detect same-area same-center same-bounds perimeter drift', () => {
+  const transparent = [0, 0, 0, 0]
+  const red = [255, 0, 0, 255]
+  const sourceKeys = Array.from({ length: 16 }, () => transparent)
+  for (const index of [3, 5, 6, 7, 8, 9, 10, 12]) sourceKeys[index] = red
+  const outputKeys = Array.from({ length: 16 }, () => transparent)
+  for (const index of [2, 5, 6, 7, 8, 9, 11, 12]) outputKeys[index] = red
+  const metrics = cellColorComponentMetrics(
+    makeCellImage(sourceKeys, 4, 4, 8),
+    makeCellGrid(outputKeys, 4, 4),
+  )
+
+  assert.equal(metrics.cellColorComponentCountDrift, 0)
+  assert.equal(metrics.cellColorComponentAreaDrift, 0)
+  assert.equal(metrics.cellColorComponentBBoxDrift, 0)
+  assert.equal(metrics.cellColorComponentPositionDrift, 0)
+  assert.equal(metrics.cellColorComponentPerimeterDrift, 2)
+})
+
 test('cell transitions distinguish retained, removed, and spurious boundaries', () => {
   const input = makeChecker(64, 64, 8)
   const retained = cellTransitionMetrics(input, makeChecker(8, 8, 1))
@@ -663,6 +726,7 @@ test('quality classification reviews exact cell color component bounds drift', (
     cellColorComponentAreaDrift: 0,
     cellColorComponentBBoxDrift: 1,
     cellColorComponentCountDrift: 0,
+    cellColorComponentPerimeterDrift: 0,
     cellColorComponentPositionDrift: 0,
     exactLowPaletteCellColorEligible: true,
     outputCellColorComponentCount: 2,
@@ -671,6 +735,24 @@ test('quality classification reviews exact cell color component bounds drift', (
 
   assert.equal(result.status, 'review')
   assert.ok(result.issues.some((issue) => issue.code === 'exact-cell-color-component-bounds-drift'))
+})
+
+test('quality classification reviews exact cell color component perimeter drift', () => {
+  const result = classifyMetrics({
+    cellColorComponentAreaDrift: 0,
+    cellColorComponentBBoxDrift: 0,
+    cellColorComponentCountDrift: 0,
+    cellColorComponentPerimeterDrift: 2,
+    cellColorComponentPositionDrift: 0,
+    exactLowPaletteCellColorEligible: true,
+    outputCellColorComponentCount: 2,
+    sourceCellColorComponentCount: 2,
+  })
+
+  assert.equal(result.status, 'review')
+  assert.ok(
+    result.issues.some((issue) => issue.code === 'exact-cell-color-component-perimeter-drift'),
+  )
 })
 
 test('quality classification fails when repeat snap changes visuals', () => {
@@ -943,6 +1025,7 @@ test('quality classification reviews alpha component shape drift', () => {
     alphaComponentBBoxDrift: 2,
     alphaComponentCount: 2,
     alphaComponentCountDrift: 0,
+    alphaComponentPerimeterDrift: 3,
     alphaComponentPositionDrift: 1,
     outputAlphaComponentCount: 2,
   })
@@ -950,6 +1033,7 @@ test('quality classification reviews alpha component shape drift', () => {
   assert.equal(result.status, 'review')
   assert.ok(result.issues.some((issue) => issue.code === 'alpha-component-area-drift'))
   assert.ok(result.issues.some((issue) => issue.code === 'alpha-component-bounds-drift'))
+  assert.ok(result.issues.some((issue) => issue.code === 'alpha-component-perimeter-drift'))
   assert.ok(result.issues.some((issue) => issue.code === 'alpha-component-position-drift'))
 })
 

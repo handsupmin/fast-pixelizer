@@ -311,6 +311,21 @@ export function classifyMetrics(metrics) {
     metrics.exactLowPaletteCellColorEligible &&
     Math.max(metrics.sourceCellColorComponentCount, metrics.outputCellColorComponentCount) >=
       QUALITY_RULES.minExactCellColorComponentCount &&
+    (metrics.cellColorComponentPerimeterDrift ?? 0) >
+      QUALITY_RULES.maxExactCellColorComponentPerimeterDrift
+  ) {
+    issues.push(
+      issue(
+        'review',
+        'exact-cell-color-component-perimeter-drift',
+        `exact cell color component perimeter drift ${metrics.cellColorComponentPerimeterDrift}`,
+      ),
+    )
+  }
+  if (
+    metrics.exactLowPaletteCellColorEligible &&
+    Math.max(metrics.sourceCellColorComponentCount, metrics.outputCellColorComponentCount) >=
+      QUALITY_RULES.minExactCellColorComponentCount &&
     (metrics.cellColorComponentPositionDrift ?? 0) >
       QUALITY_RULES.maxExactCellColorComponentPositionDrift
   ) {
@@ -524,6 +539,19 @@ export function classifyMetrics(metrics) {
   if (
     Math.max(metrics.alphaComponentCount ?? 0, metrics.outputAlphaComponentCount ?? 0) >=
       QUALITY_RULES.minAlphaComponentCount &&
+    (metrics.alphaComponentPerimeterDrift ?? 0) > QUALITY_RULES.maxAlphaComponentPerimeterDrift
+  ) {
+    issues.push(
+      issue(
+        'review',
+        'alpha-component-perimeter-drift',
+        `alpha component perimeter drift ${metrics.alphaComponentPerimeterDrift}`,
+      ),
+    )
+  }
+  if (
+    Math.max(metrics.alphaComponentCount ?? 0, metrics.outputAlphaComponentCount ?? 0) >=
+      QUALITY_RULES.minAlphaComponentCount &&
     (metrics.alphaComponentPositionDrift ?? 0) > QUALITY_RULES.maxAlphaComponentPositionDrift
   ) {
     issues.push(
@@ -728,6 +756,13 @@ export function objective(metrics) {
     Math.max(
       0,
       (metrics.exactLowPaletteCellColorEligible
+        ? (metrics.cellColorComponentPerimeterDrift ?? 0)
+        : 0) - QUALITY_RULES.maxExactCellColorComponentPerimeterDrift,
+    ) *
+      1 +
+    Math.max(
+      0,
+      (metrics.exactLowPaletteCellColorEligible
         ? (metrics.cellColorComponentPositionDrift ?? 0)
         : 0) - QUALITY_RULES.maxExactCellColorComponentPositionDrift,
     ) *
@@ -759,6 +794,11 @@ export function objective(metrics) {
       0.25 +
     Math.max(0, (metrics.alphaComponentBBoxDrift ?? 0) - QUALITY_RULES.maxAlphaComponentBBoxDrift) *
       0.5 +
+    Math.max(
+      0,
+      (metrics.alphaComponentPerimeterDrift ?? 0) - QUALITY_RULES.maxAlphaComponentPerimeterDrift,
+    ) *
+      0.25 +
     Math.max(
       0,
       (metrics.alphaComponentPositionDrift ?? 0) - QUALITY_RULES.maxAlphaComponentPositionDrift,

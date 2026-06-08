@@ -176,6 +176,7 @@ function componentStats(data, width, height) {
       let right = -1
       let top = height
       let bottom = -1
+      let perimeter = 0
       seen[start] = 1
       stack.push(start)
 
@@ -197,16 +198,23 @@ function componentStats(data, width, height) {
           [px, py + 1],
           [px, py - 1],
         ]) {
-          if (nx < 0 || ny < 0 || nx >= width || ny >= height) continue
+          if (nx < 0 || ny < 0 || nx >= width || ny >= height) {
+            perimeter++
+            continue
+          }
           const next = ny * width + nx
-          if (seen[next] === 1 || alphaAt(data, width, nx, ny) <= VISIBLE_ALPHA_THRESHOLD) continue
+          if (alphaAt(data, width, nx, ny) <= VISIBLE_ALPHA_THRESHOLD) {
+            perimeter++
+            continue
+          }
+          if (seen[next] === 1) continue
 
           seen[next] = 1
           stack.push(next)
         }
       }
 
-      components.push({ bottom, left, right, size, top, x: sumX / size, y: sumY / size })
+      components.push({ bottom, left, perimeter, right, size, top, x: sumX / size, y: sumY / size })
     }
   }
 
@@ -262,6 +270,21 @@ function componentBBoxDrift(source, output) {
   return drift
 }
 
+function componentPerimeterDrift(source, output) {
+  const sourceComponents = sortComponents(source)
+  const outputComponents = sortComponents(output)
+  const componentCount = Math.max(sourceComponents.length, outputComponents.length)
+  let drift = 0
+
+  for (let index = 0; index < componentCount; index++) {
+    drift += Math.abs(
+      (sourceComponents[index]?.perimeter ?? 0) - (outputComponents[index]?.perimeter ?? 0),
+    )
+  }
+
+  return drift
+}
+
 function alphaComponentStats(input, resized) {
   const { width, height } = input
   const smallLimit = Math.max(64, Math.floor(width * height * SMALL_COMPONENT_AREA_RATIO))
@@ -275,6 +298,7 @@ function alphaComponentStats(input, resized) {
     alphaComponentBBoxDrift: componentBBoxDrift(source, output),
     alphaComponentCount: source.length,
     alphaComponentCountDrift: Math.abs(source.length - output.length),
+    alphaComponentPerimeterDrift: componentPerimeterDrift(source, output),
     alphaComponentPositionDrift: componentPositionDrift(source, output),
     alphaSmallComponentCount: sourceSmall,
     alphaSmallComponentCountDrift: Math.abs(sourceSmall - outputSmall),
