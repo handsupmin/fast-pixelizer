@@ -108,6 +108,18 @@ export function classifyMetrics(metrics) {
       ),
     )
   }
+  if (
+    metrics.paletteUtilizationTarget >= QUALITY_RULES.minPaletteUtilizationTarget &&
+    metrics.outputPaletteUtilization < QUALITY_RULES.minOutputPaletteUtilization
+  ) {
+    issues.push(
+      issue(
+        'review',
+        'palette-underused',
+        `palette utilization ${formatNum(metrics.outputPaletteUtilization)} (${metrics.outputPaletteColorCount}/${metrics.paletteUtilizationTarget})`,
+      ),
+    )
+  }
   if (metrics.lowPaletteRetention < QUALITY_RULES.minLowPaletteRetention) {
     issues.push(
       issue(
@@ -312,6 +324,9 @@ export function objective(metrics) {
     Math.max(0, metrics.outputColorDominance - QUALITY_RULES.maxOutputColorDominance) *
       Math.max(0, metrics.paletteDominanceDelta - QUALITY_RULES.maxPaletteDominanceDelta) *
       80 +
+    Math.max(0, QUALITY_RULES.minOutputPaletteUtilization - metrics.outputPaletteUtilization) *
+      Math.max(0, metrics.paletteUtilizationTarget - QUALITY_RULES.minPaletteUtilizationTarget) *
+      0.5 +
     Math.max(0, QUALITY_RULES.minLowPaletteRetention - metrics.lowPaletteRetention) * 50 +
     Math.max(0, QUALITY_RULES.minOutputCoverage - metrics.outputCoverage) * 50 +
     Math.max(0, 1 - metrics.edgeAlignment) * 25 +

@@ -7,6 +7,7 @@ import { cellColorDominanceMetrics } from '../scripts/snap-quality/cell-dominanc
 import { edgeOverlapStats } from '../scripts/snap-quality/edge-overlap.mjs'
 import { gridBoundarySignals, preservationStats } from '../scripts/snap-quality/metrics.mjs'
 import { paletteDominanceMetrics } from '../scripts/snap-quality/palette-dominance.mjs'
+import { paletteUtilizationMetrics } from '../scripts/snap-quality/palette-utilization.mjs'
 
 function makeVerticalStripes(width, height, stripeWidth) {
   const data = new Uint8ClampedArray(width * height * 4)
@@ -61,6 +62,26 @@ function makeTransparentBox(width, height, left, top, right, bottom) {
     }
   }
   return { data, width, height }
+}
+
+function makeColorGrid(cols, rows, cellSize) {
+  const width = cols * cellSize
+  const data = new Uint8ClampedArray(width * rows * cellSize * 4)
+  for (let row = 0; row < rows; row++) {
+    for (let col = 0; col < cols; col++) {
+      const seed = row * cols + col
+      for (let y = row * cellSize; y < (row + 1) * cellSize; y++) {
+        for (let x = col * cellSize; x < (col + 1) * cellSize; x++) {
+          const i = (y * width + x) * 4
+          data[i] = (seed * 37) % 256
+          data[i + 1] = (seed * 67) % 256
+          data[i + 2] = (seed * 97) % 256
+          data[i + 3] = 255
+        }
+      }
+    }
+  }
+  return { data, width, height: rows * cellSize }
 }
 
 test('grid boundary signals expose a weak axis instead of hiding it in the mean', () => {
@@ -149,6 +170,24 @@ test('palette dominance detects output color collapse beyond source dominance', 
   assert.equal(drifted.paletteDominanceDelta, 0.5)
 })
 
+test('palette utilization detects underused output palette on rich inputs', () => {
+  const input = makeColorGrid(8, 8, 4)
+  const rich = makeColorGrid(8, 8, 1)
+  const collapsed = makeSolid(8, 8, 0)
+  const preserved = paletteUtilizationMetrics(input, rich, 64)
+  const drifted = paletteUtilizationMetrics(input, collapsed, 64)
+
+  assert.equal(preserved.paletteUtilizationTarget, 64)
+  assert.equal(preserved.outputPaletteUtilization, 1)
+  assert.equal(preserved.paletteUtilizationGap, 0)
+  assert.equal(drifted.paletteUtilizationTarget, 64)
+  assert.equal(drifted.outputPaletteColorCount, 1)
+  assert.ok(
+    drifted.outputPaletteUtilization < 0.02,
+    `expected collapsed palette utilization below 0.02, got ${drifted.outputPaletteUtilization}`,
+  )
+})
+
 test('quality classification fails when repeat snap changes visuals', () => {
   const result = classifyMetrics({
     alphaMae: 0,
@@ -181,8 +220,12 @@ test('quality classification fails when repeat snap changes visuals', () => {
     outputCellMae: 0,
     outputCoverage: 1,
     outputColorDominance: 0.5,
+    outputPaletteColorCount: 32,
+    outputPaletteUtilization: 1,
     outputRgbPaletteOverage: 0,
     paletteDominanceDelta: 0,
+    paletteUtilizationGap: 0,
+    paletteUtilizationTarget: 32,
     preservationMae: 0,
     preservationP95: 0,
     repeatGridGap: 0,
@@ -231,8 +274,12 @@ test('quality classification fails when same input snap is visually non-determin
     outputCellMae: 0,
     outputCoverage: 1,
     outputColorDominance: 0.5,
+    outputPaletteColorCount: 32,
+    outputPaletteUtilization: 1,
     outputRgbPaletteOverage: 0,
     paletteDominanceDelta: 0,
+    paletteUtilizationGap: 0,
+    paletteUtilizationTarget: 32,
     preservationMae: 0,
     preservationP95: 0,
     repeatGridGap: 0,
@@ -281,8 +328,12 @@ test('quality classification reviews weak edge map overlap', () => {
     outputCellMae: 0,
     outputCoverage: 1,
     outputColorDominance: 0.5,
+    outputPaletteColorCount: 32,
+    outputPaletteUtilization: 1,
     outputRgbPaletteOverage: 0,
     paletteDominanceDelta: 0,
+    paletteUtilizationGap: 0,
+    paletteUtilizationTarget: 32,
     preservationMae: 0,
     preservationP95: 0,
     repeatGridGap: 0,
@@ -333,8 +384,12 @@ test('quality classification reviews alpha silhouette drift', () => {
     outputCellMae: 0,
     outputCoverage: 1,
     outputColorDominance: 0.5,
+    outputPaletteColorCount: 32,
+    outputPaletteUtilization: 1,
     outputRgbPaletteOverage: 0,
     paletteDominanceDelta: 0,
+    paletteUtilizationGap: 0,
+    paletteUtilizationTarget: 32,
     preservationMae: 0,
     preservationP95: 0,
     repeatGridGap: 0,
@@ -385,8 +440,12 @@ test('quality classification reviews cell representative color drift', () => {
     outputCellMae: 0,
     outputCoverage: 1,
     outputColorDominance: 0.5,
+    outputPaletteColorCount: 32,
+    outputPaletteUtilization: 1,
     outputRgbPaletteOverage: 0,
     paletteDominanceDelta: 0,
+    paletteUtilizationGap: 0,
+    paletteUtilizationTarget: 32,
     preservationMae: 0,
     preservationP95: 0,
     repeatGridGap: 0,
@@ -435,8 +494,12 @@ test('quality classification reviews palette dominance collapse', () => {
     outputCellMae: 0,
     outputCoverage: 1,
     outputColorDominance: 0.9,
+    outputPaletteColorCount: 32,
+    outputPaletteUtilization: 1,
     outputRgbPaletteOverage: 0,
     paletteDominanceDelta: 0.3,
+    paletteUtilizationGap: 0,
+    paletteUtilizationTarget: 32,
     preservationMae: 0,
     preservationP95: 0,
     repeatGridGap: 0,
@@ -451,4 +514,58 @@ test('quality classification reviews palette dominance collapse', () => {
 
   assert.equal(result.status, 'review')
   assert.ok(result.issues.some((issue) => issue.code === 'palette-dominance-collapse'))
+})
+
+test('quality classification reviews underused palette on rich inputs', () => {
+  const result = classifyMetrics({
+    alphaMae: 0,
+    alphaBBoxDriftPx: 0,
+    alphaBBoxDriftRatio: 0,
+    alphaCoverageRatio: 1,
+    alphaMaskIou: 1,
+    alphaP95: 0,
+    aspectError: 0,
+    axisEdgeAlignmentMin: 1,
+    axisPhaseAlignmentMin: 1,
+    cellMae: 0,
+    cellColorDominance: 1,
+    cellColorDominanceP05: 1,
+    cellColorErrorMax: 0,
+    cellColorErrorMean: 0,
+    cellColorErrorP95: 0,
+    cols: 32,
+    contrastRatio: 1,
+    determinismGridGap: 0,
+    determinismVisualMae: 0,
+    determinismVisualP95: 0,
+    edgeAlignment: 1,
+    edgeJaccard: 1,
+    edgeRecall: 1,
+    edgeSpuriousRatio: 0,
+    expectedGridGap: 0,
+    lineEdgeRatio: 1,
+    lowPaletteRetention: 1,
+    outputCellMae: 0,
+    outputCoverage: 1,
+    outputColorDominance: 0.4,
+    outputPaletteColorCount: 12,
+    outputPaletteUtilization: 0.375,
+    outputRgbPaletteOverage: 0,
+    paletteDominanceDelta: 0,
+    paletteUtilizationGap: 20,
+    paletteUtilizationTarget: 32,
+    preservationMae: 0,
+    preservationP95: 0,
+    repeatGridGap: 0,
+    repeatVisualMae: 0,
+    repeatVisualP95: 0,
+    rows: 32,
+    shortAxisCells: 32,
+    sourceCellSize: 8,
+    squareCellError: 0,
+    stabilityDepthGap: 0,
+  })
+
+  assert.equal(result.status, 'review')
+  assert.ok(result.issues.some((issue) => issue.code === 'palette-underused'))
 })

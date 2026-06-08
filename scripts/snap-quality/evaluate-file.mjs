@@ -7,6 +7,7 @@ import { cellColorDominanceMetrics } from './cell-dominance.mjs'
 import { cellColorErrorMetrics } from './cell-color-error.mjs'
 import { loadImage, writePng } from './image-io.mjs'
 import { paletteDominanceMetrics } from './palette-dominance.mjs'
+import { paletteUtilizationMetrics } from './palette-utilization.mjs'
 import {
   cellUniformityMetrics,
   gridBoundarySignals,
@@ -86,9 +87,14 @@ function toItem({ dataset, expected, input, metrics, name, original, resized, un
     expectedGridGap: metrics.expectedGridGap,
     inputColorCount: uniqueColorCount(input),
     inputRgbColorCount: metrics.inputRgbColorCount,
+    inputBucketColorCount: metrics.inputBucketColorCount,
     inputColorDominance: formatNum(metrics.inputColorDominance),
     outputColorCount: uniqueColorCount(resized.result),
     outputRgbColorCount: metrics.outputRgbColorCount,
+    outputPaletteColorCount: metrics.outputPaletteColorCount,
+    outputPaletteUtilization: formatNum(metrics.outputPaletteUtilization),
+    paletteUtilizationGap: metrics.paletteUtilizationGap,
+    paletteUtilizationTarget: metrics.paletteUtilizationTarget,
     outputColorDominance: formatNum(metrics.outputColorDominance),
     paletteDominanceDelta: formatNum(metrics.paletteDominanceDelta),
     outputRgbPaletteOverage: metrics.outputRgbPaletteOverage,
@@ -131,6 +137,7 @@ async function buildMetrics(input, expected, snapshots, colorVariety) {
   const inputRgbColorCount = uniqueRgbColorCount(input)
   const outputRgbColorCount = uniqueRgbColorCount(resized.result)
   const paletteDominance = paletteDominanceMetrics(input, resized.result)
+  const paletteUtilization = paletteUtilizationMetrics(input, resized.result, colorVariety)
 
   return {
     metrics: {
@@ -179,6 +186,11 @@ async function buildMetrics(input, expected, snapshots, colorVariety) {
       inputColorDominance: paletteDominance.inputColorDominance,
       outputColorDominance: paletteDominance.outputColorDominance,
       paletteDominanceDelta: paletteDominance.paletteDominanceDelta,
+      inputBucketColorCount: paletteUtilization.inputBucketColorCount,
+      outputPaletteColorCount: paletteUtilization.outputPaletteColorCount,
+      outputPaletteUtilization: paletteUtilization.outputPaletteUtilization,
+      paletteUtilizationGap: paletteUtilization.paletteUtilizationGap,
+      paletteUtilizationTarget: paletteUtilization.paletteUtilizationTarget,
       inputRgbColorCount,
       outputRgbColorCount,
       lowPaletteRetention: lowPaletteRetention(
