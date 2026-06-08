@@ -26,6 +26,8 @@ As of `1.3.5`, the eval criteria additionally track boundary phase alignment, al
 
 As of `1.3.6`, the uniform-cell detector also counts visible runs per sampled line, so partially cropped edge cells no longer make exact scaled pixel art under-count the source grid.
 
+As of `1.3.7`, internal 1px editor grid gutters are treated as separators instead of cells, so grid-overlay screenshots can recover the underlying pixel grid.
+
 Recent regression examples:
 
 | Input                  | Previous           | `1.2.0`   |
@@ -50,9 +52,10 @@ Recent regression examples:
 7. **Exact transition recovery** — recovers clean square pixelate outputs with uneven original-size cell widths
 8. **Transparent-padding arbitration** — keeps high-confidence uniform grids when transparent margins create stronger coarse transitions
 9. **Edge-crop run counting** — preserves visible source-grid counts when edge cells are partially cropped
-10. **Lattice regularization** — rebuilds a globally uniform grid instead of letting local cut drift accumulate
-11. **Majority-vote resampling** — picks the dominant color per cell
-12. **Uniform re-rendering** — every cell gets the exact same pixel size
+10. **Editor-gutter filtering** — ignores internal 1px grid separators when counting source cells
+11. **Lattice regularization** — rebuilds a globally uniform grid instead of letting local cut drift accumulate
+12. **Majority-vote resampling** — picks the dominant color per cell
+13. **Uniform re-rendering** — every cell gets the exact same pixel size
 
 No manual resolution input needed. The grid is auto-detected.
 
@@ -88,6 +91,7 @@ Current criteria include:
 | Output coverage     | Original-size snap output shrinking too far from input size    |
 | Transparent padding | Large transparent sprite margins causing coarse grid selection |
 | Partial edge crop   | Cropped edge cells causing the visible source grid to shrink   |
+| Editor grid gutters | Thin internal grid overlay lines being counted as cells        |
 | Palette budget      | Snapped RGB colors exceeding the requested color variety       |
 | Palette retention   | Limited-palette inputs losing too many original RGB colors     |
 | Boundary evidence   | Weak inferred boundaries compared with average image gradients |
@@ -106,6 +110,8 @@ The `1.3.3` fixture expansion keeps the same hard failures at `0` across `24` fi
 The `1.3.5` transparent-padding run keeps hard failures at `0` across `27` images: `0 fail / 22 pass / 5 review`, expected-grid gap `0`, and repeat gap `0`. A `32x32` sprite with an 8-cell transparent border changed from `4x4` to the expected `32x32`.
 
 The `1.3.6` partial-edge-crop run keeps hard failures at `0` across `28` images: `0 fail / 22 pass / 6 review`, expected-grid gap `0`, and repeat gap `0`. A `48x32` source cropped seven scaled pixels from every edge changed from `46x30` to the expected `48x32`.
+
+The `1.3.7` editor-gutter run keeps hard failures at `0` across `29` images: `0 fail / 22 pass / 7 review`, expected-grid gap `0`, and repeat gap `0`. A `48x32` source with 1px internal editor gutters changed from `57x39` to the expected `48x32`.
 
 ```ts
 import { snap } from 'fast-pixelizer'

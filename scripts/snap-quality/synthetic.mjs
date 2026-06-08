@@ -67,6 +67,34 @@ async function writeScaledCrop(file, image, scale, kernel, crop) {
     .toFile(file)
 }
 
+async function writeScaledGutters(file, image, scale, gutter) {
+  const width = image.width * scale + (image.width - 1) * gutter
+  const height = image.height * scale + (image.height - 1) * gutter
+  const data = new Uint8ClampedArray(width * height * 4)
+  for (let i = 3; i < data.length; i += 4) data[i] = 255
+
+  for (let y = 0; y < image.height; y++) {
+    for (let x = 0; x < image.width; x++) {
+      const sourceIndex = (y * image.width + x) * 4
+      const x0 = x * (scale + gutter)
+      const y0 = y * (scale + gutter)
+      for (let py = y0; py < y0 + scale; py++) {
+        for (let px = x0; px < x0 + scale; px++) {
+          const targetIndex = (py * width + px) * 4
+          data[targetIndex] = image.data[sourceIndex]
+          data[targetIndex + 1] = image.data[sourceIndex + 1]
+          data[targetIndex + 2] = image.data[sourceIndex + 2]
+          data[targetIndex + 3] = image.data[sourceIndex + 3]
+        }
+      }
+    }
+  }
+
+  await sharp(Buffer.from(data), { raw: { width, height, channels: 4 } })
+    .png()
+    .toFile(file)
+}
+
 async function writeResized(file, image, width, height, kernel) {
   await sharp(Buffer.from(image.data), {
     raw: { width: image.width, height: image.height, channels: 4 },
@@ -172,6 +200,13 @@ export async function generateSyntheticDataset(outDir) {
       expected: { cols: 48, rows: 32 },
     },
     {
+      file: 'editor-grid-gutter-48x32-scale6.png',
+      image: makeLowResPattern(48, 32, 'dense'),
+      scale: 6,
+      gutter: 1,
+      expected: { cols: 48, rows: 32 },
+    },
+    {
       file: 'jpeg-48x32-scale8-q45.jpg',
       image: makeLowResPattern(48, 32, 'dense'),
       scale: 8,
@@ -186,6 +221,8 @@ export async function generateSyntheticDataset(outDir) {
     if (fixture.quality) await writeJpeg(file, fixture.image, fixture.scale, fixture.quality)
     else if (fixture.crop)
       await writeScaledCrop(file, fixture.image, fixture.scale, fixture.kernel, fixture.crop)
+    else if (fixture.gutter)
+      await writeScaledGutters(file, fixture.image, fixture.scale, fixture.gutter)
     else if (fixture.width && fixture.height)
       await writeResized(file, fixture.image, fixture.width, fixture.height, fixture.kernel)
     else await writeScaled(file, fixture.image, fixture.scale, fixture.kernel)

@@ -46,6 +46,33 @@ function makeTransparentBorderPattern(width, height, border) {
   return { data, width, height }
 }
 
+function scaleWithGutters(image, scale, gutter) {
+  const width = image.width * scale + (image.width - 1) * gutter
+  const height = image.height * scale + (image.height - 1) * gutter
+  const data = new Uint8ClampedArray(width * height * 4)
+
+  for (let i = 3; i < data.length; i += 4) data[i] = 255
+
+  for (let y = 0; y < image.height; y++) {
+    for (let x = 0; x < image.width; x++) {
+      const sourceIndex = (y * image.width + x) * 4
+      const x0 = x * (scale + gutter)
+      const y0 = y * (scale + gutter)
+      for (let py = y0; py < y0 + scale; py++) {
+        for (let px = x0; px < x0 + scale; px++) {
+          const targetIndex = (py * width + px) * 4
+          data[targetIndex] = image.data[sourceIndex]
+          data[targetIndex + 1] = image.data[sourceIndex + 1]
+          data[targetIndex + 2] = image.data[sourceIndex + 2]
+          data[targetIndex + 3] = image.data[sourceIndex + 3]
+        }
+      }
+    }
+  }
+
+  return { data, width, height }
+}
+
 async function scaleImage(image, scale, kernel) {
   const { data, info } = await sharp(Buffer.from(image.data), {
     raw: { width: image.width, height: image.height, channels: 4 },
@@ -195,6 +222,13 @@ test('transparent padded pixel art keeps the full source grid', async () => {
 test('partially cropped edge cells keep the visible source grid', async () => {
   const scaled = await scaleImage(makePattern(48, 32), 8, 'nearest')
   const input = await cropImage(scaled, 7, 7, scaled.width - 14, scaled.height - 14)
+  const grid = detectImage(input)
+
+  assert.deepEqual(grid, { cols: 48, rows: 32 })
+})
+
+test('editor grid gutters do not count as source cells', () => {
+  const input = scaleWithGutters(makePattern(48, 32), 6, 1)
   const grid = detectImage(input)
 
   assert.deepEqual(grid, { cols: 48, rows: 32 })

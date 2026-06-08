@@ -15,6 +15,7 @@ export interface UniformGridEstimate {
 interface AxisRunSummary {
   histogram: Map<number, number>
   maxRunCount: number
+  maxInternalThinRunCount: number
 }
 
 const MAX_SAMPLE_LINES = 128
@@ -37,58 +38,88 @@ function addRun(histogram: Map<number, number>, length: number): void {
   histogram.set(length, (histogram.get(length) ?? 0) + 1)
 }
 
+function countCellRuns(runLengths: readonly number[]): number {
+  let count = 0
+  for (let index = 0; index < runLengths.length; index++) {
+    const length = runLengths[index] ?? 0
+    const edgeRun = index === 0 || index === runLengths.length - 1
+    if (length >= 2 || edgeRun) count++
+  }
+  return count
+}
+
+function countInternalThinRuns(runLengths: readonly number[]): number {
+  let count = 0
+  for (let index = 1; index < runLengths.length - 1; index++) {
+    if ((runLengths[index] ?? 0) < 2) count++
+  }
+  return count
+}
+
 function collectHorizontalRuns(data: Uint8ClampedArray, width: number, height: number) {
   const histogram = new Map<number, number>()
   let maxRunCount = 0
+  let maxInternalThinRunCount = 0
   const yStep = Math.max(1, Math.floor(height / MAX_SAMPLE_LINES))
 
   for (let y = 0; y < height; y += yStep) {
+    const runLengths: number[] = []
     let runStart = 0
-    let runCount = 1
     let current = pixelKey(data, y * width * 4)
     for (let x = 1; x < width; x++) {
       const key = pixelKey(data, (y * width + x) * 4)
       if (key === current) continue
-      addRun(histogram, x - runStart)
-      runCount++
+      const length = x - runStart
+      addRun(histogram, length)
+      runLengths.push(length)
       runStart = x
       current = key
     }
-    addRun(histogram, width - runStart)
-    maxRunCount = Math.max(maxRunCount, runCount)
+    const finalLength = width - runStart
+    addRun(histogram, finalLength)
+    runLengths.push(finalLength)
+    maxRunCount = Math.max(maxRunCount, countCellRuns(runLengths))
+    maxInternalThinRunCount = Math.max(maxInternalThinRunCount, countInternalThinRuns(runLengths))
   }
 
-  return { histogram, maxRunCount }
+  return { histogram, maxRunCount, maxInternalThinRunCount }
 }
 
 function collectVerticalRuns(data: Uint8ClampedArray, width: number, height: number) {
   const histogram = new Map<number, number>()
   let maxRunCount = 0
+  let maxInternalThinRunCount = 0
   const xStep = Math.max(1, Math.floor(width / MAX_SAMPLE_LINES))
 
   for (let x = 0; x < width; x += xStep) {
+    const runLengths: number[] = []
     let runStart = 0
-    let runCount = 1
     let current = pixelKey(data, x * 4)
     for (let y = 1; y < height; y++) {
       const key = pixelKey(data, (y * width + x) * 4)
       if (key === current) continue
-      addRun(histogram, y - runStart)
-      runCount++
+      const length = y - runStart
+      addRun(histogram, length)
+      runLengths.push(length)
       runStart = y
       current = key
     }
-    addRun(histogram, height - runStart)
-    maxRunCount = Math.max(maxRunCount, runCount)
+    const finalLength = height - runStart
+    addRun(histogram, finalLength)
+    runLengths.push(finalLength)
+    maxRunCount = Math.max(maxRunCount, countCellRuns(runLengths))
+    maxInternalThinRunCount = Math.max(maxInternalThinRunCount, countInternalThinRuns(runLengths))
   }
 
-  return { histogram, maxRunCount }
+  return { histogram, maxRunCount, maxInternalThinRunCount }
 }
 
-function estimateCells(limit: number, step: number, maxRunCount: number): number {
+function estimateCells(summary: AxisRunSummary, limit: number, step: number): number {
+  if (summary.maxInternalThinRunCount >= summary.maxRunCount * 0.5) return summary.maxRunCount
+
   const geometricCells = Math.round(limit / step)
   const edgeCropLimit = Math.ceil(limit / step) + 1
-  return Math.max(geometricCells, Math.min(maxRunCount, edgeCropLimit))
+  return Math.max(geometricCells, Math.min(summary.maxRunCount, edgeCropLimit))
 }
 
 function estimateAxisStep(summary: AxisRunSummary, limit: number): AxisEstimate | null {
@@ -115,7 +146,7 @@ function estimateAxisStep(summary: AxisRunSummary, limit: number): AxisEstimate 
     ) {
       best = {
         step,
-        cells: estimateCells(limit, step, summary.maxRunCount),
+        cells: estimateCells(summary, limit, step),
         confidence: divisibleConfidence,
       }
       bestDivisibleConfidence = Math.max(bestDivisibleConfidence, divisibleConfidence)

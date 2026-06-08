@@ -10,7 +10,7 @@ Build an objective loop for model-generated "pixel art" and package demo images,
 | ------------------ | ----------------------------------------------------------- | ----: |
 | Model examples     | `/Users/sangmin/sources/mono-pix/src/assets/examples`       |     5 |
 | Demo examples      | `examples/`                                                 |    11 |
-| Synthetic fixtures | generated under `.tmp/snap-quality-eval-*/synthetic-source` |    12 |
+| Synthetic fixtures | generated under `.tmp/snap-quality-eval-*/synthetic-source` |    13 |
 
 The model examples use the prompt `탑뷰 도트 중세 판타지 용사 파티의 모험 픽셀아트 그려줘`.
 
@@ -29,6 +29,7 @@ The model examples use the prompt `탑뷰 도트 중세 판타지 용사 파티�
 | Output coverage     | original-size output keeps less than `90%` of input on either axis | Flags snap results that visually shrink too far                     |
 | Transparent padding | known-grid transparent-border sprite misses its expected grid      | Prevents transparent margins from being mistaken for coarse cells   |
 | Partial edge crop   | known-grid source with cropped edge cells misses its expected grid | Prevents partial edge cells from shrinking the visible source grid  |
+| Editor grid gutters | known-grid source with internal 1px gutters misses expected grid   | Prevents editor grid overlays from being counted as source cells    |
 | Palette budget      | snapped RGB palette exceeds `colorVariety + 1`                     | Catches accidental color explosion while allowing transparency      |
 | Palette retention   | limited-palette input keeps less than `95%` of its RGB colors      | Catches color collapse on already-indexed or hand-authored sprites  |
 | Boundary evidence   | inferred boundaries are weaker than `0.6x` average axis gradient   | Flags weak or hallucinated grids                                    |
@@ -61,6 +62,8 @@ The model examples use the prompt `탑뷰 도트 중세 판타지 용사 파티�
 19. Changed square-grid candidate selection to prefer high-confidence uniform-cell grids over much coarser exact-transition grids.
 20. Added a partial-edge-crop known-grid synthetic fixture.
 21. Changed uniform-cell detection to use visible run counts when edge cells are partially cropped.
+22. Added an editor-grid-gutter known-grid synthetic fixture.
+23. Changed uniform-cell detection to ignore internal 1px separator runs when counting source cells.
 
 ## Rejected Experiments
 
@@ -232,8 +235,23 @@ Partial-edge-crop check:
 | ------------------------------------ | ------- | ------- | -------- | ---------: | -------- |
 | `partial-edge-crop-48x32-scale8.png` | `46x30` | `48x32` | `48x32`  |   `4 -> 0` | `review` |
 
+After editor-gutter recovery:
+
+| Scope              | Status counts                 | Objective mean | Repeat gap total | Expected-grid gap total | Output coverage mean |
+| ------------------ | ----------------------------- | -------------: | ---------------: | ----------------------: | -------------------: |
+| Overall            | `0 fail / 22 pass / 7 review` |      `38.9565` |              `0` |                     `0` |             `0.9634` |
+| Model examples     | `0 fail / 4 pass / 1 review`  |      `45.2232` |              `0` |                     `0` |             `0.9661` |
+| Demo examples      | `0 fail / 9 pass / 2 review`  |      `24.3586` |              `0` |                     `0` |             `0.9688` |
+| Synthetic fixtures | `0 fail / 9 pass / 4 review`  |      `48.8983` |              `0` |                     `0` |             `0.9578` |
+
+Editor-gutter check:
+
+| Fixture                               | Before  | After   | Expected | Gap change | Status   |
+| ------------------------------------- | ------- | ------- | -------- | ---------: | -------- |
+| `editor-grid-gutter-48x32-scale6.png` | `57x39` | `48x32` | `48x32`  |  `16 -> 0` | `review` |
+
 Final detailed output is written by:
 
 ```bash
-npm run eval:snap-quality -- --out-dir .tmp/snap-quality-eval-partial-edge-crop
+npm run eval:snap-quality -- --out-dir .tmp/snap-quality-eval-editor-gutter
 ```

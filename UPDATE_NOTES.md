@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+## 1.3.7
+
+- Improved `snap()` on pixel art screenshots with internal 1px editor grid gutters by counting only cell-like runs.
+- Added an editor-grid-gutter synthetic fixture with a known `48x32` grid.
+
 ## 1.3.6
 
 - Improved `snap()` on exact scaled pixel art whose edge cells were partially cropped by using visible run counts to preserve the source grid.
