@@ -51,6 +51,19 @@ function makeSolid(width, height, value) {
   return { data, width, height }
 }
 
+function makePatchedSolid(width, height, value, patch) {
+  const image = makeSolid(width, height, value)
+  for (let y = patch.top; y < patch.bottom; y++) {
+    for (let x = patch.left; x < patch.right; x++) {
+      const i = (y * width + x) * 4
+      image.data[i] = patch.value
+      image.data[i + 1] = patch.value
+      image.data[i + 2] = patch.value
+    }
+  }
+  return image
+}
+
 function makeTransparentBox(width, height, left, top, right, bottom) {
   const data = new Uint8ClampedArray(width * height * 4)
   for (let y = top; y < bottom; y++) {
@@ -104,6 +117,22 @@ test('line edge ratio stays near one when the snapped output is identical', asyn
     stats.lineEdgeRatio > 0.99 && stats.lineEdgeRatio < 1.01,
     `expected line edge ratio near 1, got ${stats.lineEdgeRatio}`,
   )
+})
+
+test('tile preservation catches small localized loss below pixel p95', async () => {
+  const source = makeSolid(64, 64, 0)
+  const output = makePatchedSolid(64, 64, 0, {
+    bottom: 8,
+    left: 0,
+    right: 8,
+    top: 0,
+    value: 255,
+  })
+  const stats = await preservationStats(source, output)
+
+  assert.equal(stats.p95, 0)
+  assert.equal(stats.tileMaxMae, 255)
+  assert.equal(stats.tileP95Mae, 0)
 })
 
 test('edge overlap distinguishes preserved and removed line positions', () => {
@@ -845,4 +874,76 @@ test('quality classification reviews one-axis spurious cell transitions', () => 
   assert.equal(result.status, 'review')
   assert.ok(result.issues.some((issue) => issue.code === 'axis-spurious-cell-transitions'))
   assert.ok(!result.issues.some((issue) => issue.code === 'spurious-cell-transitions'))
+})
+
+test('quality classification reviews regional preservation loss', () => {
+  const result = classifyMetrics({
+    alphaMae: 0,
+    alphaBBoxDriftPx: 0,
+    alphaBBoxDriftRatio: 0,
+    alphaCoverageRatio: 1,
+    alphaMaskIou: 1,
+    alphaP95: 0,
+    aspectError: 0,
+    axisEdgeAlignmentMin: 1,
+    axisPhaseAlignmentMin: 1,
+    cellMae: 0,
+    cellColorDominance: 1,
+    cellColorDominanceP05: 1,
+    cellColorErrorMax: 0,
+    cellColorErrorMean: 0,
+    cellColorErrorP95: 0,
+    cellTransitionAxisRetentionMin: 1,
+    cellTransitionAxisSpuriousRatioMax: 0,
+    cellTransitionErrorMean: 0,
+    cellTransitionRetention: 1,
+    cellTransitionSpuriousRatio: 0,
+    cellTransitionXRetention: 1,
+    cellTransitionXSpuriousRatio: 0,
+    cellTransitionYRetention: 1,
+    cellTransitionYSpuriousRatio: 0,
+    cols: 32,
+    contrastRatio: 1,
+    determinismGridGap: 0,
+    determinismVisualMae: 0,
+    determinismVisualP95: 0,
+    edgeAlignment: 1,
+    edgeJaccard: 1,
+    edgeRecall: 1,
+    edgeSpuriousRatio: 0,
+    expectedGridGap: 0,
+    lineEdgeRatio: 1,
+    lowPaletteRetention: 1,
+    outputCellMae: 0,
+    outputCellTransitionCount: 64,
+    outputCellTransitionXCount: 32,
+    outputCellTransitionYCount: 32,
+    outputCoverage: 1,
+    outputColorDominance: 0.5,
+    outputPaletteColorCount: 32,
+    outputPaletteUtilization: 1,
+    outputRgbPaletteOverage: 0,
+    paletteDominanceDelta: 0,
+    paletteUtilizationGap: 0,
+    paletteUtilizationTarget: 32,
+    preservationMae: 5,
+    preservationP95: 0,
+    repeatGridGap: 0,
+    repeatVisualMae: 0,
+    repeatVisualP95: 0,
+    rows: 32,
+    shortAxisCells: 32,
+    sourceCellSize: 8,
+    sourceCellTransitionCount: 64,
+    sourceCellTransitionXCount: 32,
+    sourceCellTransitionYCount: 32,
+    squareCellError: 0,
+    stabilityDepthGap: 0,
+    tilePreservationMaxMae: 60,
+    tilePreservationP95Mae: 0,
+  })
+
+  assert.equal(result.status, 'review')
+  assert.ok(result.issues.some((issue) => issue.code === 'regional-preservation-loss'))
+  assert.ok(!result.issues.some((issue) => issue.code === 'localized-preservation-loss'))
 })

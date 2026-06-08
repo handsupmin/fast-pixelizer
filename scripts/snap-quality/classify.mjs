@@ -279,6 +279,20 @@ export function classifyMetrics(metrics) {
     )
   }
   if (
+    metrics.tilePreservationMaxMae > QUALITY_RULES.maxTilePreservationMae ||
+    metrics.tilePreservationP95Mae > QUALITY_RULES.maxTilePreservationP95
+  ) {
+    issues.push(
+      issue(
+        'review',
+        'regional-preservation-loss',
+        `tile preservation max ${formatNum(metrics.tilePreservationMaxMae)}, p95 ${formatNum(
+          metrics.tilePreservationP95Mae,
+        )}`,
+      ),
+    )
+  }
+  if (
     metrics.alphaMae > QUALITY_RULES.maxAlphaMae ||
     metrics.alphaP95 > QUALITY_RULES.maxAlphaP95
   ) {
@@ -368,6 +382,8 @@ export function objective(metrics) {
     metrics.cellMae +
     metrics.preservationMae +
     metrics.preservationP95 * 0.25 +
+    Math.max(0, metrics.tilePreservationMaxMae - QUALITY_RULES.maxTilePreservationMae) * 0.5 +
+    Math.max(0, metrics.tilePreservationP95Mae - QUALITY_RULES.maxTilePreservationP95) * 0.75 +
     metrics.alphaMae +
     metrics.alphaP95 * 0.1 +
     Math.abs(1 - metrics.alphaCoverageRatio) * 80 +

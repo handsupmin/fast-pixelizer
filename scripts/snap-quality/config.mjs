@@ -32,6 +32,8 @@ export const QUALITY_RULES = {
   highCellMae: 18,
   maxPreservationMae: 38,
   maxPreservationP95: 86,
+  maxTilePreservationMae: 40,
+  maxTilePreservationP95: 35,
   maxAlphaMae: 8,
   maxAlphaP95: 40,
   minAlphaCoverageRatio: 0.98,

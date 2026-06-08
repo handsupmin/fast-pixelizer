@@ -198,9 +198,27 @@ function lumaStats(data, width, height) {
   return { mean, stdDev: count > 0 ? Math.sqrt(Math.max(0, sumSq / count - mean * mean)) : 0 }
 }
 
+function percentile(sortedValues, quantile) {
+  return sortedValues.length > 0
+    ? sortedValues[Math.min(sortedValues.length - 1, Math.floor(sortedValues.length * quantile))]
+    : 0
+}
+
+function tilePreservationValues(tileSums, tileCounts) {
+  const values = []
+  for (let tile = 0; tile < tileSums.length; tile++) {
+    if (tileCounts[tile] > 0) values.push(tileSums[tile] / tileCounts[tile])
+  }
+  values.sort((a, b) => a - b)
+  return values
+}
+
 export async function preservationStats(input, result, options = {}) {
   const resized = await resizeToInput(result, input)
   const stride = Math.max(1, Math.floor((input.width * input.height) / MAX_METRIC_SAMPLES))
+  const tileGrid = options.tileGrid ?? 8
+  const tileSums = new Float64Array(tileGrid * tileGrid)
+  const tileCounts = new Uint32Array(tileGrid * tileGrid)
   const errors = []
   const alphaErrors = []
   let sum = 0
@@ -209,6 +227,8 @@ export async function preservationStats(input, result, options = {}) {
   let alphaCount = 0
 
   for (let pixel = 0; pixel < input.width * input.height; pixel += stride) {
+    const x = pixel % input.width
+    const y = Math.floor(pixel / input.width)
     const i = pixel * 4
     let pixelError = 0
     for (let ch = 0; ch < 3; ch++) {
@@ -218,6 +238,11 @@ export async function preservationStats(input, result, options = {}) {
       count++
     }
     const alphaError = Math.abs(input.data[i + 3] - resized[i + 3])
+    const tileX = Math.min(tileGrid - 1, Math.floor((x * tileGrid) / input.width))
+    const tileY = Math.min(tileGrid - 1, Math.floor((y * tileGrid) / input.height))
+    const tile = tileY * tileGrid + tileX
+    tileSums[tile] += pixelError / 3
+    tileCounts[tile]++
     alphaSum += alphaError
     alphaCount++
     errors.push(pixelError / 3)
@@ -226,8 +251,7 @@ export async function preservationStats(input, result, options = {}) {
 
   errors.sort((a, b) => a - b)
   alphaErrors.sort((a, b) => a - b)
-  const p95Index = Math.min(errors.length - 1, Math.floor(errors.length * 0.95))
-  const alphaP95Index = Math.min(alphaErrors.length - 1, Math.floor(alphaErrors.length * 0.95))
+  const tileValues = tilePreservationValues(tileSums, tileCounts)
   const inputLuma = lumaStats(input.data, input.width, input.height)
   const outputLuma = lumaStats(resized, input.width, input.height)
   const inputEdge = meanAxisGradient(input)
@@ -241,9 +265,11 @@ export async function preservationStats(input, result, options = {}) {
 
   return {
     mae: count > 0 ? sum / count : 0,
-    p95: errors.length > 0 ? errors[p95Index] : 0,
+    p95: percentile(errors, 0.95),
+    tileMaxMae: tileValues.length > 0 ? tileValues[tileValues.length - 1] : 0,
+    tileP95Mae: percentile(tileValues, 0.95),
     alphaMae: alphaCount > 0 ? alphaSum / alphaCount : 0,
-    alphaP95: alphaErrors.length > 0 ? alphaErrors[alphaP95Index] : 0,
+    alphaP95: percentile(alphaErrors, 0.95),
     alphaCoverageRatio: alphaMask.alphaCoverageRatio,
     alphaMaskIou: alphaMask.alphaMaskIou,
     alphaBBoxDriftPx: alphaMask.alphaBBoxDriftPx,
