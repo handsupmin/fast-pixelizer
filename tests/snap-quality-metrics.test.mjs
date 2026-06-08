@@ -6,6 +6,7 @@ import { classifyMetrics } from '../scripts/snap-quality/classify.mjs'
 import { cellColorDominanceMetrics } from '../scripts/snap-quality/cell-dominance.mjs'
 import { edgeOverlapStats } from '../scripts/snap-quality/edge-overlap.mjs'
 import { gridBoundarySignals, preservationStats } from '../scripts/snap-quality/metrics.mjs'
+import { paletteDominanceMetrics } from '../scripts/snap-quality/palette-dominance.mjs'
 
 function makeVerticalStripes(width, height, stripeWidth) {
   const data = new Uint8ClampedArray(width * height * 4)
@@ -136,6 +137,18 @@ test('cell color error tracks representative source cell color drift', () => {
   )
 })
 
+test('palette dominance detects output color collapse beyond source dominance', () => {
+  const input = makeChecker(64, 64, 8)
+  const collapsed = makeSolid(8, 8, 0)
+  const preserved = paletteDominanceMetrics(input, makeChecker(8, 8, 1))
+  const drifted = paletteDominanceMetrics(input, collapsed)
+
+  assert.equal(preserved.outputColorDominance, 0.5)
+  assert.equal(preserved.paletteDominanceDelta, 0)
+  assert.equal(drifted.outputColorDominance, 1)
+  assert.equal(drifted.paletteDominanceDelta, 0.5)
+})
+
 test('quality classification fails when repeat snap changes visuals', () => {
   const result = classifyMetrics({
     alphaMae: 0,
@@ -167,7 +180,9 @@ test('quality classification fails when repeat snap changes visuals', () => {
     lowPaletteRetention: 1,
     outputCellMae: 0,
     outputCoverage: 1,
+    outputColorDominance: 0.5,
     outputRgbPaletteOverage: 0,
+    paletteDominanceDelta: 0,
     preservationMae: 0,
     preservationP95: 0,
     repeatGridGap: 0,
@@ -215,7 +230,9 @@ test('quality classification fails when same input snap is visually non-determin
     lowPaletteRetention: 1,
     outputCellMae: 0,
     outputCoverage: 1,
+    outputColorDominance: 0.5,
     outputRgbPaletteOverage: 0,
+    paletteDominanceDelta: 0,
     preservationMae: 0,
     preservationP95: 0,
     repeatGridGap: 0,
@@ -263,7 +280,9 @@ test('quality classification reviews weak edge map overlap', () => {
     lowPaletteRetention: 1,
     outputCellMae: 0,
     outputCoverage: 1,
+    outputColorDominance: 0.5,
     outputRgbPaletteOverage: 0,
+    paletteDominanceDelta: 0,
     preservationMae: 0,
     preservationP95: 0,
     repeatGridGap: 0,
@@ -313,7 +332,9 @@ test('quality classification reviews alpha silhouette drift', () => {
     lowPaletteRetention: 1,
     outputCellMae: 0,
     outputCoverage: 1,
+    outputColorDominance: 0.5,
     outputRgbPaletteOverage: 0,
+    paletteDominanceDelta: 0,
     preservationMae: 0,
     preservationP95: 0,
     repeatGridGap: 0,
@@ -363,7 +384,9 @@ test('quality classification reviews cell representative color drift', () => {
     lowPaletteRetention: 1,
     outputCellMae: 0,
     outputCoverage: 1,
+    outputColorDominance: 0.5,
     outputRgbPaletteOverage: 0,
+    paletteDominanceDelta: 0,
     preservationMae: 0,
     preservationP95: 0,
     repeatGridGap: 0,
@@ -378,4 +401,54 @@ test('quality classification reviews cell representative color drift', () => {
 
   assert.equal(result.status, 'review')
   assert.ok(result.issues.some((issue) => issue.code === 'cell-color-drift'))
+})
+
+test('quality classification reviews palette dominance collapse', () => {
+  const result = classifyMetrics({
+    alphaMae: 0,
+    alphaBBoxDriftPx: 0,
+    alphaBBoxDriftRatio: 0,
+    alphaCoverageRatio: 1,
+    alphaMaskIou: 1,
+    alphaP95: 0,
+    aspectError: 0,
+    axisEdgeAlignmentMin: 1,
+    axisPhaseAlignmentMin: 1,
+    cellMae: 0,
+    cellColorDominance: 1,
+    cellColorDominanceP05: 1,
+    cellColorErrorMax: 0,
+    cellColorErrorMean: 0,
+    cellColorErrorP95: 0,
+    cols: 32,
+    contrastRatio: 1,
+    determinismGridGap: 0,
+    determinismVisualMae: 0,
+    determinismVisualP95: 0,
+    edgeAlignment: 1,
+    edgeJaccard: 1,
+    edgeRecall: 1,
+    edgeSpuriousRatio: 0,
+    expectedGridGap: 0,
+    lineEdgeRatio: 1,
+    lowPaletteRetention: 1,
+    outputCellMae: 0,
+    outputCoverage: 1,
+    outputColorDominance: 0.9,
+    outputRgbPaletteOverage: 0,
+    paletteDominanceDelta: 0.3,
+    preservationMae: 0,
+    preservationP95: 0,
+    repeatGridGap: 0,
+    repeatVisualMae: 0,
+    repeatVisualP95: 0,
+    rows: 32,
+    shortAxisCells: 32,
+    sourceCellSize: 8,
+    squareCellError: 0,
+    stabilityDepthGap: 0,
+  })
+
+  assert.equal(result.status, 'review')
+  assert.ok(result.issues.some((issue) => issue.code === 'palette-dominance-collapse'))
 })

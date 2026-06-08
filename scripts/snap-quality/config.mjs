@@ -38,6 +38,8 @@ export const QUALITY_RULES = {
   maxOutputCellMae: 0.01,
   maxOutputSquareCellError: 0.001,
   maxOutputRgbPaletteOverage: 0,
+  maxOutputColorDominance: 0.65,
+  maxPaletteDominanceDelta: 0.2,
   minLowPaletteRetention: 0.95,
   minOutputCoverage: 0.9,
   minContrastRatio: 0.45,

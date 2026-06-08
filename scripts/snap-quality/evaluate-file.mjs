@@ -6,6 +6,7 @@ import { classifyMetrics, formatNum, objective } from './classify.mjs'
 import { cellColorDominanceMetrics } from './cell-dominance.mjs'
 import { cellColorErrorMetrics } from './cell-color-error.mjs'
 import { loadImage, writePng } from './image-io.mjs'
+import { paletteDominanceMetrics } from './palette-dominance.mjs'
 import {
   cellUniformityMetrics,
   gridBoundarySignals,
@@ -85,8 +86,11 @@ function toItem({ dataset, expected, input, metrics, name, original, resized, un
     expectedGridGap: metrics.expectedGridGap,
     inputColorCount: uniqueColorCount(input),
     inputRgbColorCount: metrics.inputRgbColorCount,
+    inputColorDominance: formatNum(metrics.inputColorDominance),
     outputColorCount: uniqueColorCount(resized.result),
     outputRgbColorCount: metrics.outputRgbColorCount,
+    outputColorDominance: formatNum(metrics.outputColorDominance),
+    paletteDominanceDelta: formatNum(metrics.paletteDominanceDelta),
     outputRgbPaletteOverage: metrics.outputRgbPaletteOverage,
     lowPaletteRetention: formatNum(metrics.lowPaletteRetention),
     snapOriginalMs: formatNum(original.durationMs),
@@ -126,6 +130,7 @@ async function buildMetrics(input, expected, snapshots, colorVariety) {
   const deterministicPreserve = await preservationStats(original.result, deterministicOriginal)
   const inputRgbColorCount = uniqueRgbColorCount(input)
   const outputRgbColorCount = uniqueRgbColorCount(resized.result)
+  const paletteDominance = paletteDominanceMetrics(input, resized.result)
 
   return {
     metrics: {
@@ -171,6 +176,9 @@ async function buildMetrics(input, expected, snapshots, colorVariety) {
       squareCellError: Math.abs(original.result.width / cols / (original.result.height / rows) - 1),
       outputCoverage: outputCoverage(input, original.result),
       outputRgbPaletteOverage: Math.max(0, outputRgbColorCount - (colorVariety + 1)),
+      inputColorDominance: paletteDominance.inputColorDominance,
+      outputColorDominance: paletteDominance.outputColorDominance,
+      paletteDominanceDelta: paletteDominance.paletteDominanceDelta,
       inputRgbColorCount,
       outputRgbColorCount,
       lowPaletteRetention: lowPaletteRetention(

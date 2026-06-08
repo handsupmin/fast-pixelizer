@@ -94,6 +94,20 @@ export function classifyMetrics(metrics) {
       ),
     )
   }
+  if (
+    metrics.outputColorDominance > QUALITY_RULES.maxOutputColorDominance &&
+    metrics.paletteDominanceDelta > QUALITY_RULES.maxPaletteDominanceDelta
+  ) {
+    issues.push(
+      issue(
+        'review',
+        'palette-dominance-collapse',
+        `output dominant color ${formatNum(metrics.outputColorDominance)}, delta ${formatNum(
+          metrics.paletteDominanceDelta,
+        )}`,
+      ),
+    )
+  }
   if (metrics.lowPaletteRetention < QUALITY_RULES.minLowPaletteRetention) {
     issues.push(
       issue(
@@ -295,6 +309,9 @@ export function objective(metrics) {
     Math.max(0, metrics.alphaBBoxDriftRatio - QUALITY_RULES.maxAlphaBBoxDriftRatio) * 200 +
     metrics.outputCellMae * 500 +
     metrics.outputRgbPaletteOverage * 50 +
+    Math.max(0, metrics.outputColorDominance - QUALITY_RULES.maxOutputColorDominance) *
+      Math.max(0, metrics.paletteDominanceDelta - QUALITY_RULES.maxPaletteDominanceDelta) *
+      80 +
     Math.max(0, QUALITY_RULES.minLowPaletteRetention - metrics.lowPaletteRetention) * 50 +
     Math.max(0, QUALITY_RULES.minOutputCoverage - metrics.outputCoverage) * 50 +
     Math.max(0, 1 - metrics.edgeAlignment) * 25 +
