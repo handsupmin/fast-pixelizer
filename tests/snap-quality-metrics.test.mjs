@@ -198,10 +198,13 @@ test('cell transitions distinguish retained, removed, and spurious boundaries', 
   assert.equal(retained.cellTransitionRetention, 1)
   assert.equal(retained.cellTransitionSpuriousRatio, 0)
   assert.equal(retained.cellTransitionErrorMean, 0)
+  assert.equal(retained.cellTransitionAxisRetentionMin, 1)
+  assert.equal(retained.cellTransitionAxisSpuriousRatioMax, 0)
   assert.ok(removed.cellTransitionRetention < 0.01)
   assert.equal(removed.outputCellTransitionCount, 0)
   assert.equal(spurious.sourceCellTransitionCount, 0)
   assert.equal(spurious.cellTransitionSpuriousRatio, 1)
+  assert.equal(spurious.cellTransitionAxisSpuriousRatioMax, 1)
 })
 
 test('quality classification fails when repeat snap changes visuals', () => {
@@ -702,4 +705,144 @@ test('quality classification reviews spurious cell transitions', () => {
 
   assert.equal(result.status, 'review')
   assert.ok(result.issues.some((issue) => issue.code === 'spurious-cell-transitions'))
+})
+
+test('quality classification reviews one-axis cell transition loss', () => {
+  const result = classifyMetrics({
+    alphaMae: 0,
+    alphaBBoxDriftPx: 0,
+    alphaBBoxDriftRatio: 0,
+    alphaCoverageRatio: 1,
+    alphaMaskIou: 1,
+    alphaP95: 0,
+    aspectError: 0,
+    axisEdgeAlignmentMin: 1,
+    axisPhaseAlignmentMin: 1,
+    cellMae: 0,
+    cellColorDominance: 1,
+    cellColorDominanceP05: 1,
+    cellColorErrorMax: 0,
+    cellColorErrorMean: 0,
+    cellColorErrorP95: 0,
+    cellTransitionAxisRetentionMin: 0.4,
+    cellTransitionAxisSpuriousRatioMax: 0,
+    cellTransitionErrorMean: 20,
+    cellTransitionRetention: 0.8,
+    cellTransitionSpuriousRatio: 0,
+    cellTransitionXRetention: 0.4,
+    cellTransitionXSpuriousRatio: 0,
+    cellTransitionYRetention: 1,
+    cellTransitionYSpuriousRatio: 0,
+    cols: 32,
+    contrastRatio: 1,
+    determinismGridGap: 0,
+    determinismVisualMae: 0,
+    determinismVisualP95: 0,
+    edgeAlignment: 1,
+    edgeJaccard: 1,
+    edgeRecall: 1,
+    edgeSpuriousRatio: 0,
+    expectedGridGap: 0,
+    lineEdgeRatio: 1,
+    lowPaletteRetention: 1,
+    outputCellMae: 0,
+    outputCellTransitionCount: 64,
+    outputCellTransitionXCount: 32,
+    outputCellTransitionYCount: 32,
+    outputCoverage: 1,
+    outputColorDominance: 0.5,
+    outputPaletteColorCount: 32,
+    outputPaletteUtilization: 1,
+    outputRgbPaletteOverage: 0,
+    paletteDominanceDelta: 0,
+    paletteUtilizationGap: 0,
+    paletteUtilizationTarget: 32,
+    preservationMae: 0,
+    preservationP95: 0,
+    repeatGridGap: 0,
+    repeatVisualMae: 0,
+    repeatVisualP95: 0,
+    rows: 32,
+    shortAxisCells: 32,
+    sourceCellSize: 8,
+    sourceCellTransitionCount: 64,
+    sourceCellTransitionXCount: 32,
+    sourceCellTransitionYCount: 32,
+    squareCellError: 0,
+    stabilityDepthGap: 0,
+  })
+
+  assert.equal(result.status, 'review')
+  assert.ok(result.issues.some((issue) => issue.code === 'axis-cell-transition-loss'))
+  assert.ok(!result.issues.some((issue) => issue.code === 'cell-transition-loss'))
+})
+
+test('quality classification reviews one-axis spurious cell transitions', () => {
+  const result = classifyMetrics({
+    alphaMae: 0,
+    alphaBBoxDriftPx: 0,
+    alphaBBoxDriftRatio: 0,
+    alphaCoverageRatio: 1,
+    alphaMaskIou: 1,
+    alphaP95: 0,
+    aspectError: 0,
+    axisEdgeAlignmentMin: 1,
+    axisPhaseAlignmentMin: 1,
+    cellMae: 0,
+    cellColorDominance: 1,
+    cellColorDominanceP05: 1,
+    cellColorErrorMax: 0,
+    cellColorErrorMean: 0,
+    cellColorErrorP95: 0,
+    cellTransitionAxisRetentionMin: 1,
+    cellTransitionAxisSpuriousRatioMax: 0.6,
+    cellTransitionErrorMean: 20,
+    cellTransitionRetention: 1,
+    cellTransitionSpuriousRatio: 0.3,
+    cellTransitionXRetention: 1,
+    cellTransitionXSpuriousRatio: 0.6,
+    cellTransitionYRetention: 1,
+    cellTransitionYSpuriousRatio: 0,
+    cols: 32,
+    contrastRatio: 1,
+    determinismGridGap: 0,
+    determinismVisualMae: 0,
+    determinismVisualP95: 0,
+    edgeAlignment: 1,
+    edgeJaccard: 1,
+    edgeRecall: 1,
+    edgeSpuriousRatio: 0,
+    expectedGridGap: 0,
+    lineEdgeRatio: 1,
+    lowPaletteRetention: 1,
+    outputCellMae: 0,
+    outputCellTransitionCount: 64,
+    outputCellTransitionXCount: 32,
+    outputCellTransitionYCount: 32,
+    outputCoverage: 1,
+    outputColorDominance: 0.5,
+    outputPaletteColorCount: 32,
+    outputPaletteUtilization: 1,
+    outputRgbPaletteOverage: 0,
+    paletteDominanceDelta: 0,
+    paletteUtilizationGap: 0,
+    paletteUtilizationTarget: 32,
+    preservationMae: 0,
+    preservationP95: 0,
+    repeatGridGap: 0,
+    repeatVisualMae: 0,
+    repeatVisualP95: 0,
+    rows: 32,
+    shortAxisCells: 32,
+    sourceCellSize: 8,
+    sourceCellTransitionCount: 64,
+    sourceCellTransitionXCount: 32,
+    sourceCellTransitionYCount: 32,
+    squareCellError: 0,
+    stabilityDepthGap: 0,
+  })
+
+  assert.equal(result.status, 'review')
+  assert.ok(result.issues.some((issue) => issue.code === 'axis-spurious-cell-transitions'))
+  assert.ok(!result.issues.some((issue) => issue.code === 'spurious-cell-transitions'))
 })

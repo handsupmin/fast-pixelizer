@@ -216,6 +216,20 @@ export function classifyMetrics(metrics) {
     )
   }
   if (
+    (metrics.sourceCellTransitionXCount >= QUALITY_RULES.minCellTransitionCount &&
+      metrics.cellTransitionXRetention < QUALITY_RULES.minCellTransitionRetention) ||
+    (metrics.sourceCellTransitionYCount >= QUALITY_RULES.minCellTransitionCount &&
+      metrics.cellTransitionYRetention < QUALITY_RULES.minCellTransitionRetention)
+  ) {
+    issues.push(
+      issue(
+        'review',
+        'axis-cell-transition-loss',
+        `min axis cell transition retention ${formatNum(metrics.cellTransitionAxisRetentionMin)}`,
+      ),
+    )
+  }
+  if (
     metrics.outputCellTransitionCount >= QUALITY_RULES.minCellTransitionCount &&
     metrics.cellTransitionSpuriousRatio > QUALITY_RULES.maxCellTransitionSpuriousRatio
   ) {
@@ -224,6 +238,22 @@ export function classifyMetrics(metrics) {
         'review',
         'spurious-cell-transitions',
         `cell transition spurious ratio ${formatNum(metrics.cellTransitionSpuriousRatio)}`,
+      ),
+    )
+  }
+  if (
+    (metrics.outputCellTransitionXCount >= QUALITY_RULES.minCellTransitionCount &&
+      metrics.cellTransitionXSpuriousRatio > QUALITY_RULES.maxCellTransitionSpuriousRatio) ||
+    (metrics.outputCellTransitionYCount >= QUALITY_RULES.minCellTransitionCount &&
+      metrics.cellTransitionYSpuriousRatio > QUALITY_RULES.maxCellTransitionSpuriousRatio)
+  ) {
+    issues.push(
+      issue(
+        'review',
+        'axis-spurious-cell-transitions',
+        `max axis cell transition spurious ratio ${formatNum(
+          metrics.cellTransitionAxisSpuriousRatioMax,
+        )}`,
       ),
     )
   }
@@ -359,11 +389,18 @@ export function objective(metrics) {
     Math.max(0, 1 - metrics.axisPhaseAlignmentMin) * 10 +
     Math.max(0, QUALITY_RULES.minCellColorDominance - metrics.cellColorDominance) * 120 +
     Math.max(0, QUALITY_RULES.minCellTransitionRetention - metrics.cellTransitionRetention) * 50 +
+    Math.max(0, QUALITY_RULES.minCellTransitionRetention - metrics.cellTransitionAxisRetentionMin) *
+      35 +
     Math.max(
       0,
       metrics.cellTransitionSpuriousRatio - QUALITY_RULES.maxCellTransitionSpuriousRatio,
     ) *
       40 +
+    Math.max(
+      0,
+      metrics.cellTransitionAxisSpuriousRatioMax - QUALITY_RULES.maxCellTransitionSpuriousRatio,
+    ) *
+      30 +
     metrics.cellTransitionErrorMean * 0.1 +
     Math.max(0, QUALITY_RULES.minSourceCellSize - metrics.sourceCellSize) * 500 +
     Math.max(0, metrics.shortAxisCells - QUALITY_RULES.maxShortAxisCells) * 10 +

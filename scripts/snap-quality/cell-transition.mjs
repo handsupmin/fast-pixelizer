@@ -48,56 +48,93 @@ function gridCellFeatures(grid) {
   return features
 }
 
+function createTransitionStats() {
+  return {
+    outputCount: 0,
+    outputWeight: 0,
+    pairs: 0,
+    retainedWeight: 0,
+    sourceCount: 0,
+    sourceWeight: 0,
+    spuriousWeight: 0,
+    transitionErrorSum: 0,
+  }
+}
+
+function accumulateTransition(stats, sourceDelta, outputDelta, minTransitionDelta) {
+  stats.transitionErrorSum += Math.abs(sourceDelta - outputDelta)
+  stats.pairs++
+
+  if (sourceDelta >= minTransitionDelta) {
+    stats.sourceCount++
+    stats.sourceWeight += sourceDelta
+    stats.retainedWeight += Math.min(outputDelta, sourceDelta)
+  }
+
+  if (outputDelta >= minTransitionDelta) {
+    stats.outputCount++
+    stats.outputWeight += outputDelta
+    if (sourceDelta < minTransitionDelta) stats.spuriousWeight += outputDelta
+  }
+}
+
+function finishTransitionStats(stats) {
+  return {
+    errorMean: stats.pairs > 0 ? stats.transitionErrorSum / stats.pairs : 0,
+    outputCount: stats.outputCount,
+    retention: stats.sourceWeight > 0 ? stats.retainedWeight / stats.sourceWeight : 1,
+    sourceCount: stats.sourceCount,
+    spuriousRatio: stats.outputWeight > 0 ? stats.spuriousWeight / stats.outputWeight : 0,
+  }
+}
+
 export function cellTransitionMetrics(input, grid, options = {}) {
   const minTransitionDelta = options.minTransitionDelta ?? 12
   const cols = grid.width
   const rows = grid.height
   const source = sourceCellFeatures(input, cols, rows)
   const output = gridCellFeatures(grid)
-  let sourceTransitionWeight = 0
-  let outputTransitionWeight = 0
-  let retainedTransitionWeight = 0
-  let spuriousTransitionWeight = 0
-  let transitionErrorSum = 0
-  let transitionCount = 0
-  let sourceCellTransitionCount = 0
-  let outputCellTransitionCount = 0
+  const allTransitions = createTransitionStats()
+  const xTransitions = createTransitionStats()
+  const yTransitions = createTransitionStats()
 
-  function accumulatePair(a, b) {
+  function accumulatePair(axisStats, a, b) {
     const sourceDelta = featureDifference(source, a * CHANNELS, source, b * CHANNELS)
     const outputDelta = featureDifference(output, a * CHANNELS, output, b * CHANNELS)
 
-    transitionErrorSum += Math.abs(sourceDelta - outputDelta)
-    transitionCount++
-
-    if (sourceDelta >= minTransitionDelta) {
-      sourceCellTransitionCount++
-      sourceTransitionWeight += sourceDelta
-      retainedTransitionWeight += Math.min(outputDelta, sourceDelta)
-    }
-
-    if (outputDelta >= minTransitionDelta) {
-      outputCellTransitionCount++
-      outputTransitionWeight += outputDelta
-      if (sourceDelta < minTransitionDelta) spuriousTransitionWeight += outputDelta
-    }
+    accumulateTransition(allTransitions, sourceDelta, outputDelta, minTransitionDelta)
+    accumulateTransition(axisStats, sourceDelta, outputDelta, minTransitionDelta)
   }
 
   for (let row = 0; row < rows; row++) {
     for (let col = 0; col < cols; col++) {
       const cell = row * cols + col
-      if (col + 1 < cols) accumulatePair(cell, cell + 1)
-      if (row + 1 < rows) accumulatePair(cell, cell + cols)
+      if (col + 1 < cols) accumulatePair(xTransitions, cell, cell + 1)
+      if (row + 1 < rows) accumulatePair(yTransitions, cell, cell + cols)
     }
   }
 
+  const all = finishTransitionStats(allTransitions)
+  const x = finishTransitionStats(xTransitions)
+  const y = finishTransitionStats(yTransitions)
+
   return {
-    cellTransitionErrorMean: transitionCount > 0 ? transitionErrorSum / transitionCount : 0,
-    cellTransitionRetention:
-      sourceTransitionWeight > 0 ? retainedTransitionWeight / sourceTransitionWeight : 1,
-    cellTransitionSpuriousRatio:
-      outputTransitionWeight > 0 ? spuriousTransitionWeight / outputTransitionWeight : 0,
-    outputCellTransitionCount,
-    sourceCellTransitionCount,
+    cellTransitionAxisRetentionMin: Math.min(x.retention, y.retention),
+    cellTransitionAxisSpuriousRatioMax: Math.max(x.spuriousRatio, y.spuriousRatio),
+    cellTransitionErrorMean: all.errorMean,
+    cellTransitionRetention: all.retention,
+    cellTransitionSpuriousRatio: all.spuriousRatio,
+    cellTransitionXErrorMean: x.errorMean,
+    cellTransitionXRetention: x.retention,
+    cellTransitionXSpuriousRatio: x.spuriousRatio,
+    cellTransitionYErrorMean: y.errorMean,
+    cellTransitionYRetention: y.retention,
+    cellTransitionYSpuriousRatio: y.spuriousRatio,
+    outputCellTransitionCount: all.outputCount,
+    outputCellTransitionXCount: x.outputCount,
+    outputCellTransitionYCount: y.outputCount,
+    sourceCellTransitionCount: all.sourceCount,
+    sourceCellTransitionXCount: x.sourceCount,
+    sourceCellTransitionYCount: y.sourceCount,
   }
 }
