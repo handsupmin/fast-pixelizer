@@ -339,6 +339,21 @@ export function classifyMetrics(metrics) {
     )
   }
   if (
+    metrics.inputChromaMean >= QUALITY_RULES.minChromaMeanForRatio &&
+    (metrics.chromaRatio < QUALITY_RULES.minChromaRatio ||
+      metrics.chromaRatio > QUALITY_RULES.maxChromaRatio)
+  ) {
+    issues.push(
+      issue(
+        'review',
+        'chroma-drift',
+        `chroma ratio ${formatNum(metrics.chromaRatio)} (${formatNum(
+          metrics.inputChromaMean,
+        )}->${formatNum(metrics.outputChromaMean)})`,
+      ),
+    )
+  }
+  if (
     metrics.lineEdgeRatio < QUALITY_RULES.minLineEdgeRatio ||
     metrics.lineEdgeRatio > QUALITY_RULES.maxLineEdgeRatio
   ) {
@@ -422,6 +437,8 @@ export function objective(metrics) {
     Math.max(0, metrics.shortAxisCells - QUALITY_RULES.maxShortAxisCells) * 10 +
     Math.max(0, metrics.sourceCellSize - QUALITY_RULES.maxSourceCellSizeReview) * 2 +
     Math.abs(1 - metrics.contrastRatio) * 10 +
+    Math.max(0, QUALITY_RULES.minChromaRatio - metrics.chromaRatio) * 40 +
+    Math.max(0, metrics.chromaRatio - QUALITY_RULES.maxChromaRatio) * 35 +
     Math.abs(1 - metrics.lineEdgeRatio) * 8 +
     Math.max(0, QUALITY_RULES.minEdgeRecall - metrics.edgeRecall) * 60 +
     Math.max(0, metrics.edgeSpuriousRatio - QUALITY_RULES.maxEdgeSpuriousRatio) * 40 +

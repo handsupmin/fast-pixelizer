@@ -135,6 +135,16 @@ test('tile preservation catches small localized loss below pixel p95', async () 
   assert.equal(stats.tileP95Mae, 0)
 })
 
+test('chroma ratio detects desaturated colorful output', async () => {
+  const source = makeColorGrid(8, 8, 8)
+  const output = makeSolid(64, 64, 96)
+  const stats = await preservationStats(source, output)
+
+  assert.ok(stats.inputChromaMean > 8, `expected colorful source, got ${stats.inputChromaMean}`)
+  assert.equal(stats.outputChromaMean, 0)
+  assert.equal(stats.chromaRatio, 0)
+})
+
 test('edge overlap distinguishes preserved and removed line positions', () => {
   const image = makeChecker(64, 64, 8)
   const blank = makeSolid(64, 64, 127)
@@ -946,4 +956,78 @@ test('quality classification reviews regional preservation loss', () => {
   assert.equal(result.status, 'review')
   assert.ok(result.issues.some((issue) => issue.code === 'regional-preservation-loss'))
   assert.ok(!result.issues.some((issue) => issue.code === 'localized-preservation-loss'))
+})
+
+test('quality classification reviews chroma drift on colorful inputs', () => {
+  const result = classifyMetrics({
+    alphaMae: 0,
+    alphaBBoxDriftPx: 0,
+    alphaBBoxDriftRatio: 0,
+    alphaCoverageRatio: 1,
+    alphaMaskIou: 1,
+    alphaP95: 0,
+    aspectError: 0,
+    axisEdgeAlignmentMin: 1,
+    axisPhaseAlignmentMin: 1,
+    cellMae: 0,
+    cellColorDominance: 1,
+    cellColorDominanceP05: 1,
+    cellColorErrorMax: 0,
+    cellColorErrorMean: 0,
+    cellColorErrorP95: 0,
+    cellTransitionAxisRetentionMin: 1,
+    cellTransitionAxisSpuriousRatioMax: 0,
+    cellTransitionErrorMean: 0,
+    cellTransitionRetention: 1,
+    cellTransitionSpuriousRatio: 0,
+    cellTransitionXRetention: 1,
+    cellTransitionXSpuriousRatio: 0,
+    cellTransitionYRetention: 1,
+    cellTransitionYSpuriousRatio: 0,
+    chromaRatio: 0.25,
+    cols: 32,
+    contrastRatio: 1,
+    determinismGridGap: 0,
+    determinismVisualMae: 0,
+    determinismVisualP95: 0,
+    edgeAlignment: 1,
+    edgeJaccard: 1,
+    edgeRecall: 1,
+    edgeSpuriousRatio: 0,
+    expectedGridGap: 0,
+    inputChromaMean: 48,
+    lineEdgeRatio: 1,
+    lowPaletteRetention: 1,
+    outputCellMae: 0,
+    outputCellTransitionCount: 64,
+    outputCellTransitionXCount: 32,
+    outputCellTransitionYCount: 32,
+    outputChromaMean: 12,
+    outputCoverage: 1,
+    outputColorDominance: 0.5,
+    outputPaletteColorCount: 32,
+    outputPaletteUtilization: 1,
+    outputRgbPaletteOverage: 0,
+    paletteDominanceDelta: 0,
+    paletteUtilizationGap: 0,
+    paletteUtilizationTarget: 32,
+    preservationMae: 0,
+    preservationP95: 0,
+    repeatGridGap: 0,
+    repeatVisualMae: 0,
+    repeatVisualP95: 0,
+    rows: 32,
+    shortAxisCells: 32,
+    sourceCellSize: 8,
+    sourceCellTransitionCount: 64,
+    sourceCellTransitionXCount: 32,
+    sourceCellTransitionYCount: 32,
+    squareCellError: 0,
+    stabilityDepthGap: 0,
+    tilePreservationMaxMae: 0,
+    tilePreservationP95Mae: 0,
+  })
+
+  assert.equal(result.status, 'review')
+  assert.ok(result.issues.some((issue) => issue.code === 'chroma-drift'))
 })

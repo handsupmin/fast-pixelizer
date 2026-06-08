@@ -198,6 +198,19 @@ function lumaStats(data, width, height) {
   return { mean, stdDev: count > 0 ? Math.sqrt(Math.max(0, sumSq / count - mean * mean)) : 0 }
 }
 
+function chromaStats(data, width, height) {
+  const stride = Math.max(1, Math.floor((width * height) / MAX_METRIC_SAMPLES))
+  let sum = 0
+  let count = 0
+  for (let pixel = 0; pixel < width * height; pixel += stride) {
+    const i = pixel * 4
+    if (data[i + 3] === 0) continue
+    sum += Math.max(data[i], data[i + 1], data[i + 2]) - Math.min(data[i], data[i + 1], data[i + 2])
+    count++
+  }
+  return { mean: count > 0 ? sum / count : 0 }
+}
+
 function percentile(sortedValues, quantile) {
   return sortedValues.length > 0
     ? sortedValues[Math.min(sortedValues.length - 1, Math.floor(sortedValues.length * quantile))]
@@ -254,6 +267,8 @@ export async function preservationStats(input, result, options = {}) {
   const tileValues = tilePreservationValues(tileSums, tileCounts)
   const inputLuma = lumaStats(input.data, input.width, input.height)
   const outputLuma = lumaStats(resized, input.width, input.height)
+  const inputChroma = chromaStats(input.data, input.width, input.height)
+  const outputChroma = chromaStats(resized, input.width, input.height)
   const inputEdge = meanAxisGradient(input)
   const outputEdge = meanAxisGradient({ data: resized, width: input.width, height: input.height })
   const edgeOverlap = options.edgeOverlap
@@ -274,6 +289,9 @@ export async function preservationStats(input, result, options = {}) {
     alphaMaskIou: alphaMask.alphaMaskIou,
     alphaBBoxDriftPx: alphaMask.alphaBBoxDriftPx,
     alphaBBoxDriftRatio: alphaMask.alphaBBoxDriftRatio,
+    inputChromaMean: inputChroma.mean,
+    outputChromaMean: outputChroma.mean,
+    chromaRatio: inputChroma.mean > 0 ? outputChroma.mean / inputChroma.mean : 1,
     contrastRatio: inputLuma.stdDev > 0 ? outputLuma.stdDev / inputLuma.stdDev : 1,
     lineEdgeRatio: inputEdge > 0 ? outputEdge / inputEdge : 1,
     edgeRecall: edgeOverlap.edgeRecall,
