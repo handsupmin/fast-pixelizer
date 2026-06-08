@@ -1,5 +1,10 @@
 # Update Notes
 
+## Unreleased
+
+- Expanded snap quality eval with phase-alignment, alpha-preservation, and RGB palette-budget criteria.
+- Added a semi-transparent synthetic fixture with a known `48x32` grid.
+
 ## 1.3.3
 
 - Expanded `npm run eval:snap-quality` with synthetic fixtures for JPEG compression, non-integer scaling, and non-square scaled pixels.

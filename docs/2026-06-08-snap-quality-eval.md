@@ -10,7 +10,7 @@ Build an objective loop for model-generated "pixel art" and package demo images,
 | ------------------ | ----------------------------------------------------------- | ----: |
 | Model examples     | `/Users/sangmin/sources/mono-pix/src/assets/examples`       |     5 |
 | Demo examples      | `examples/`                                                 |    11 |
-| Synthetic fixtures | generated under `.tmp/snap-quality-eval-*/synthetic-source` |     8 |
+| Synthetic fixtures | generated under `.tmp/snap-quality-eval-*/synthetic-source` |     9 |
 
 The model examples use the prompt `탑뷰 도트 중세 판타지 용사 파티의 모험 픽셀아트 그려줘`.
 
@@ -26,9 +26,12 @@ The model examples use the prompt `탑뷰 도트 중세 판타지 용사 파티�
 | Deep stability      | a second re-snap of the original-size snapped output changes grid | Catches repeat-only fixes that fail one pass later                  |
 | Determinism         | two snaps of the same source disagree on grid size                | Catches non-deterministic detection                                 |
 | Output purity       | snapped output cells are not single-color or square               | Verifies the core promise of snap output                            |
+| Palette budget      | snapped RGB palette exceeds `colorVariety + 1`                    | Catches accidental color explosion while allowing transparency      |
 | Boundary evidence   | inferred boundaries are weaker than `0.6x` average axis gradient  | Flags weak or hallucinated grids                                    |
+| Phase alignment     | inferred boundaries score below `0.5` against nearby peaks        | Flags grids that are strong but shifted off the true lattice phase  |
 | Source disorder     | intra-cell MAE exceeds `18`                                       | Flags painterly/noisy cells inside the inferred grid                |
 | Preservation        | nearest-resized snap MAE exceeds `38` or p95 exceeds `86`         | Guards against losing too much source feel                          |
+| Alpha preservation  | alpha MAE exceeds `8` or p95 exceeds `40`                         | Guards transparent and semi-transparent sprites                     |
 | Contrast            | snapped contrast ratio falls outside `0.45-1.8`                   | Flags washed-out or over-amplified output                           |
 
 ## Accepted Changes
@@ -44,6 +47,8 @@ The model examples use the prompt `탑뷰 도트 중세 판타지 용사 파티�
 9. Added synthetic fixtures for JPEG compression, non-integer scaling, and non-square scaled pixels.
 10. Changed exact uniform-cell detection to support independent horizontal and vertical run-length scale factors.
 11. Changed synthetic aspect scoring to use the known expected-grid aspect instead of the stretched source aspect when ground truth exists.
+12. Added phase-alignment, alpha-preservation, and RGB palette-budget eval criteria.
+13. Added a semi-transparent known-grid synthetic fixture.
 
 ## Rejected Experiments
 
@@ -116,8 +121,26 @@ New fixture checks:
 | `non-integer-48x32-to-360x240.png` |       - | `48x32` |  `48x32` |        `0` |
 | `jpeg-48x32-scale8-q45.jpg`        |       - | `48x32` |  `48x32` |        `0` |
 
+After phase/alpha/palette criteria expansion:
+
+| Scope              | Status counts                 | Objective mean | Repeat gap total | Expected-grid gap total | Phase alignment mean | Alpha MAE mean |
+| ------------------ | ----------------------------- | -------------: | ---------------: | ----------------------: | -------------------: | -------------: |
+| Overall            | `0 fail / 18 pass / 7 review` |      `39.9255` |              `0` |                     `0` |             `0.8349` |            `0` |
+| Model examples     | `0 fail / 4 pass / 1 review`  |      `45.2232` |              `0` |                     `0` |             `0.8044` |            `0` |
+| Demo examples      | `0 fail / 7 pass / 4 review`  |      `38.7336` |              `0` |                     `0` |             `0.7138` |            `0` |
+| Synthetic fixtures | `0 fail / 7 pass / 2 review`  |      `38.4391` |              `0` |                     `0` |             `0.9999` |            `0` |
+
+New criteria checks:
+
+| Fixture or image                    | Grid      | Phase alignment | Alpha MAE / p95 | RGB palette overage | Status   |
+| ----------------------------------- | --------- | --------------: | --------------: | ------------------: | -------- |
+| `semi-transparent-48x32-scale8.png` | `48x32`   |             `1` |         `0 / 0` |                 `0` | `pass`   |
+| `3.gpt.png`                         | `149x149` |        `0.4765` |         `0 / 0` |                 `0` | `review` |
+| `example-64-clean.png`              | `39x39`   |        `0.3349` |         `0 / 0` |                 `0` | `review` |
+| `example-64-detail.png`             | `66x66`   |        `0.2797` |         `0 / 0` |                 `0` | `review` |
+
 Final detailed output is written by:
 
 ```bash
-npm run eval:snap-quality -- --out-dir .tmp/snap-quality-eval-final-24
+npm run eval:snap-quality -- --out-dir .tmp/snap-quality-eval-phase-alpha
 ```

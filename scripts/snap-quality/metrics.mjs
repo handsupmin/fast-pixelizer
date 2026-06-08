@@ -6,6 +6,28 @@ function grayAt(data, width, x, y) {
   return data[i + 3] === 0 ? 0 : 0.299 * data[i] + 0.587 * data[i + 1] + 0.114 * data[i + 2]
 }
 
+function axisGradientAt(input, axis, position, stride) {
+  const { data, width, height } = input
+  let sum = 0
+  let count = 0
+
+  if (axis === 'x') {
+    const x = Math.min(width - 2, Math.max(1, position))
+    for (let y = 0; y < height; y += stride) {
+      sum += Math.abs(grayAt(data, width, x + 1, y) - grayAt(data, width, x - 1, y))
+      count++
+    }
+  } else {
+    const y = Math.min(height - 2, Math.max(1, position))
+    for (let x = 0; x < width; x += stride) {
+      sum += Math.abs(grayAt(data, width, x, y + 1) - grayAt(data, width, x, y - 1))
+      count++
+    }
+  }
+
+  return count > 0 ? sum / count : 0
+}
+
 export function meanAxisGradient(input) {
   const { data, width, height } = input
   let sum = 0
@@ -54,6 +76,35 @@ export function gridBoundaryGradient(input, cols, rows) {
   }
 
   return count > 0 ? sum / count : 0
+}
+
+function axisPhaseAlignment(input, axis, cells, limit, stride) {
+  const step = limit / cells
+  const radius = Math.max(1, Math.min(8, Math.floor(step / 2)))
+  let sum = 0
+  let count = 0
+
+  for (let index = 1; index < cells; index++) {
+    const base = Math.round(index * step)
+    const boundary = axisGradientAt(input, axis, base, stride)
+    let best = 0
+    for (let offset = -radius; offset <= radius; offset++) {
+      best = Math.max(best, axisGradientAt(input, axis, base + offset, stride))
+    }
+    if (best <= 0.01) continue
+    sum += boundary / best
+    count++
+  }
+
+  return count > 0 ? sum / count : 1
+}
+
+export function gridPhaseAlignment(input, cols, rows) {
+  const xStride = Math.max(1, Math.floor(input.height / 512))
+  const yStride = Math.max(1, Math.floor(input.width / 512))
+  const xAlignment = axisPhaseAlignment(input, 'x', cols, input.width, xStride)
+  const yAlignment = axisPhaseAlignment(input, 'y', rows, input.height, yStride)
+  return (xAlignment + yAlignment) / 2
 }
 
 export function cellUniformityMetrics(input, cols, rows) {
@@ -134,8 +185,11 @@ export async function preservationStats(input, result) {
   const resized = await resizeToInput(result, input)
   const stride = Math.max(1, Math.floor((input.width * input.height) / MAX_METRIC_SAMPLES))
   const errors = []
+  const alphaErrors = []
   let sum = 0
+  let alphaSum = 0
   let count = 0
+  let alphaCount = 0
 
   for (let pixel = 0; pixel < input.width * input.height; pixel += stride) {
     const i = pixel * 4
@@ -146,17 +200,25 @@ export async function preservationStats(input, result) {
       pixelError += channelError
       count++
     }
+    const alphaError = Math.abs(input.data[i + 3] - resized[i + 3])
+    alphaSum += alphaError
+    alphaCount++
     errors.push(pixelError / 3)
+    alphaErrors.push(alphaError)
   }
 
   errors.sort((a, b) => a - b)
+  alphaErrors.sort((a, b) => a - b)
   const p95Index = Math.min(errors.length - 1, Math.floor(errors.length * 0.95))
+  const alphaP95Index = Math.min(alphaErrors.length - 1, Math.floor(alphaErrors.length * 0.95))
   const inputLuma = lumaStats(input.data, input.width, input.height)
   const outputLuma = lumaStats(resized, input.width, input.height)
 
   return {
     mae: count > 0 ? sum / count : 0,
     p95: errors.length > 0 ? errors[p95Index] : 0,
+    alphaMae: alphaCount > 0 ? alphaSum / alphaCount : 0,
+    alphaP95: alphaErrors.length > 0 ? alphaErrors[alphaP95Index] : 0,
     contrastRatio: inputLuma.stdDev > 0 ? outputLuma.stdDev / inputLuma.stdDev : 1,
   }
 }
@@ -168,6 +230,18 @@ export function uniqueColorCount(input) {
   for (let pixel = 0; pixel < width * height; pixel += stride) {
     const i = pixel * 4
     colors.add(((data[i] << 24) | (data[i + 1] << 16) | (data[i + 2] << 8) | data[i + 3]) >>> 0)
+  }
+  return colors.size
+}
+
+export function uniqueRgbColorCount(input) {
+  const { data, width, height } = input
+  const colors = new Set()
+  const stride = Math.max(1, Math.floor((width * height) / MAX_METRIC_SAMPLES))
+  for (let pixel = 0; pixel < width * height; pixel += stride) {
+    const i = pixel * 4
+    if (data[i + 3] === 0) continue
+    colors.add((data[i] << 16) | (data[i + 1] << 8) | data[i + 2])
   }
   return colors.size
 }

@@ -57,6 +57,15 @@ export function classifyMetrics(metrics) {
       ),
     )
   }
+  if (metrics.outputRgbPaletteOverage > QUALITY_RULES.maxOutputRgbPaletteOverage) {
+    issues.push(
+      issue(
+        'fail',
+        'palette-budget-exceeded',
+        `RGB palette over budget by ${metrics.outputRgbPaletteOverage}`,
+      ),
+    )
+  }
   if (metrics.squareCellError > QUALITY_RULES.maxOutputSquareCellError) {
     issues.push(
       issue(
@@ -69,6 +78,15 @@ export function classifyMetrics(metrics) {
   if (metrics.edgeAlignment < QUALITY_RULES.minEdgeAlignment) {
     issues.push(
       issue('review', 'weak-boundaries', `edge alignment ${formatNum(metrics.edgeAlignment)}`),
+    )
+  }
+  if (metrics.phaseAlignment < QUALITY_RULES.minPhaseAlignment) {
+    issues.push(
+      issue(
+        'review',
+        'phase-misaligned-grid',
+        `phase alignment ${formatNum(metrics.phaseAlignment)}`,
+      ),
     )
   }
   if (metrics.sourceCellSize > QUALITY_RULES.maxSourceCellSizeReview) {
@@ -98,6 +116,18 @@ export function classifyMetrics(metrics) {
     )
   }
   if (
+    metrics.alphaMae > QUALITY_RULES.maxAlphaMae ||
+    metrics.alphaP95 > QUALITY_RULES.maxAlphaP95
+  ) {
+    issues.push(
+      issue(
+        'review',
+        'alpha-preservation-loss',
+        `alpha MAE ${formatNum(metrics.alphaMae)}, p95 ${formatNum(metrics.alphaP95)}`,
+      ),
+    )
+  }
+  if (
     metrics.contrastRatio < QUALITY_RULES.minContrastRatio ||
     metrics.contrastRatio > QUALITY_RULES.maxContrastRatio
   ) {
@@ -120,8 +150,12 @@ export function objective(metrics) {
     metrics.cellMae +
     metrics.preservationMae +
     metrics.preservationP95 * 0.25 +
+    metrics.alphaMae +
+    metrics.alphaP95 * 0.1 +
     metrics.outputCellMae * 500 +
+    metrics.outputRgbPaletteOverage * 50 +
     Math.max(0, 1 - metrics.edgeAlignment) * 25 +
+    Math.max(0, 1 - metrics.phaseAlignment) * 15 +
     Math.max(0, QUALITY_RULES.minSourceCellSize - metrics.sourceCellSize) * 500 +
     Math.max(0, metrics.shortAxisCells - QUALITY_RULES.maxShortAxisCells) * 10 +
     Math.max(0, metrics.sourceCellSize - QUALITY_RULES.maxSourceCellSizeReview) * 2 +

@@ -13,7 +13,9 @@ function makeLowResPattern(cols, rows, mode) {
       data[i] = value
       data[i + 1] = (value * 3 + x * 5) % 256
       data[i + 2] = (value * 7 + y * 11) % 256
-      data[i + 3] = mode === 'transparent' && x < cols / 5 && y < rows / 5 ? 0 : 255
+      if (mode === 'transparent' && x < cols / 5 && y < rows / 5) data[i + 3] = 0
+      else if (mode === 'semi-transparent' && (x + y) % 5 === 0) data[i + 3] = 128
+      else data[i + 3] = 255
     }
   }
   return { data, width: cols, height: rows }
@@ -86,6 +88,13 @@ export async function generateSyntheticDataset(outDir) {
       scale: 8,
       kernel: 'nearest',
       expected: { cols: 32, rows: 32 },
+    },
+    {
+      file: 'semi-transparent-48x32-scale8.png',
+      image: makeLowResPattern(48, 32, 'semi-transparent'),
+      scale: 8,
+      kernel: 'nearest',
+      expected: { cols: 48, rows: 32 },
     },
     {
       file: 'non-integer-48x32-to-360x240.png',

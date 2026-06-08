@@ -9,9 +9,11 @@ import { listImages, loadImage, writePng } from './image-io.mjs'
 import {
   cellUniformityMetrics,
   gridBoundaryGradient,
+  gridPhaseAlignment,
   meanAxisGradient,
   preservationStats,
   uniqueColorCount,
+  uniqueRgbColorCount,
 } from './metrics.mjs'
 import { summarize, summarizeByDataset, toMarkdown } from './report.mjs'
 
@@ -97,6 +99,7 @@ async function evaluateFile(file, dataset, options, expectations) {
   const preserve = await preservationStats(input, original.result)
   const outputCellWidth = original.result.width / cols
   const outputCellHeight = original.result.height / rows
+  const outputRgbColorCount = uniqueRgbColorCount(resized.result)
   const metrics = {
     cols,
     rows,
@@ -108,12 +111,16 @@ async function evaluateFile(file, dataset, options, expectations) {
     determinismGridGap: gridGap(deterministic, resized.result),
     expectedGridGap: expected ? Math.abs(cols - expected.cols) + Math.abs(rows - expected.rows) : 0,
     edgeAlignment: boundaryGradient / (fullGradient + 1e-9),
+    phaseAlignment: gridPhaseAlignment(input, cols, rows),
     cellMae: uniformity.cellMae,
     outputCellMae: outputUniformity.cellMae,
     preservationMae: preserve.mae,
     preservationP95: preserve.p95,
+    alphaMae: preserve.alphaMae,
+    alphaP95: preserve.alphaP95,
     contrastRatio: preserve.contrastRatio,
     squareCellError: Math.abs(outputCellWidth / outputCellHeight - 1),
+    outputRgbPaletteOverage: Math.max(0, outputRgbColorCount - (options.colorVariety + 1)),
   }
   const classification = classifyMetrics(metrics)
   const item = {
@@ -128,11 +135,14 @@ async function evaluateFile(file, dataset, options, expectations) {
     squareCellError: formatNum(metrics.squareCellError),
     aspectError: formatNum(metrics.aspectError),
     edgeAlignment: formatNum(metrics.edgeAlignment),
+    phaseAlignment: formatNum(metrics.phaseAlignment),
     cellMae: formatNum(metrics.cellMae),
     cellStdDev: formatNum(uniformity.cellStdDev),
     outputCellMae: formatNum(metrics.outputCellMae),
     preservationMae: formatNum(metrics.preservationMae),
     preservationP95: formatNum(metrics.preservationP95),
+    alphaMae: formatNum(metrics.alphaMae),
+    alphaP95: formatNum(metrics.alphaP95),
     contrastRatio: formatNum(metrics.contrastRatio),
     repeatGridGap: metrics.repeatGridGap,
     stabilityDepthGap: metrics.stabilityDepthGap,
@@ -140,6 +150,8 @@ async function evaluateFile(file, dataset, options, expectations) {
     expectedGridGap: metrics.expectedGridGap,
     inputColorCount: uniqueColorCount(input),
     outputColorCount: uniqueColorCount(resized.result),
+    outputRgbColorCount,
+    outputRgbPaletteOverage: metrics.outputRgbPaletteOverage,
     snapOriginalMs: formatNum(original.durationMs),
     snapResizedMs: formatNum(resized.durationMs),
     status: classification.status,
