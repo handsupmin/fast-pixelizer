@@ -4,6 +4,7 @@ import { performance } from 'node:perf_hooks'
 import { snap } from '../../dist/index.js'
 import { classifyMetrics, formatNum, objective } from './classify.mjs'
 import { cellColorDominanceMetrics } from './cell-dominance.mjs'
+import { cellColorErrorMetrics } from './cell-color-error.mjs'
 import { loadImage, writePng } from './image-io.mjs'
 import {
   cellUniformityMetrics,
@@ -55,6 +56,9 @@ function toItem({ dataset, expected, input, metrics, name, original, resized, un
     axisPhaseAlignmentMin: formatNum(metrics.axisPhaseAlignmentMin),
     cellColorDominance: formatNum(metrics.cellColorDominance),
     cellColorDominanceP05: formatNum(metrics.cellColorDominanceP05),
+    cellColorErrorMean: formatNum(metrics.cellColorErrorMean),
+    cellColorErrorP95: formatNum(metrics.cellColorErrorP95),
+    cellColorErrorMax: formatNum(metrics.cellColorErrorMax),
     cellMae: formatNum(metrics.cellMae),
     cellStdDev: formatNum(uniformity.cellStdDev),
     outputCellMae: formatNum(metrics.outputCellMae),
@@ -112,6 +116,7 @@ async function buildMetrics(input, expected, snapshots, colorVariety) {
   const phase = gridPhaseSignals(input, cols, rows)
   const uniformity = cellUniformityMetrics(input, cols, rows)
   const dominance = cellColorDominanceMetrics(input, cols, rows)
+  const colorError = cellColorErrorMetrics(input, resized.result)
   const outputUniformity = cellUniformityMetrics(original.result, cols, rows)
   const preserve = await preservationStats(input, original.result, {
     alphaMask: true,
@@ -145,6 +150,9 @@ async function buildMetrics(input, expected, snapshots, colorVariety) {
       axisPhaseAlignmentMin: phase.min,
       cellColorDominance: dominance.mean,
       cellColorDominanceP05: dominance.p05,
+      cellColorErrorMean: colorError.cellColorErrorMean,
+      cellColorErrorP95: colorError.cellColorErrorP95,
+      cellColorErrorMax: colorError.cellColorErrorMax,
       cellMae: uniformity.cellMae,
       outputCellMae: outputUniformity.cellMae,
       preservationMae: preserve.mae,

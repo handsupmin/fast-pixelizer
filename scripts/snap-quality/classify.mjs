@@ -163,6 +163,20 @@ export function classifyMetrics(metrics) {
       ),
     )
   }
+  if (
+    metrics.cellColorErrorMean > QUALITY_RULES.maxCellColorErrorMean ||
+    metrics.cellColorErrorP95 > QUALITY_RULES.maxCellColorErrorP95
+  ) {
+    issues.push(
+      issue(
+        'review',
+        'cell-color-drift',
+        `cell color error mean ${formatNum(metrics.cellColorErrorMean)}, p95 ${formatNum(
+          metrics.cellColorErrorP95,
+        )}`,
+      ),
+    )
+  }
   if (metrics.cellMae > QUALITY_RULES.highCellMae) {
     issues.push(issue('review', 'noisy-cells', `cell MAE ${formatNum(metrics.cellMae)}`))
   }
@@ -269,6 +283,8 @@ export function objective(metrics) {
     metrics.determinismVisualP95 * 20 +
     metrics.expectedGridGap * 150 +
     metrics.aspectError * 50 +
+    metrics.cellColorErrorMean * 0.5 +
+    metrics.cellColorErrorP95 * 0.2 +
     metrics.cellMae +
     metrics.preservationMae +
     metrics.preservationP95 * 0.25 +
