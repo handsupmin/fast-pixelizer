@@ -320,6 +320,25 @@ test('alpha semitransparency value stats detect changed shadow opacity with low 
   assert.equal(stats.alphaSemitransparentValueP95, 64)
 })
 
+test('alpha tile preservation catches localized transparency loss below global alpha p95', async () => {
+  const source = makeSolid(64, 64, 96)
+  const output = setAlphaRect(makeSolid(64, 64, 96), 4, 4, 8, 8, 0)
+  const stats = await preservationStats(source, output, { alphaMask: true })
+
+  assert.ok(stats.alphaMae < 1, `expected low alpha MAE, got ${stats.alphaMae}`)
+  assert.equal(stats.alphaP95, 0)
+  assert.ok(
+    stats.alphaCoverageRatio > 0.99,
+    `expected coverage inside tolerance, got ${stats.alphaCoverageRatio}`,
+  )
+  assert.ok(
+    stats.alphaMaskIou > 0.99,
+    `expected mask IoU inside tolerance, got ${stats.alphaMaskIou}`,
+  )
+  assert.equal(stats.alphaTileMaxMae, 63.75)
+  assert.equal(stats.alphaTileP95Mae, 0)
+})
+
 test('cell color dominance separates clean and ambiguous cells', () => {
   const clean = cellColorDominanceMetrics(makeChecker(64, 64, 8), 8, 8)
   const ambiguous = cellColorDominanceMetrics(makeChecker(64, 64, 1), 8, 8)
@@ -677,6 +696,16 @@ test('quality classification reviews alpha semitransparency value drift', () => 
 
   assert.equal(result.status, 'review')
   assert.ok(result.issues.some((issue) => issue.code === 'alpha-semitransparency-value-drift'))
+})
+
+test('quality classification reviews regional alpha preservation loss', () => {
+  const result = classifyMetrics({
+    alphaTileMaxMae: 41,
+    alphaTileP95Mae: 0,
+  })
+
+  assert.equal(result.status, 'review')
+  assert.ok(result.issues.some((issue) => issue.code === 'regional-alpha-preservation-loss'))
 })
 
 test('quality classification reviews cell representative color drift', () => {

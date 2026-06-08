@@ -299,6 +299,7 @@ export async function preservationStats(input, result, options = {}) {
   const stride = Math.max(1, Math.floor((input.width * input.height) / MAX_METRIC_SAMPLES))
   const tileGrid = options.tileGrid ?? 8
   const tileSums = new Float64Array(tileGrid * tileGrid)
+  const alphaTileSums = new Float64Array(tileGrid * tileGrid)
   const tileCounts = new Uint32Array(tileGrid * tileGrid)
   const hueMinChroma = options.hueMinChroma ?? 16
   const inputRgbCoverage = new Map()
@@ -337,6 +338,7 @@ export async function preservationStats(input, result, options = {}) {
     const tileY = Math.min(tileGrid - 1, Math.floor((y * tileGrid) / input.height))
     const tile = tileY * tileGrid + tileX
     tileSums[tile] += pixelError / 3
+    alphaTileSums[tile] += alphaError
     tileCounts[tile]++
     if (
       input.data[i + 3] > 0 &&
@@ -356,6 +358,7 @@ export async function preservationStats(input, result, options = {}) {
   alphaErrors.sort((a, b) => a - b)
   hueErrors.sort((a, b) => a - b)
   const tileValues = tilePreservationValues(tileSums, tileCounts)
+  const alphaTileValues = tilePreservationValues(alphaTileSums, tileCounts)
   const inputLuma = lumaStats(input.data, input.width, input.height)
   const outputLuma = lumaStats(resized, input.width, input.height)
   const inputChroma = chromaStats(input.data, input.width, input.height)
@@ -404,6 +407,8 @@ export async function preservationStats(input, result, options = {}) {
     tileP95Mae: percentile(tileValues, 0.95),
     alphaMae: alphaCount > 0 ? alphaSum / alphaCount : 0,
     alphaP95: percentile(alphaErrors, 0.95),
+    alphaTileMaxMae: alphaTileValues.length > 0 ? alphaTileValues[alphaTileValues.length - 1] : 0,
+    alphaTileP95Mae: percentile(alphaTileValues, 0.95),
     alphaCoverageRatio: alphaMask.alphaCoverageRatio,
     alphaMaskIou: alphaMask.alphaMaskIou,
     alphaBBoxDriftPx: alphaMask.alphaBBoxDriftPx,
