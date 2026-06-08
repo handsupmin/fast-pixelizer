@@ -358,6 +358,32 @@ export function classifyMetrics(metrics) {
     )
   }
   if (
+    Math.max(metrics.alphaComponentCount ?? 0, metrics.outputAlphaComponentCount ?? 0) >=
+      QUALITY_RULES.minAlphaComponentCount &&
+    metrics.alphaComponentCountDrift > QUALITY_RULES.maxAlphaComponentCountDrift
+  ) {
+    issues.push(
+      issue(
+        'review',
+        'alpha-component-drift',
+        `alpha components ${metrics.alphaComponentCount}->${metrics.outputAlphaComponentCount}`,
+      ),
+    )
+  }
+  if (
+    Math.max(metrics.alphaSmallComponentCount ?? 0, metrics.outputAlphaSmallComponentCount ?? 0) >=
+      QUALITY_RULES.minAlphaSmallComponentCount &&
+    metrics.alphaSmallComponentCountDrift > QUALITY_RULES.maxAlphaSmallComponentCountDrift
+  ) {
+    issues.push(
+      issue(
+        'review',
+        'alpha-small-component-drift',
+        `small alpha components ${metrics.alphaSmallComponentCount}->${metrics.outputAlphaSmallComponentCount}`,
+      ),
+    )
+  }
+  if (
     metrics.alphaEdgeCount >= QUALITY_RULES.minAlphaEdgeCount &&
     (metrics.alphaEdgeRecall < QUALITY_RULES.minAlphaEdgeRecall ||
       metrics.alphaEdgeJaccard < QUALITY_RULES.minAlphaEdgeJaccard)
@@ -477,6 +503,16 @@ export function objective(metrics) {
     Math.abs(1 - metrics.alphaCoverageRatio) * 80 +
     Math.max(0, QUALITY_RULES.minAlphaMaskIou - metrics.alphaMaskIou) * 120 +
     Math.max(0, metrics.alphaBBoxDriftRatio - QUALITY_RULES.maxAlphaBBoxDriftRatio) * 200 +
+    Math.max(
+      0,
+      (metrics.alphaComponentCountDrift ?? 0) - QUALITY_RULES.maxAlphaComponentCountDrift,
+    ) *
+      40 +
+    Math.max(
+      0,
+      (metrics.alphaSmallComponentCountDrift ?? 0) - QUALITY_RULES.maxAlphaSmallComponentCountDrift,
+    ) *
+      35 +
     Math.max(0, QUALITY_RULES.minAlphaEdgeRecall - (metrics.alphaEdgeRecall ?? 1)) * 70 +
     Math.max(0, (metrics.alphaEdgeSpuriousRatio ?? 0) - QUALITY_RULES.maxAlphaEdgeSpuriousRatio) *
       50 +

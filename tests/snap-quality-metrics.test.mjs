@@ -254,6 +254,31 @@ test('alpha edge stats detect lost transparent cutouts with high mask IoU', () =
   )
 })
 
+test('alpha component stats detect lost detached details with high mask IoU', () => {
+  const source = makeTransparentBox(64, 64, 16, 16, 48, 48)
+  const detached = makeTransparentBox(64, 64, 4, 4, 6, 6)
+  for (let i = 0; i < detached.data.length; i += 4) {
+    if (detached.data[i + 3] === 0) continue
+    source.data[i] = detached.data[i]
+    source.data[i + 1] = detached.data[i + 1]
+    source.data[i + 2] = detached.data[i + 2]
+    source.data[i + 3] = detached.data[i + 3]
+  }
+  const output = makeTransparentBox(64, 64, 16, 16, 48, 48)
+  const stats = alphaMaskStats(source, output.data)
+
+  assert.ok(
+    stats.alphaMaskIou > 0.99,
+    `expected lost detail to keep high mask IoU, got ${stats.alphaMaskIou}`,
+  )
+  assert.equal(stats.alphaComponentCount, 2)
+  assert.equal(stats.outputAlphaComponentCount, 1)
+  assert.equal(stats.alphaComponentCountDrift, 1)
+  assert.equal(stats.alphaSmallComponentCount, 1)
+  assert.equal(stats.outputAlphaSmallComponentCount, 0)
+  assert.equal(stats.alphaSmallComponentCountDrift, 1)
+})
+
 test('cell color dominance separates clean and ambiguous cells', () => {
   const clean = cellColorDominanceMetrics(makeChecker(64, 64, 8), 8, 8)
   const ambiguous = cellColorDominanceMetrics(makeChecker(64, 64, 1), 8, 8)
@@ -567,6 +592,21 @@ test('quality classification reviews spurious alpha edge growth', () => {
 
   assert.equal(result.status, 'review')
   assert.ok(result.issues.some((issue) => issue.code === 'spurious-alpha-edge-growth'))
+})
+
+test('quality classification reviews alpha component count drift', () => {
+  const result = classifyMetrics({
+    alphaComponentCount: 2,
+    alphaComponentCountDrift: 1,
+    alphaSmallComponentCount: 1,
+    alphaSmallComponentCountDrift: 1,
+    outputAlphaComponentCount: 1,
+    outputAlphaSmallComponentCount: 0,
+  })
+
+  assert.equal(result.status, 'review')
+  assert.ok(result.issues.some((issue) => issue.code === 'alpha-component-drift'))
+  assert.ok(result.issues.some((issue) => issue.code === 'alpha-small-component-drift'))
 })
 
 test('quality classification reviews cell representative color drift', () => {

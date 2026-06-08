@@ -1,6 +1,7 @@
 const VISIBLE_ALPHA_THRESHOLD = 16
 const ALPHA_EDGE_THRESHOLD = 16
 const EDGE_TOLERANCE_PX = 1
+const SMALL_COMPONENT_AREA_RATIO = 0.01
 
 function emptyBounds(width, height) {
   return {
@@ -104,6 +105,66 @@ function alphaEdgeStats(input, resized) {
   }
 }
 
+function componentSizes(data, width, height) {
+  const seen = new Uint8Array(width * height)
+  const sizes = []
+  const stack = []
+
+  for (let y = 0; y < height; y++) {
+    for (let x = 0; x < width; x++) {
+      const start = y * width + x
+      if (seen[start] === 1 || alphaAt(data, width, x, y) <= VISIBLE_ALPHA_THRESHOLD) continue
+
+      let size = 0
+      seen[start] = 1
+      stack.push(start)
+
+      while (stack.length > 0) {
+        const index = stack.pop()
+        size++
+        const px = index % width
+        const py = Math.floor(index / width)
+
+        for (const [nx, ny] of [
+          [px + 1, py],
+          [px - 1, py],
+          [px, py + 1],
+          [px, py - 1],
+        ]) {
+          if (nx < 0 || ny < 0 || nx >= width || ny >= height) continue
+          const next = ny * width + nx
+          if (seen[next] === 1 || alphaAt(data, width, nx, ny) <= VISIBLE_ALPHA_THRESHOLD) continue
+
+          seen[next] = 1
+          stack.push(next)
+        }
+      }
+
+      sizes.push(size)
+    }
+  }
+
+  return sizes
+}
+
+function alphaComponentStats(input, resized) {
+  const { width, height } = input
+  const smallLimit = Math.max(64, Math.floor(width * height * SMALL_COMPONENT_AREA_RATIO))
+  const source = componentSizes(input.data, width, height)
+  const output = componentSizes(resized, width, height)
+  const sourceSmall = source.filter((size) => size <= smallLimit).length
+  const outputSmall = output.filter((size) => size <= smallLimit).length
+
+  return {
+    alphaComponentCount: source.length,
+    alphaComponentCountDrift: Math.abs(source.length - output.length),
+    alphaSmallComponentCount: sourceSmall,
+    alphaSmallComponentCountDrift: Math.abs(sourceSmall - outputSmall),
+    outputAlphaComponentCount: output.length,
+    outputAlphaSmallComponentCount: outputSmall,
+  }
+}
+
 export function alphaMaskStats(input, resized) {
   const { width, height } = input
   const inputBounds = emptyBounds(width, height)
@@ -143,6 +204,7 @@ export function alphaMaskStats(input, resized) {
 
   return {
     alphaCoverageRatio: inputCount > 0 ? outputCount / inputCount : outputCount > 0 ? 0 : 1,
+    ...alphaComponentStats(input, resized),
     ...alphaEdgeStats(input, resized),
     alphaMaskIou: union > 0 ? intersection / union : 1,
     alphaBBoxDriftPx: driftPx,

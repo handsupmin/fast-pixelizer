@@ -375,6 +375,8 @@ export async function preservationStats(input, result, options = {}) {
     ? alphaMaskStats(input, resized)
     : {
         alphaCoverageRatio: 1,
+        alphaComponentCount: 0,
+        alphaComponentCountDrift: 0,
         alphaEdgeCount: 0,
         alphaEdgeJaccard: 1,
         alphaEdgeRecall: 1,
@@ -382,7 +384,11 @@ export async function preservationStats(input, result, options = {}) {
         alphaMaskIou: 1,
         alphaBBoxDriftPx: 0,
         alphaBBoxDriftRatio: 0,
+        alphaSmallComponentCount: 0,
+        alphaSmallComponentCountDrift: 0,
+        outputAlphaComponentCount: 0,
         outputAlphaEdgeCount: 0,
+        outputAlphaSmallComponentCount: 0,
       }
 
   return {
@@ -396,6 +402,12 @@ export async function preservationStats(input, result, options = {}) {
     alphaMaskIou: alphaMask.alphaMaskIou,
     alphaBBoxDriftPx: alphaMask.alphaBBoxDriftPx,
     alphaBBoxDriftRatio: alphaMask.alphaBBoxDriftRatio,
+    alphaComponentCount: alphaMask.alphaComponentCount,
+    outputAlphaComponentCount: alphaMask.outputAlphaComponentCount,
+    alphaComponentCountDrift: alphaMask.alphaComponentCountDrift,
+    alphaSmallComponentCount: alphaMask.alphaSmallComponentCount,
+    outputAlphaSmallComponentCount: alphaMask.outputAlphaSmallComponentCount,
+    alphaSmallComponentCountDrift: alphaMask.alphaSmallComponentCountDrift,
     alphaEdgeCount: alphaMask.alphaEdgeCount,
     outputAlphaEdgeCount: alphaMask.outputAlphaEdgeCount,
     alphaEdgeRecall: alphaMask.alphaEdgeRecall,
