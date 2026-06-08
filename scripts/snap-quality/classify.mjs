@@ -38,6 +38,20 @@ export function classifyMetrics(metrics) {
   if (metrics.repeatGridGap > repeatTolerance(metrics.cols, metrics.rows)) {
     issues.push(issue('fail', 'unstable-repeat', `repeat grid gap ${metrics.repeatGridGap}`))
   }
+  if (
+    metrics.repeatVisualMae > QUALITY_RULES.maxRepeatVisualMae ||
+    metrics.repeatVisualP95 > QUALITY_RULES.maxRepeatVisualP95
+  ) {
+    issues.push(
+      issue(
+        'fail',
+        'unstable-repeat-visuals',
+        `repeat visual MAE ${formatNum(metrics.repeatVisualMae)}, p95 ${formatNum(
+          metrics.repeatVisualP95,
+        )}`,
+      ),
+    )
+  }
   if (metrics.stabilityDepthGap > 0) {
     issues.push(
       issue('fail', 'unstable-depth', `second repeat grid gap ${metrics.stabilityDepthGap}`),
@@ -185,6 +199,8 @@ export function objective(metrics) {
   return (
     metrics.repeatGridGap * 100 +
     metrics.stabilityDepthGap * 100 +
+    metrics.repeatVisualMae * 80 +
+    metrics.repeatVisualP95 * 20 +
     metrics.expectedGridGap * 150 +
     metrics.aspectError * 50 +
     metrics.cellMae +

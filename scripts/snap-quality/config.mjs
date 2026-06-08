@@ -14,6 +14,8 @@ export const QUALITY_RULES = {
   maxSourceCellSizeReview: 64,
   maxRepeatGridGapFloor: 2,
   maxRepeatGridGapRate: 0.01,
+  maxRepeatVisualMae: 0.5,
+  maxRepeatVisualP95: 2,
   maxExpectedGridGap: 0,
   minEdgeAlignment: 0.6,
   minAxisEdgeAlignment: 0.35,

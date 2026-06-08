@@ -94,6 +94,7 @@ Current criteria include:
 | Micro-grid snap     | Detectors that lock onto generated texture instead of cells    |
 | Macro-grid snap     | Detectors that under-detect a large same-color block as a cell |
 | Idempotence         | `snap(snap(image))` changing the detected grid                 |
+| Visual idempotence  | `snap(snap(image))` changing snapped colors or edge pixels     |
 | Determinism         | Two snaps of the same source disagreeing on grid size          |
 | Output purity       | Snapped output cells that are not single-color or square       |
 | Output coverage     | Original-size snap output shrinking too far from input size    |

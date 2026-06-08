@@ -1,5 +1,6 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
+import { classifyMetrics } from '../scripts/snap-quality/classify.mjs'
 import { gridBoundarySignals, preservationStats } from '../scripts/snap-quality/metrics.mjs'
 
 function makeVerticalStripes(width, height, stripeWidth) {
@@ -51,4 +52,38 @@ test('line edge ratio stays near one when the snapped output is identical', asyn
     stats.lineEdgeRatio > 0.99 && stats.lineEdgeRatio < 1.01,
     `expected line edge ratio near 1, got ${stats.lineEdgeRatio}`,
   )
+})
+
+test('quality classification fails when repeat snap changes visuals', () => {
+  const result = classifyMetrics({
+    alphaMae: 0,
+    alphaP95: 0,
+    aspectError: 0,
+    axisEdgeAlignmentMin: 1,
+    axisPhaseAlignmentMin: 1,
+    cellMae: 0,
+    cols: 32,
+    contrastRatio: 1,
+    determinismGridGap: 0,
+    edgeAlignment: 1,
+    expectedGridGap: 0,
+    lineEdgeRatio: 1,
+    lowPaletteRetention: 1,
+    outputCellMae: 0,
+    outputCoverage: 1,
+    outputRgbPaletteOverage: 0,
+    preservationMae: 0,
+    preservationP95: 0,
+    repeatGridGap: 0,
+    repeatVisualMae: 1,
+    repeatVisualP95: 0,
+    rows: 32,
+    shortAxisCells: 32,
+    sourceCellSize: 8,
+    squareCellError: 0,
+    stabilityDepthGap: 0,
+  })
+
+  assert.equal(result.status, 'fail')
+  assert.ok(result.issues.some((issue) => issue.code === 'unstable-repeat-visuals'))
 })

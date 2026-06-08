@@ -104,6 +104,7 @@ async function evaluateFile(file, dataset, options, expectations) {
   const uniformity = cellUniformityMetrics(input, cols, rows)
   const outputUniformity = cellUniformityMetrics(original.result, cols, rows)
   const preserve = await preservationStats(input, original.result)
+  const repeatPreserve = await preservationStats(original.result, repeatOriginal)
   const outputCellWidth = original.result.width / cols
   const outputCellHeight = original.result.height / rows
   const outputCoverage = Math.min(
@@ -125,6 +126,8 @@ async function evaluateFile(file, dataset, options, expectations) {
     repeatGridGap: gridGap(repeat, resized.result),
     stabilityDepthGap: gridGap(repeatAgain, repeat),
     determinismGridGap: gridGap(deterministic, resized.result),
+    repeatVisualMae: repeatPreserve.mae,
+    repeatVisualP95: repeatPreserve.p95,
     expectedGridGap: expected ? Math.abs(cols - expected.cols) + Math.abs(rows - expected.rows) : 0,
     edgeAlignment: boundary.mean / (fullGradient + 1e-9),
     axisEdgeAlignmentMin: boundary.min / (fullGradient + 1e-9),
@@ -170,6 +173,8 @@ async function evaluateFile(file, dataset, options, expectations) {
     contrastRatio: formatNum(metrics.contrastRatio),
     lineEdgeRatio: formatNum(metrics.lineEdgeRatio),
     repeatGridGap: metrics.repeatGridGap,
+    repeatVisualMae: formatNum(metrics.repeatVisualMae),
+    repeatVisualP95: formatNum(metrics.repeatVisualP95),
     stabilityDepthGap: metrics.stabilityDepthGap,
     determinismGridGap: metrics.determinismGridGap,
     expectedGridGap: metrics.expectedGridGap,
