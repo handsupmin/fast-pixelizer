@@ -834,6 +834,11 @@ export function classifyMetrics(metrics) {
       ),
     )
   }
+  if ((metrics.alphaMax ?? 0) > QUALITY_RULES.maxAlphaMax) {
+    issues.push(
+      issue('review', 'alpha-preservation-outlier', `alpha max ${formatNum(metrics.alphaMax)}`),
+    )
+  }
   if (
     metrics.alphaTileMaxMae > QUALITY_RULES.maxAlphaTileMae ||
     metrics.alphaTileP95Mae > QUALITY_RULES.maxAlphaTileP95
@@ -1304,6 +1309,7 @@ export function objective(metrics) {
     Math.max(0, metrics.tilePreservationP95Mae - QUALITY_RULES.maxTilePreservationP95) * 0.75 +
     metrics.alphaMae +
     metrics.alphaP95 * 0.1 +
+    Math.max(0, (metrics.alphaMax ?? 0) - QUALITY_RULES.maxAlphaMax) * 0.2 +
     Math.max(0, metrics.alphaTileMaxMae - QUALITY_RULES.maxAlphaTileMae) * 0.5 +
     Math.max(0, metrics.alphaTileP95Mae - QUALITY_RULES.maxAlphaTileP95) * 0.75 +
     Math.abs(1 - metrics.alphaCoverageRatio) * 80 +

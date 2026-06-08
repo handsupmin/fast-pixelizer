@@ -88,6 +88,7 @@ export const QUALITY_RULES = {
   maxHueErrorP95: 80,
   maxAlphaMae: 8,
   maxAlphaP95: 40,
+  maxAlphaMax: 0,
   maxAlphaTileMae: 40,
   maxAlphaTileP95: 20,
   minAlphaCoverageRatio: 0.98,

@@ -478,6 +478,7 @@ export async function preservationStats(input, result, options = {}) {
     tileP95Mae: percentile(tileValues, 0.95),
     alphaMae: alphaCount > 0 ? alphaSum / alphaCount : 0,
     alphaP95: percentile(alphaErrors, 0.95),
+    alphaMax: alphaErrors.length > 0 ? alphaErrors[alphaErrors.length - 1] : 0,
     alphaTileMaxMae: alphaTileValues.length > 0 ? alphaTileValues[alphaTileValues.length - 1] : 0,
     alphaTileP95Mae: percentile(alphaTileValues, 0.95),
     alphaCoverageRatio: alphaMask.alphaCoverageRatio,

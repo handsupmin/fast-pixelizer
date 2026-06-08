@@ -601,6 +601,20 @@ test('alpha tile preservation catches localized transparency loss below global a
   assert.equal(stats.alphaTileP95Mae, 0)
 })
 
+test('alpha max preservation catches a single changed pixel below p95 and tile thresholds', async () => {
+  const source = makeSolid(64, 64, 96)
+  const output = setAlphaRect(makeSolid(64, 64, 96), 4, 4, 5, 5, 0)
+  const stats = await preservationStats(source, output, { alphaMask: true })
+
+  assert.ok(stats.alphaMae < 1, `expected low alpha MAE, got ${stats.alphaMae}`)
+  assert.equal(stats.alphaP95, 0)
+  assert.ok(
+    stats.alphaTileMaxMae < 40,
+    `expected tile alpha MAE below review threshold, got ${stats.alphaTileMaxMae}`,
+  )
+  assert.equal(stats.alphaMax, 255)
+})
+
 test('cell color dominance separates clean and ambiguous cells', () => {
   const clean = cellColorDominanceMetrics(makeChecker(64, 64, 8), 8, 8)
   const ambiguous = cellColorDominanceMetrics(makeChecker(64, 64, 1), 8, 8)
@@ -1756,6 +1770,21 @@ test('quality classification reviews regional alpha preservation loss', () => {
 
   assert.equal(result.status, 'review')
   assert.ok(result.issues.some((issue) => issue.code === 'regional-alpha-preservation-loss'))
+})
+
+test('quality classification reviews alpha preservation outliers hidden by p95', () => {
+  const result = classifyMetrics({
+    alphaMae: 0,
+    alphaMax: 255,
+    alphaP95: 0,
+    alphaTileMaxMae: 0,
+    alphaTileP95Mae: 0,
+  })
+
+  assert.equal(result.status, 'review')
+  assert.ok(result.issues.some((issue) => issue.code === 'alpha-preservation-outlier'))
+  assert.ok(!result.issues.some((issue) => issue.code === 'alpha-preservation-loss'))
+  assert.ok(!result.issues.some((issue) => issue.code === 'regional-alpha-preservation-loss'))
 })
 
 test('quality classification reviews cell representative color drift', () => {
