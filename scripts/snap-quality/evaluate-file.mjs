@@ -5,6 +5,7 @@ import { snap } from '../../dist/index.js'
 import { QUALITY_RULES } from './config.mjs'
 import { classifyMetrics, formatNum, objective } from './classify.mjs'
 import { cellColorDominanceMetrics } from './cell-dominance.mjs'
+import { cellColorComponentMetrics } from './cell-color-components.mjs'
 import { cellColorErrorMetrics } from './cell-color-error.mjs'
 import { cellTransitionMetrics } from './cell-transition.mjs'
 import { loadImage, writePng } from './image-io.mjs'
@@ -61,6 +62,12 @@ function toItem({ dataset, expected, input, metrics, name, original, resized, un
     cellColorDominance: formatNum(metrics.cellColorDominance),
     cellColorDominanceP05: formatNum(metrics.cellColorDominanceP05),
     exactLowPaletteCellColorEligible: metrics.exactLowPaletteCellColorEligible,
+    cellColorComponentCountDrift: metrics.cellColorComponentCountDrift,
+    smallCellColorComponentCountDrift: metrics.smallCellColorComponentCountDrift,
+    sourceCellColorComponentCount: metrics.sourceCellColorComponentCount,
+    sourceSmallCellColorComponentCount: metrics.sourceSmallCellColorComponentCount,
+    outputCellColorComponentCount: metrics.outputCellColorComponentCount,
+    outputSmallCellColorComponentCount: metrics.outputSmallCellColorComponentCount,
     cellColorErrorMean: formatNum(metrics.cellColorErrorMean),
     cellColorErrorP95: formatNum(metrics.cellColorErrorP95),
     cellColorErrorMax: formatNum(metrics.cellColorErrorMax),
@@ -189,6 +196,16 @@ async function buildMetrics(input, expected, snapshots, colorVariety) {
     inputRgbColorCount > 0 && inputRgbColorCount <= colorVariety + 1
   const exactLowPaletteCellColorEligible =
     lowPaletteCoverageEligible && dominance.mean >= QUALITY_RULES.minExactLowPaletteCellDominance
+  const colorComponents = exactLowPaletteCellColorEligible
+    ? cellColorComponentMetrics(input, resized.result)
+    : {
+        cellColorComponentCountDrift: 0,
+        outputCellColorComponentCount: 0,
+        outputSmallCellColorComponentCount: 0,
+        smallCellColorComponentCountDrift: 0,
+        sourceCellColorComponentCount: 0,
+        sourceSmallCellColorComponentCount: 0,
+      }
   const paletteDominance = paletteDominanceMetrics(input, resized.result)
   const paletteUtilization = paletteUtilizationMetrics(input, resized.result, colorVariety)
 
@@ -216,6 +233,12 @@ async function buildMetrics(input, expected, snapshots, colorVariety) {
       cellColorDominance: dominance.mean,
       cellColorDominanceP05: dominance.p05,
       exactLowPaletteCellColorEligible,
+      cellColorComponentCountDrift: colorComponents.cellColorComponentCountDrift,
+      smallCellColorComponentCountDrift: colorComponents.smallCellColorComponentCountDrift,
+      sourceCellColorComponentCount: colorComponents.sourceCellColorComponentCount,
+      sourceSmallCellColorComponentCount: colorComponents.sourceSmallCellColorComponentCount,
+      outputCellColorComponentCount: colorComponents.outputCellColorComponentCount,
+      outputSmallCellColorComponentCount: colorComponents.outputSmallCellColorComponentCount,
       cellColorErrorMean: colorError.cellColorErrorMean,
       cellColorErrorP95: colorError.cellColorErrorP95,
       cellColorErrorMax: colorError.cellColorErrorMax,

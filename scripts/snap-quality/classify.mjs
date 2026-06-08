@@ -231,6 +231,37 @@ export function classifyMetrics(metrics) {
     )
   }
   if (
+    metrics.exactLowPaletteCellColorEligible &&
+    Math.max(metrics.sourceCellColorComponentCount, metrics.outputCellColorComponentCount) >=
+      QUALITY_RULES.minExactCellColorComponentCount &&
+    metrics.cellColorComponentCountDrift > QUALITY_RULES.maxExactCellColorComponentCountDrift
+  ) {
+    issues.push(
+      issue(
+        'review',
+        'exact-cell-color-component-drift',
+        `exact cell color components ${metrics.sourceCellColorComponentCount}->${metrics.outputCellColorComponentCount}`,
+      ),
+    )
+  }
+  if (
+    metrics.exactLowPaletteCellColorEligible &&
+    Math.max(
+      metrics.sourceSmallCellColorComponentCount,
+      metrics.outputSmallCellColorComponentCount,
+    ) >= QUALITY_RULES.minExactSmallCellColorComponentCount &&
+    metrics.smallCellColorComponentCountDrift >
+      QUALITY_RULES.maxExactSmallCellColorComponentCountDrift
+  ) {
+    issues.push(
+      issue(
+        'review',
+        'exact-small-cell-color-component-drift',
+        `exact small cell color components ${metrics.sourceSmallCellColorComponentCount}->${metrics.outputSmallCellColorComponentCount}`,
+      ),
+    )
+  }
+  if (
     metrics.sourceCellTransitionCount >= QUALITY_RULES.minCellTransitionCount &&
     metrics.cellTransitionRetention < QUALITY_RULES.minCellTransitionRetention
   ) {
@@ -549,6 +580,18 @@ export function objective(metrics) {
         QUALITY_RULES.maxExactLowPaletteCellColorErrorMax,
     ) *
       0.5 +
+    Math.max(
+      0,
+      (metrics.exactLowPaletteCellColorEligible ? metrics.cellColorComponentCountDrift : 0) -
+        QUALITY_RULES.maxExactCellColorComponentCountDrift,
+    ) *
+      20 +
+    Math.max(
+      0,
+      (metrics.exactLowPaletteCellColorEligible ? metrics.smallCellColorComponentCountDrift : 0) -
+        QUALITY_RULES.maxExactSmallCellColorComponentCountDrift,
+    ) *
+      16 +
     metrics.cellMae +
     metrics.preservationMae +
     metrics.preservationP95 * 0.25 +

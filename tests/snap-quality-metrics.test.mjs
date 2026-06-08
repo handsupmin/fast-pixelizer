@@ -1,6 +1,7 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import { alphaMaskStats } from '../scripts/snap-quality/alpha-mask.mjs'
+import { cellColorComponentMetrics } from '../scripts/snap-quality/cell-color-components.mjs'
 import { cellColorErrorMetrics } from '../scripts/snap-quality/cell-color-error.mjs'
 import { classifyMetrics } from '../scripts/snap-quality/classify.mjs'
 import { cellColorDominanceMetrics } from '../scripts/snap-quality/cell-dominance.mjs'
@@ -140,6 +141,44 @@ function makeColorGrid(cols, rows, cellSize) {
     }
   }
   return { data, width, height: rows * cellSize }
+}
+
+function makeCellImage(keys, cols, rows, cellSize) {
+  const width = cols * cellSize
+  const height = rows * cellSize
+  const data = new Uint8ClampedArray(width * height * 4)
+
+  for (let row = 0; row < rows; row++) {
+    for (let col = 0; col < cols; col++) {
+      const color = keys[row * cols + col]
+      for (let y = row * cellSize; y < (row + 1) * cellSize; y++) {
+        for (let x = col * cellSize; x < (col + 1) * cellSize; x++) {
+          const i = (y * width + x) * 4
+          data[i] = color[0]
+          data[i + 1] = color[1]
+          data[i + 2] = color[2]
+          data[i + 3] = color[3] ?? 255
+        }
+      }
+    }
+  }
+
+  return { data, width, height }
+}
+
+function makeCellGrid(keys, cols, rows) {
+  const data = new Uint8ClampedArray(cols * rows * 4)
+
+  for (let cell = 0; cell < keys.length; cell++) {
+    const color = keys[cell]
+    const i = cell * 4
+    data[i] = color[0]
+    data[i + 1] = color[1]
+    data[i + 2] = color[2]
+    data[i + 3] = color[3] ?? 255
+  }
+
+  return { data, width: cols, height: rows }
 }
 
 test('grid boundary signals expose a weak axis instead of hiding it in the mean', () => {
@@ -388,6 +427,27 @@ test('palette utilization detects underused output palette on rich inputs', () =
     drifted.outputPaletteUtilization < 0.02,
     `expected collapsed palette utilization below 0.02, got ${drifted.outputPaletteUtilization}`,
   )
+})
+
+test('cell color components detect lost detached exact-color parts', () => {
+  const black = [0, 0, 0, 255]
+  const red = [255, 0, 0, 255]
+  const sourceKeys = Array.from({ length: 16 }, () => black)
+  sourceKeys[0] = red
+  sourceKeys[15] = red
+  const outputKeys = [...sourceKeys]
+  outputKeys[15] = black
+  const metrics = cellColorComponentMetrics(
+    makeCellImage(sourceKeys, 4, 4, 8),
+    makeCellGrid(outputKeys, 4, 4),
+  )
+
+  assert.equal(metrics.sourceCellColorComponentCount, 3)
+  assert.equal(metrics.outputCellColorComponentCount, 2)
+  assert.equal(metrics.cellColorComponentCountDrift, 1)
+  assert.equal(metrics.sourceSmallCellColorComponentCount, 2)
+  assert.equal(metrics.outputSmallCellColorComponentCount, 1)
+  assert.equal(metrics.smallCellColorComponentCountDrift, 1)
 })
 
 test('cell transitions distinguish retained, removed, and spurious boundaries', () => {
@@ -773,6 +833,22 @@ test('quality classification reviews rare exact low-palette cell drift', () => {
   assert.equal(result.status, 'review')
   assert.ok(result.issues.some((issue) => issue.code === 'rare-cell-color-drift'))
   assert.ok(!result.issues.some((issue) => issue.code === 'cell-color-drift'))
+})
+
+test('quality classification reviews exact cell color component drift', () => {
+  const result = classifyMetrics({
+    cellColorComponentCountDrift: 1,
+    exactLowPaletteCellColorEligible: true,
+    outputCellColorComponentCount: 2,
+    outputSmallCellColorComponentCount: 1,
+    smallCellColorComponentCountDrift: 1,
+    sourceCellColorComponentCount: 3,
+    sourceSmallCellColorComponentCount: 2,
+  })
+
+  assert.equal(result.status, 'review')
+  assert.ok(result.issues.some((issue) => issue.code === 'exact-cell-color-component-drift'))
+  assert.ok(result.issues.some((issue) => issue.code === 'exact-small-cell-color-component-drift'))
 })
 
 test('quality classification reviews palette dominance collapse', () => {
