@@ -2,7 +2,13 @@ import fs from 'node:fs/promises'
 import path from 'node:path'
 import { performance } from 'node:perf_hooks'
 import { snap } from '../../dist/index.js'
-import { DEFAULT_OUT_DIR, QUALITY_RULES, ROOT, defaultDatasets } from './config.mjs'
+import {
+  DEFAULT_OUT_DIR,
+  KNOWN_EXPECTATIONS,
+  QUALITY_RULES,
+  ROOT,
+  defaultDatasets,
+} from './config.mjs'
 import { classifyMetrics, formatNum, objective } from './classify.mjs'
 import { generateSyntheticDataset } from './synthetic.mjs'
 import { listImages, loadImage, writePng } from './image-io.mjs'
@@ -89,7 +95,7 @@ async function evaluateFile(file, dataset, options, expectations) {
   const cols = resized.result.width
   const rows = resized.result.height
   const name = path.basename(file)
-  const expected = expectations.get(name)
+  const expected = expectations.get(`${dataset.name}/${name}`) ?? expectations.get(name)
   const targetAspect = expected ? expected.cols / expected.rows : input.width / input.height
   const gridAspect = cols / rows
   const fullGradient = meanAxisGradient(input)
@@ -173,7 +179,7 @@ async function evaluateFile(file, dataset, options, expectations) {
 export async function runSnapQualityEval(argv) {
   const options = parseArgs(argv)
   await fs.mkdir(options.outDir, { recursive: true })
-  const expectations = new Map()
+  const expectations = new Map(KNOWN_EXPECTATIONS)
   const datasets = [...options.datasets]
   if (options.includeSynthetic) {
     const synthetic = await generateSyntheticDataset(options.outDir)

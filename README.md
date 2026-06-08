@@ -22,6 +22,8 @@ As of `1.3.3`, the synthetic coverage also includes JPEG compression, non-intege
 
 The unreleased eval criteria additionally track boundary phase alignment, alpha preservation, and RGB palette budget so future snap changes can catch shifted grids, broken transparency, and accidental palette expansion.
 
+The unreleased detector also recovers exact square pixelate outputs whose original-size render uses uneven `5px/6px` cell widths, fixing package-generated `64×64` examples that previously snapped to `39×39` or `66×66`.
+
 Recent regression examples:
 
 | Input                  | Previous           | `1.2.0`   |
@@ -43,9 +45,10 @@ Recent regression examples:
 4. **High-resolution plausibility guard** — avoids treating 1–2px generated texture as the real grid
 5. **Uniform-cell detection** — preserves already-snapped square-cell outputs on repeated runs
 6. **Gated peak recovery** — recovers blurred scaled pixel art only when the current grid is clearly under-detected
-7. **Lattice regularization** — rebuilds a globally uniform grid instead of letting local cut drift accumulate
-8. **Majority-vote resampling** — picks the dominant color per cell
-9. **Uniform re-rendering** — every cell gets the exact same pixel size
+7. **Exact transition recovery** — recovers clean square pixelate outputs with uneven original-size cell widths
+8. **Lattice regularization** — rebuilds a globally uniform grid instead of letting local cut drift accumulate
+9. **Majority-vote resampling** — picks the dominant color per cell
+10. **Uniform re-rendering** — every cell gets the exact same pixel size
 
 No manual resolution input needed. The grid is auto-detected.
 

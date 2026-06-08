@@ -14,6 +14,7 @@ import {
   walk,
 } from './snap-profile'
 import { kmeansQuantize } from './snap-quantize'
+import { detectExactTransitionGrid } from './snap-transitions'
 import { detectUniformCellGrid } from './snap-uniform'
 
 export interface SnapOptions {
@@ -127,10 +128,11 @@ export function snap(input: ImageLike, options?: SnapOptions): SnapResult {
 
   const quantData = kmeansQuantize(data, pixelCount, colorVariety)
   const uniformGrid = detectUniformCellGrid(data, width, height)
-  let numCols = uniformGrid?.cols ?? 0
-  let numRows = uniformGrid?.rows ?? 0
+  const transitionGrid = detectExactTransitionGrid(data, width, height)
+  let numCols = transitionGrid?.cols ?? uniformGrid?.cols ?? 0
+  let numRows = transitionGrid?.rows ?? uniformGrid?.rows ?? 0
 
-  if (!uniformGrid) {
+  if (!transitionGrid && !uniformGrid) {
     const colProfile = computeColProfile(quantData, width, height)
     const rowProfile = computeRowProfile(quantData, width, height)
     const minStep = minimumPlausibleStep(width, height)

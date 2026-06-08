@@ -151,3 +151,15 @@ test('non-square scaled pixel art recovers the square source grid', async () => 
 
   assert.deepEqual(grid, { cols: 40, rows: 40 })
 })
+
+test('package 64px clean example recovers its generated source grid', async () => {
+  const grid = await detect('examples/example-64-clean.png')
+
+  assert.deepEqual({ cols: grid.cols, rows: grid.rows }, { cols: 64, rows: 64 })
+})
+
+test('package 64px detail example recovers its generated source grid', async () => {
+  const grid = await detect('examples/example-64-detail.png')
+
+  assert.deepEqual({ cols: grid.cols, rows: grid.rows }, { cols: 64, rows: 64 })
+})

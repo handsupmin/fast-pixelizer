@@ -29,6 +29,13 @@ export const QUALITY_RULES = {
   maxContrastRatio: 1.8,
 }
 
+export const KNOWN_EXPECTATIONS = [
+  ['demo-examples/example-32-clean.png', { cols: 32, rows: 32 }],
+  ['demo-examples/example-32-detail.png', { cols: 32, rows: 32 }],
+  ['demo-examples/example-64-clean.png', { cols: 64, rows: 64 }],
+  ['demo-examples/example-64-detail.png', { cols: 64, rows: 64 }],
+]
+
 export function defaultDatasets() {
   return [
     { name: 'model-examples', dir: DEFAULT_MODEL_DIR },

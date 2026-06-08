@@ -49,6 +49,8 @@ The model examples use the prompt `탑뷰 도트 중세 판타지 용사 파티�
 11. Changed synthetic aspect scoring to use the known expected-grid aspect instead of the stretched source aspect when ground truth exists.
 12. Added phase-alignment, alpha-preservation, and RGB palette-budget eval criteria.
 13. Added a semi-transparent known-grid synthetic fixture.
+14. Added known-grid expectations for package-generated `32x32` and `64x64` demo pixelate examples.
+15. Added an exact-transition recovery path for square pixelate outputs with uneven original-size cell widths.
 
 ## Rejected Experiments
 
@@ -139,8 +141,24 @@ New criteria checks:
 | `example-64-clean.png`              | `39x39`   |        `0.3349` |         `0 / 0` |                 `0` | `review` |
 | `example-64-detail.png`             | `66x66`   |        `0.2797` |         `0 / 0` |                 `0` | `review` |
 
+After exact-transition recovery:
+
+| Scope              | Status counts                 | Objective mean | Repeat gap total | Expected-grid gap total | Phase alignment mean | Preservation p95 mean |
+| ------------------ | ----------------------------- | -------------: | ---------------: | ----------------------: | -------------------: | --------------------: |
+| Overall            | `0 fail / 20 pass / 5 review` |      `33.5466` |              `0` |                     `0` |             `0.8903` |                  `35` |
+| Model examples     | `0 fail / 4 pass / 1 review`  |      `45.2232` |              `0` |                     `0` |             `0.8044` |                `50.4` |
+| Demo examples      | `0 fail / 9 pass / 2 review`  |      `24.2361` |              `0` |                     `0` |             `0.8397` |             `21.5455` |
+| Synthetic fixtures | `0 fail / 7 pass / 2 review`  |      `38.4391` |              `0` |                     `0` |             `0.9999` |             `42.8889` |
+
+Exact-transition fixes:
+
+| Fixture or image        | Before  | After   | Expected | Repeat gap | Status |
+| ----------------------- | ------- | ------- | -------- | ---------: | ------ |
+| `example-64-clean.png`  | `39x39` | `64x64` | `64x64`  |        `0` | `pass` |
+| `example-64-detail.png` | `66x66` | `64x64` | `64x64`  |        `0` | `pass` |
+
 Final detailed output is written by:
 
 ```bash
-npm run eval:snap-quality -- --out-dir .tmp/snap-quality-eval-phase-alpha
+npm run eval:snap-quality -- --out-dir .tmp/snap-quality-eval-exact-transitions
 ```
