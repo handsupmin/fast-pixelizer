@@ -719,6 +719,23 @@ test('cell color adjacency detects lost same-color diagonal neighbors', () => {
   assert.equal(metrics.cellColorDiagonalAdjacencyDrift, 1)
 })
 
+test('cell color quad patterns detect changed 2x2 corners', () => {
+  const transparent = [0, 0, 0, 0]
+  const red = [255, 0, 0, 255]
+  const sourceKeys = [red, red, red, transparent]
+  const outputKeys = [red, red, transparent, red]
+  const metrics = cellColorComponentMetrics(
+    makeCellImage(sourceKeys, 2, 2, 8),
+    makeCellGrid(outputKeys, 2, 2),
+  )
+
+  assert.equal(metrics.sourceCellColorQuadPatternCount, 1)
+  assert.equal(metrics.outputCellColorQuadPatternCount, 1)
+  assert.equal(metrics.sourceCellColorDistinctQuadPatternCount, 1)
+  assert.equal(metrics.outputCellColorDistinctQuadPatternCount, 1)
+  assert.equal(metrics.cellColorQuadPatternDrift, 2)
+})
+
 test('cell transitions distinguish retained, removed, and spurious boundaries', () => {
   const input = makeChecker(64, 64, 8)
   const retained = cellTransitionMetrics(input, makeChecker(8, 8, 1))
@@ -828,6 +845,18 @@ test('quality classification reviews exact cell color diagonal adjacency drift',
   assert.ok(
     result.issues.some((issue) => issue.code === 'exact-cell-color-diagonal-adjacency-drift'),
   )
+})
+
+test('quality classification reviews exact cell color quad pattern drift', () => {
+  const result = classifyMetrics({
+    cellColorQuadPatternDrift: 2,
+    exactLowPaletteCellColorEligible: true,
+    outputCellColorQuadPatternCount: 1,
+    sourceCellColorQuadPatternCount: 1,
+  })
+
+  assert.equal(result.status, 'review')
+  assert.ok(result.issues.some((issue) => issue.code === 'exact-cell-color-quad-pattern-drift'))
 })
 
 test('quality classification reviews exact cell color component position drift', () => {

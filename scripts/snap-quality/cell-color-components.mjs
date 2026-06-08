@@ -332,6 +332,35 @@ function adjacencyDrift(source, output) {
   return { diagonalDrift, orthogonalDrift }
 }
 
+function countQuadPatterns(keys, cols, rows) {
+  const patterns = new Map()
+  let count = 0
+
+  for (let row = 0; row + 1 < rows; row++) {
+    for (let col = 0; col + 1 < cols; col++) {
+      const cell = row * cols + col
+      const pattern = [keys[cell], keys[cell + 1], keys[cell + cols], keys[cell + cols + 1]].join(
+        ',',
+      )
+      patterns.set(pattern, (patterns.get(pattern) ?? 0) + 1)
+      count++
+    }
+  }
+
+  return { count, patterns }
+}
+
+function quadPatternDrift(source, output) {
+  const patterns = new Set([...source.patterns.keys(), ...output.patterns.keys()])
+  let drift = 0
+
+  for (const pattern of patterns) {
+    drift += Math.abs((source.patterns.get(pattern) ?? 0) - (output.patterns.get(pattern) ?? 0))
+  }
+
+  return drift
+}
+
 export function cellColorComponentMetrics(input, grid) {
   const cols = grid.width
   const rows = grid.height
@@ -343,6 +372,8 @@ export function cellColorComponentMetrics(input, grid) {
   const sourceAdjacency = countSameColorAdjacency(sourceKeys, cols, rows)
   const outputAdjacency = countSameColorAdjacency(outputKeys, cols, rows)
   const adjacency = adjacencyDrift(sourceAdjacency, outputAdjacency)
+  const sourceQuadPatterns = countQuadPatterns(sourceKeys, cols, rows)
+  const outputQuadPatterns = countQuadPatterns(outputKeys, cols, rows)
 
   return {
     cellColorAdjacencyDrift: adjacency.orthogonalDrift,
@@ -353,16 +384,21 @@ export function cellColorComponentMetrics(input, grid) {
     cellColorComponentPerimeterDrift: componentPerimeterDrift(source, output),
     cellColorComponentPositionDrift: componentPositionDrift(source, output),
     cellColorDiagonalAdjacencyDrift: adjacency.diagonalDrift,
+    cellColorQuadPatternDrift: quadPatternDrift(sourceQuadPatterns, outputQuadPatterns),
     outputCellColorAdjacencyCount: outputAdjacency.orthogonalCount,
     outputCellColorComponentCount: output.count,
     outputCellColorComponentHoleCount: holes.outputCount,
     outputCellColorDiagonalAdjacencyCount: outputAdjacency.diagonalCount,
+    outputCellColorDistinctQuadPatternCount: outputQuadPatterns.patterns.size,
+    outputCellColorQuadPatternCount: outputQuadPatterns.count,
     outputSmallCellColorComponentCount: output.smallCount,
     smallCellColorComponentCountDrift: Math.abs(source.smallCount - output.smallCount),
     sourceCellColorAdjacencyCount: sourceAdjacency.orthogonalCount,
     sourceCellColorComponentCount: source.count,
     sourceCellColorComponentHoleCount: holes.sourceCount,
     sourceCellColorDiagonalAdjacencyCount: sourceAdjacency.diagonalCount,
+    sourceCellColorDistinctQuadPatternCount: sourceQuadPatterns.patterns.size,
+    sourceCellColorQuadPatternCount: sourceQuadPatterns.count,
     sourceSmallCellColorComponentCount: source.smallCount,
   }
 }

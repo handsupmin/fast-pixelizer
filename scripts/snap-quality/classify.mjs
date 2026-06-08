@@ -300,6 +300,22 @@ export function classifyMetrics(metrics) {
   }
   if (
     metrics.exactLowPaletteCellColorEligible &&
+    Math.max(
+      metrics.sourceCellColorQuadPatternCount ?? 0,
+      metrics.outputCellColorQuadPatternCount ?? 0,
+    ) >= QUALITY_RULES.minExactCellColorQuadPatternCount &&
+    (metrics.cellColorQuadPatternDrift ?? 0) > QUALITY_RULES.maxExactCellColorQuadPatternDrift
+  ) {
+    issues.push(
+      issue(
+        'review',
+        'exact-cell-color-quad-pattern-drift',
+        `exact cell color 2x2 pattern drift ${metrics.cellColorQuadPatternDrift}`,
+      ),
+    )
+  }
+  if (
+    metrics.exactLowPaletteCellColorEligible &&
     Math.max(metrics.sourceCellColorComponentCount, metrics.outputCellColorComponentCount) >=
       QUALITY_RULES.minExactCellColorComponentCount &&
     metrics.cellColorComponentCountDrift > QUALITY_RULES.maxExactCellColorComponentCountDrift
@@ -887,6 +903,12 @@ export function objective(metrics) {
         : 0) - QUALITY_RULES.maxExactCellColorDiagonalAdjacencyDrift,
     ) *
       8 +
+    Math.max(
+      0,
+      (metrics.exactLowPaletteCellColorEligible ? (metrics.cellColorQuadPatternDrift ?? 0) : 0) -
+        QUALITY_RULES.maxExactCellColorQuadPatternDrift,
+    ) *
+      4 +
     Math.max(
       0,
       (metrics.exactLowPaletteCellColorEligible ? (metrics.cellColorComponentAreaDrift ?? 0) : 0) -
