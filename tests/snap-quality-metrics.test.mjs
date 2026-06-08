@@ -1,5 +1,6 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
+import { alphaMaskStats } from '../scripts/snap-quality/alpha-mask.mjs'
 import { classifyMetrics } from '../scripts/snap-quality/classify.mjs'
 import { cellColorDominanceMetrics } from '../scripts/snap-quality/cell-dominance.mjs'
 import { edgeOverlapStats } from '../scripts/snap-quality/edge-overlap.mjs'
@@ -46,6 +47,20 @@ function makeSolid(width, height, value) {
   return { data, width, height }
 }
 
+function makeTransparentBox(width, height, left, top, right, bottom) {
+  const data = new Uint8ClampedArray(width * height * 4)
+  for (let y = top; y < bottom; y++) {
+    for (let x = left; x < right; x++) {
+      const i = (y * width + x) * 4
+      data[i] = 255
+      data[i + 1] = 255
+      data[i + 2] = 255
+      data[i + 3] = 255
+    }
+  }
+  return { data, width, height }
+}
+
 test('grid boundary signals expose a weak axis instead of hiding it in the mean', () => {
   const signals = gridBoundarySignals(makeVerticalStripes(64, 64, 8), 8, 8)
 
@@ -81,6 +96,24 @@ test('edge overlap distinguishes preserved and removed line positions', () => {
   assert.ok(removed.edgeJaccard < 0.1, `expected low overlap, got ${removed.edgeJaccard}`)
 })
 
+test('alpha mask stats detect shifted transparent silhouettes', () => {
+  const source = makeTransparentBox(64, 64, 16, 16, 48, 48)
+  const shifted = makeTransparentBox(64, 64, 20, 16, 52, 48)
+  const preserved = alphaMaskStats(source, source.data)
+  const drifted = alphaMaskStats(source, shifted.data)
+
+  assert.equal(preserved.alphaCoverageRatio, 1)
+  assert.equal(preserved.alphaMaskIou, 1)
+  assert.equal(preserved.alphaBBoxDriftPx, 0)
+  assert.equal(preserved.alphaBBoxDriftRatio, 0)
+  assert.equal(drifted.alphaCoverageRatio, 1)
+  assert.ok(
+    drifted.alphaMaskIou < 0.8,
+    `expected shifted IoU below 0.8, got ${drifted.alphaMaskIou}`,
+  )
+  assert.equal(drifted.alphaBBoxDriftPx, 4)
+})
+
 test('cell color dominance separates clean and ambiguous cells', () => {
   const clean = cellColorDominanceMetrics(makeChecker(64, 64, 8), 8, 8)
   const ambiguous = cellColorDominanceMetrics(makeChecker(64, 64, 1), 8, 8)
@@ -92,6 +125,10 @@ test('cell color dominance separates clean and ambiguous cells', () => {
 test('quality classification fails when repeat snap changes visuals', () => {
   const result = classifyMetrics({
     alphaMae: 0,
+    alphaBBoxDriftPx: 0,
+    alphaBBoxDriftRatio: 0,
+    alphaCoverageRatio: 1,
+    alphaMaskIou: 1,
     alphaP95: 0,
     aspectError: 0,
     axisEdgeAlignmentMin: 1,
@@ -133,6 +170,10 @@ test('quality classification fails when repeat snap changes visuals', () => {
 test('quality classification fails when same input snap is visually non-deterministic', () => {
   const result = classifyMetrics({
     alphaMae: 0,
+    alphaBBoxDriftPx: 0,
+    alphaBBoxDriftRatio: 0,
+    alphaCoverageRatio: 1,
+    alphaMaskIou: 1,
     alphaP95: 0,
     aspectError: 0,
     axisEdgeAlignmentMin: 1,
@@ -174,6 +215,10 @@ test('quality classification fails when same input snap is visually non-determin
 test('quality classification reviews weak edge map overlap', () => {
   const result = classifyMetrics({
     alphaMae: 0,
+    alphaBBoxDriftPx: 0,
+    alphaBBoxDriftRatio: 0,
+    alphaCoverageRatio: 1,
+    alphaMaskIou: 1,
     alphaP95: 0,
     aspectError: 0,
     axisEdgeAlignmentMin: 1,
@@ -212,4 +257,51 @@ test('quality classification reviews weak edge map overlap', () => {
   assert.ok(result.issues.some((issue) => issue.code === 'edge-recall-loss'))
   assert.ok(result.issues.some((issue) => issue.code === 'spurious-edge-growth'))
   assert.ok(result.issues.some((issue) => issue.code === 'edge-map-drift'))
+})
+
+test('quality classification reviews alpha silhouette drift', () => {
+  const result = classifyMetrics({
+    alphaMae: 0,
+    alphaBBoxDriftPx: 4,
+    alphaBBoxDriftRatio: 0.0625,
+    alphaCoverageRatio: 0.9,
+    alphaMaskIou: 0.75,
+    alphaP95: 0,
+    aspectError: 0,
+    axisEdgeAlignmentMin: 1,
+    axisPhaseAlignmentMin: 1,
+    cellMae: 0,
+    cellColorDominance: 1,
+    cellColorDominanceP05: 1,
+    cols: 32,
+    contrastRatio: 1,
+    determinismGridGap: 0,
+    determinismVisualMae: 0,
+    determinismVisualP95: 0,
+    edgeAlignment: 1,
+    edgeJaccard: 1,
+    edgeRecall: 1,
+    edgeSpuriousRatio: 0,
+    expectedGridGap: 0,
+    lineEdgeRatio: 1,
+    lowPaletteRetention: 1,
+    outputCellMae: 0,
+    outputCoverage: 1,
+    outputRgbPaletteOverage: 0,
+    preservationMae: 0,
+    preservationP95: 0,
+    repeatGridGap: 0,
+    repeatVisualMae: 0,
+    repeatVisualP95: 0,
+    rows: 32,
+    shortAxisCells: 32,
+    sourceCellSize: 8,
+    squareCellError: 0,
+    stabilityDepthGap: 0,
+  })
+
+  assert.equal(result.status, 'review')
+  assert.ok(result.issues.some((issue) => issue.code === 'alpha-coverage-drift'))
+  assert.ok(result.issues.some((issue) => issue.code === 'alpha-mask-drift'))
+  assert.ok(result.issues.some((issue) => issue.code === 'alpha-bounds-drift'))
 })

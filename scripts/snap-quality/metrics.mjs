@@ -1,4 +1,5 @@
 import { MAX_METRIC_SAMPLES } from './config.mjs'
+import { alphaMaskStats } from './alpha-mask.mjs'
 import { edgeOverlapStats } from './edge-overlap.mjs'
 import { resizeToInput } from './image-io.mjs'
 
@@ -234,12 +235,19 @@ export async function preservationStats(input, result, options = {}) {
   const edgeOverlap = options.edgeOverlap
     ? edgeOverlapStats(input, resized)
     : { edgeRecall: 1, edgeSpuriousRatio: 0, edgeJaccard: 1 }
+  const alphaMask = options.alphaMask
+    ? alphaMaskStats(input, resized)
+    : { alphaCoverageRatio: 1, alphaMaskIou: 1, alphaBBoxDriftPx: 0, alphaBBoxDriftRatio: 0 }
 
   return {
     mae: count > 0 ? sum / count : 0,
     p95: errors.length > 0 ? errors[p95Index] : 0,
     alphaMae: alphaCount > 0 ? alphaSum / alphaCount : 0,
     alphaP95: alphaErrors.length > 0 ? alphaErrors[alphaP95Index] : 0,
+    alphaCoverageRatio: alphaMask.alphaCoverageRatio,
+    alphaMaskIou: alphaMask.alphaMaskIou,
+    alphaBBoxDriftPx: alphaMask.alphaBBoxDriftPx,
+    alphaBBoxDriftRatio: alphaMask.alphaBBoxDriftRatio,
     contrastRatio: inputLuma.stdDev > 0 ? outputLuma.stdDev / inputLuma.stdDev : 1,
     lineEdgeRatio: inputEdge > 0 ? outputEdge / inputEdge : 1,
     edgeRecall: edgeOverlap.edgeRecall,

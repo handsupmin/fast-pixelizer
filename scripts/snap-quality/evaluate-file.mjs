@@ -62,6 +62,10 @@ function toItem({ dataset, expected, input, metrics, name, original, resized, un
     preservationP95: formatNum(metrics.preservationP95),
     alphaMae: formatNum(metrics.alphaMae),
     alphaP95: formatNum(metrics.alphaP95),
+    alphaCoverageRatio: formatNum(metrics.alphaCoverageRatio),
+    alphaMaskIou: formatNum(metrics.alphaMaskIou),
+    alphaBBoxDriftPx: metrics.alphaBBoxDriftPx,
+    alphaBBoxDriftRatio: formatNum(metrics.alphaBBoxDriftRatio),
     contrastRatio: formatNum(metrics.contrastRatio),
     lineEdgeRatio: formatNum(metrics.lineEdgeRatio),
     edgeRecall: formatNum(metrics.edgeRecall),
@@ -109,7 +113,10 @@ async function buildMetrics(input, expected, snapshots, colorVariety) {
   const uniformity = cellUniformityMetrics(input, cols, rows)
   const dominance = cellColorDominanceMetrics(input, cols, rows)
   const outputUniformity = cellUniformityMetrics(original.result, cols, rows)
-  const preserve = await preservationStats(input, original.result, { edgeOverlap: true })
+  const preserve = await preservationStats(input, original.result, {
+    alphaMask: true,
+    edgeOverlap: true,
+  })
   const repeatPreserve = await preservationStats(original.result, repeatOriginal)
   const deterministicPreserve = await preservationStats(original.result, deterministicOriginal)
   const inputRgbColorCount = uniqueRgbColorCount(input)
@@ -144,6 +151,10 @@ async function buildMetrics(input, expected, snapshots, colorVariety) {
       preservationP95: preserve.p95,
       alphaMae: preserve.alphaMae,
       alphaP95: preserve.alphaP95,
+      alphaCoverageRatio: preserve.alphaCoverageRatio,
+      alphaMaskIou: preserve.alphaMaskIou,
+      alphaBBoxDriftPx: preserve.alphaBBoxDriftPx,
+      alphaBBoxDriftRatio: preserve.alphaBBoxDriftRatio,
       contrastRatio: preserve.contrastRatio,
       lineEdgeRatio: preserve.lineEdgeRatio,
       edgeRecall: preserve.edgeRecall,

@@ -197,6 +197,32 @@ export function classifyMetrics(metrics) {
     )
   }
   if (
+    metrics.alphaCoverageRatio < QUALITY_RULES.minAlphaCoverageRatio ||
+    metrics.alphaCoverageRatio > QUALITY_RULES.maxAlphaCoverageRatio
+  ) {
+    issues.push(
+      issue(
+        'review',
+        'alpha-coverage-drift',
+        `alpha coverage ratio ${formatNum(metrics.alphaCoverageRatio)}`,
+      ),
+    )
+  }
+  if (metrics.alphaMaskIou < QUALITY_RULES.minAlphaMaskIou) {
+    issues.push(
+      issue('review', 'alpha-mask-drift', `alpha mask IoU ${formatNum(metrics.alphaMaskIou)}`),
+    )
+  }
+  if (metrics.alphaBBoxDriftRatio > QUALITY_RULES.maxAlphaBBoxDriftRatio) {
+    issues.push(
+      issue(
+        'review',
+        'alpha-bounds-drift',
+        `alpha bounds drift ${formatNum(metrics.alphaBBoxDriftRatio)}`,
+      ),
+    )
+  }
+  if (
     metrics.contrastRatio < QUALITY_RULES.minContrastRatio ||
     metrics.contrastRatio > QUALITY_RULES.maxContrastRatio
   ) {
@@ -248,6 +274,9 @@ export function objective(metrics) {
     metrics.preservationP95 * 0.25 +
     metrics.alphaMae +
     metrics.alphaP95 * 0.1 +
+    Math.abs(1 - metrics.alphaCoverageRatio) * 80 +
+    Math.max(0, QUALITY_RULES.minAlphaMaskIou - metrics.alphaMaskIou) * 120 +
+    Math.max(0, metrics.alphaBBoxDriftRatio - QUALITY_RULES.maxAlphaBBoxDriftRatio) * 200 +
     metrics.outputCellMae * 500 +
     metrics.outputRgbPaletteOverage * 50 +
     Math.max(0, QUALITY_RULES.minLowPaletteRetention - metrics.lowPaletteRetention) * 50 +
