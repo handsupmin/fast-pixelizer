@@ -84,6 +84,27 @@ function toItem({ dataset, expected, input, metrics, name, original, resized, un
     cellTransitionRetention: formatNum(metrics.cellTransitionRetention),
     cellTransitionSpuriousRatio: formatNum(metrics.cellTransitionSpuriousRatio),
     cellTransitionErrorMean: formatNum(metrics.cellTransitionErrorMean),
+    cellDiagonalTransitionRetention: formatNum(metrics.cellDiagonalTransitionRetention),
+    cellDiagonalTransitionSpuriousRatio: formatNum(metrics.cellDiagonalTransitionSpuriousRatio),
+    cellDiagonalTransitionErrorMean: formatNum(metrics.cellDiagonalTransitionErrorMean),
+    cellDiagonalTransitionDirectionRetentionMin: formatNum(
+      metrics.cellDiagonalTransitionDirectionRetentionMin,
+    ),
+    cellDiagonalTransitionDirectionSpuriousRatioMax: formatNum(
+      metrics.cellDiagonalTransitionDirectionSpuriousRatioMax,
+    ),
+    cellDiagonalTransitionDownRightRetention: formatNum(
+      metrics.cellDiagonalTransitionDownRightRetention,
+    ),
+    cellDiagonalTransitionDownLeftRetention: formatNum(
+      metrics.cellDiagonalTransitionDownLeftRetention,
+    ),
+    cellDiagonalTransitionDownRightSpuriousRatio: formatNum(
+      metrics.cellDiagonalTransitionDownRightSpuriousRatio,
+    ),
+    cellDiagonalTransitionDownLeftSpuriousRatio: formatNum(
+      metrics.cellDiagonalTransitionDownLeftSpuriousRatio,
+    ),
     cellTransitionAxisRetentionMin: formatNum(metrics.cellTransitionAxisRetentionMin),
     cellTransitionAxisSpuriousRatioMax: formatNum(metrics.cellTransitionAxisSpuriousRatioMax),
     cellTransitionXRetention: formatNum(metrics.cellTransitionXRetention),
@@ -93,9 +114,15 @@ function toItem({ dataset, expected, input, metrics, name, original, resized, un
     sourceCellTransitionCount: metrics.sourceCellTransitionCount,
     sourceCellTransitionXCount: metrics.sourceCellTransitionXCount,
     sourceCellTransitionYCount: metrics.sourceCellTransitionYCount,
+    sourceCellDiagonalTransitionCount: metrics.sourceCellDiagonalTransitionCount,
+    sourceCellDiagonalTransitionDownRightCount: metrics.sourceCellDiagonalTransitionDownRightCount,
+    sourceCellDiagonalTransitionDownLeftCount: metrics.sourceCellDiagonalTransitionDownLeftCount,
     outputCellTransitionCount: metrics.outputCellTransitionCount,
     outputCellTransitionXCount: metrics.outputCellTransitionXCount,
     outputCellTransitionYCount: metrics.outputCellTransitionYCount,
+    outputCellDiagonalTransitionCount: metrics.outputCellDiagonalTransitionCount,
+    outputCellDiagonalTransitionDownRightCount: metrics.outputCellDiagonalTransitionDownRightCount,
+    outputCellDiagonalTransitionDownLeftCount: metrics.outputCellDiagonalTransitionDownLeftCount,
     cellMae: formatNum(metrics.cellMae),
     cellStdDev: formatNum(uniformity.cellStdDev),
     outputCellMae: formatNum(metrics.outputCellMae),
@@ -280,6 +307,20 @@ async function buildMetrics(input, expected, snapshots, colorVariety) {
       cellTransitionRetention: transitions.cellTransitionRetention,
       cellTransitionSpuriousRatio: transitions.cellTransitionSpuriousRatio,
       cellTransitionErrorMean: transitions.cellTransitionErrorMean,
+      cellDiagonalTransitionRetention: transitions.cellDiagonalTransitionRetention,
+      cellDiagonalTransitionSpuriousRatio: transitions.cellDiagonalTransitionSpuriousRatio,
+      cellDiagonalTransitionErrorMean: transitions.cellDiagonalTransitionErrorMean,
+      cellDiagonalTransitionDirectionRetentionMin:
+        transitions.cellDiagonalTransitionDirectionRetentionMin,
+      cellDiagonalTransitionDirectionSpuriousRatioMax:
+        transitions.cellDiagonalTransitionDirectionSpuriousRatioMax,
+      cellDiagonalTransitionDownRightRetention:
+        transitions.cellDiagonalTransitionDownRightRetention,
+      cellDiagonalTransitionDownLeftRetention: transitions.cellDiagonalTransitionDownLeftRetention,
+      cellDiagonalTransitionDownRightSpuriousRatio:
+        transitions.cellDiagonalTransitionDownRightSpuriousRatio,
+      cellDiagonalTransitionDownLeftSpuriousRatio:
+        transitions.cellDiagonalTransitionDownLeftSpuriousRatio,
       cellTransitionAxisRetentionMin: transitions.cellTransitionAxisRetentionMin,
       cellTransitionAxisSpuriousRatioMax: transitions.cellTransitionAxisSpuriousRatioMax,
       cellTransitionXRetention: transitions.cellTransitionXRetention,
@@ -289,9 +330,19 @@ async function buildMetrics(input, expected, snapshots, colorVariety) {
       sourceCellTransitionCount: transitions.sourceCellTransitionCount,
       sourceCellTransitionXCount: transitions.sourceCellTransitionXCount,
       sourceCellTransitionYCount: transitions.sourceCellTransitionYCount,
+      sourceCellDiagonalTransitionCount: transitions.sourceCellDiagonalTransitionCount,
+      sourceCellDiagonalTransitionDownRightCount:
+        transitions.sourceCellDiagonalTransitionDownRightCount,
+      sourceCellDiagonalTransitionDownLeftCount:
+        transitions.sourceCellDiagonalTransitionDownLeftCount,
       outputCellTransitionCount: transitions.outputCellTransitionCount,
       outputCellTransitionXCount: transitions.outputCellTransitionXCount,
       outputCellTransitionYCount: transitions.outputCellTransitionYCount,
+      outputCellDiagonalTransitionCount: transitions.outputCellDiagonalTransitionCount,
+      outputCellDiagonalTransitionDownRightCount:
+        transitions.outputCellDiagonalTransitionDownRightCount,
+      outputCellDiagonalTransitionDownLeftCount:
+        transitions.outputCellDiagonalTransitionDownLeftCount,
       cellMae: uniformity.cellMae,
       outputCellMae: outputUniformity.cellMae,
       outputAlphaCellMae: outputUniformity.alphaCellMae,

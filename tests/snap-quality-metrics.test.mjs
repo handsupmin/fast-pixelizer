@@ -699,6 +699,28 @@ test('cell transitions distinguish retained, removed, and spurious boundaries', 
   assert.equal(spurious.cellTransitionAxisSpuriousRatioMax, 1)
 })
 
+test('cell diagonal transitions distinguish retained, removed, and spurious diagonals', () => {
+  const black = [0, 0, 0, 255]
+  const white = [255, 255, 255, 255]
+  const stripes = Array.from({ length: 36 }, (_, index) => ((index % 6) % 2 === 0 ? black : white))
+  const solid = Array.from({ length: 36 }, () => black)
+  const input = makeCellImage(stripes, 6, 6, 8)
+  const retained = cellTransitionMetrics(input, makeCellGrid(stripes, 6, 6))
+  const removed = cellTransitionMetrics(input, makeCellGrid(solid, 6, 6))
+  const spurious = cellTransitionMetrics(makeCellImage(solid, 6, 6, 8), makeCellGrid(stripes, 6, 6))
+
+  assert.equal(retained.sourceCellDiagonalTransitionCount, 50)
+  assert.equal(retained.outputCellDiagonalTransitionCount, 50)
+  assert.equal(retained.cellDiagonalTransitionRetention, 1)
+  assert.equal(retained.cellDiagonalTransitionSpuriousRatio, 0)
+  assert.equal(retained.cellDiagonalTransitionDirectionRetentionMin, 1)
+  assert.ok(removed.cellDiagonalTransitionRetention < 0.01)
+  assert.equal(removed.outputCellDiagonalTransitionCount, 0)
+  assert.equal(spurious.sourceCellDiagonalTransitionCount, 0)
+  assert.equal(spurious.cellDiagonalTransitionSpuriousRatio, 1)
+  assert.equal(spurious.cellDiagonalTransitionDirectionSpuriousRatioMax, 1)
+})
+
 test('quality classification fails when output alpha cells are not uniform', () => {
   const result = classifyMetrics({
     outputAlphaCellMae: 0.02,
@@ -1593,6 +1615,62 @@ test('quality classification reviews one-axis spurious cell transitions', () => 
   assert.equal(result.status, 'review')
   assert.ok(result.issues.some((issue) => issue.code === 'axis-spurious-cell-transitions'))
   assert.ok(!result.issues.some((issue) => issue.code === 'spurious-cell-transitions'))
+})
+
+test('quality classification reviews lost diagonal cell transitions', () => {
+  const result = classifyMetrics({
+    cellDiagonalTransitionRetention: 0.4,
+    sourceCellDiagonalTransitionCount: 64,
+  })
+
+  assert.equal(result.status, 'review')
+  assert.ok(result.issues.some((issue) => issue.code === 'cell-diagonal-transition-loss'))
+})
+
+test('quality classification reviews spurious diagonal cell transitions', () => {
+  const result = classifyMetrics({
+    cellDiagonalTransitionSpuriousRatio: 0.6,
+    outputCellDiagonalTransitionCount: 64,
+  })
+
+  assert.equal(result.status, 'review')
+  assert.ok(result.issues.some((issue) => issue.code === 'spurious-cell-diagonal-transitions'))
+})
+
+test('quality classification reviews one-direction diagonal cell transition loss', () => {
+  const result = classifyMetrics({
+    cellDiagonalTransitionDirectionRetentionMin: 0.4,
+    cellDiagonalTransitionDownLeftRetention: 1,
+    cellDiagonalTransitionDownRightRetention: 0.4,
+    cellDiagonalTransitionRetention: 0.8,
+    sourceCellDiagonalTransitionCount: 64,
+    sourceCellDiagonalTransitionDownLeftCount: 32,
+    sourceCellDiagonalTransitionDownRightCount: 32,
+  })
+
+  assert.equal(result.status, 'review')
+  assert.ok(
+    result.issues.some((issue) => issue.code === 'directional-cell-diagonal-transition-loss'),
+  )
+  assert.ok(!result.issues.some((issue) => issue.code === 'cell-diagonal-transition-loss'))
+})
+
+test('quality classification reviews one-direction spurious diagonal cell transitions', () => {
+  const result = classifyMetrics({
+    cellDiagonalTransitionDirectionSpuriousRatioMax: 0.6,
+    cellDiagonalTransitionDownLeftSpuriousRatio: 0,
+    cellDiagonalTransitionDownRightSpuriousRatio: 0.6,
+    cellDiagonalTransitionSpuriousRatio: 0.3,
+    outputCellDiagonalTransitionCount: 64,
+    outputCellDiagonalTransitionDownLeftCount: 32,
+    outputCellDiagonalTransitionDownRightCount: 32,
+  })
+
+  assert.equal(result.status, 'review')
+  assert.ok(
+    result.issues.some((issue) => issue.code === 'directional-spurious-cell-diagonal-transitions'),
+  )
+  assert.ok(!result.issues.some((issue) => issue.code === 'spurious-cell-diagonal-transitions'))
 })
 
 test('quality classification reviews regional preservation loss', () => {

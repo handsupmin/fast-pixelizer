@@ -97,6 +97,9 @@ export function cellTransitionMetrics(input, grid, options = {}) {
   const allTransitions = createTransitionStats()
   const xTransitions = createTransitionStats()
   const yTransitions = createTransitionStats()
+  const diagonalTransitions = createTransitionStats()
+  const downRightTransitions = createTransitionStats()
+  const downLeftTransitions = createTransitionStats()
 
   function accumulatePair(axisStats, a, b) {
     const sourceDelta = featureDifference(source, a * CHANNELS, source, b * CHANNELS)
@@ -106,19 +109,48 @@ export function cellTransitionMetrics(input, grid, options = {}) {
     accumulateTransition(axisStats, sourceDelta, outputDelta, minTransitionDelta)
   }
 
+  function accumulateDiagonalPair(directionStats, a, b) {
+    const sourceDelta = featureDifference(source, a * CHANNELS, source, b * CHANNELS)
+    const outputDelta = featureDifference(output, a * CHANNELS, output, b * CHANNELS)
+
+    accumulateTransition(diagonalTransitions, sourceDelta, outputDelta, minTransitionDelta)
+    accumulateTransition(directionStats, sourceDelta, outputDelta, minTransitionDelta)
+  }
+
   for (let row = 0; row < rows; row++) {
     for (let col = 0; col < cols; col++) {
       const cell = row * cols + col
       if (col + 1 < cols) accumulatePair(xTransitions, cell, cell + 1)
       if (row + 1 < rows) accumulatePair(yTransitions, cell, cell + cols)
+      if (row + 1 < rows && col + 1 < cols) {
+        accumulateDiagonalPair(downRightTransitions, cell, cell + cols + 1)
+      }
+      if (row + 1 < rows && col > 0) {
+        accumulateDiagonalPair(downLeftTransitions, cell, cell + cols - 1)
+      }
     }
   }
 
   const all = finishTransitionStats(allTransitions)
   const x = finishTransitionStats(xTransitions)
   const y = finishTransitionStats(yTransitions)
+  const diagonal = finishTransitionStats(diagonalTransitions)
+  const downRight = finishTransitionStats(downRightTransitions)
+  const downLeft = finishTransitionStats(downLeftTransitions)
 
   return {
+    cellDiagonalTransitionDirectionRetentionMin: Math.min(downRight.retention, downLeft.retention),
+    cellDiagonalTransitionDirectionSpuriousRatioMax: Math.max(
+      downRight.spuriousRatio,
+      downLeft.spuriousRatio,
+    ),
+    cellDiagonalTransitionDownLeftRetention: downLeft.retention,
+    cellDiagonalTransitionDownLeftSpuriousRatio: downLeft.spuriousRatio,
+    cellDiagonalTransitionDownRightRetention: downRight.retention,
+    cellDiagonalTransitionDownRightSpuriousRatio: downRight.spuriousRatio,
+    cellDiagonalTransitionErrorMean: diagonal.errorMean,
+    cellDiagonalTransitionRetention: diagonal.retention,
+    cellDiagonalTransitionSpuriousRatio: diagonal.spuriousRatio,
     cellTransitionAxisRetentionMin: Math.min(x.retention, y.retention),
     cellTransitionAxisSpuriousRatioMax: Math.max(x.spuriousRatio, y.spuriousRatio),
     cellTransitionErrorMean: all.errorMean,
@@ -130,9 +162,15 @@ export function cellTransitionMetrics(input, grid, options = {}) {
     cellTransitionYErrorMean: y.errorMean,
     cellTransitionYRetention: y.retention,
     cellTransitionYSpuriousRatio: y.spuriousRatio,
+    outputCellDiagonalTransitionCount: diagonal.outputCount,
+    outputCellDiagonalTransitionDownLeftCount: downLeft.outputCount,
+    outputCellDiagonalTransitionDownRightCount: downRight.outputCount,
     outputCellTransitionCount: all.outputCount,
     outputCellTransitionXCount: x.outputCount,
     outputCellTransitionYCount: y.outputCount,
+    sourceCellDiagonalTransitionCount: diagonal.sourceCount,
+    sourceCellDiagonalTransitionDownLeftCount: downLeft.sourceCount,
+    sourceCellDiagonalTransitionDownRightCount: downRight.sourceCount,
     sourceCellTransitionCount: all.sourceCount,
     sourceCellTransitionXCount: x.sourceCount,
     sourceCellTransitionYCount: y.sourceCount,

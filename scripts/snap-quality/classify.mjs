@@ -427,6 +427,76 @@ export function classifyMetrics(metrics) {
       ),
     )
   }
+  if (
+    (metrics.sourceCellDiagonalTransitionCount ?? 0) >=
+      QUALITY_RULES.minCellDiagonalTransitionCount &&
+    (metrics.cellDiagonalTransitionRetention ?? 1) <
+      QUALITY_RULES.minCellDiagonalTransitionRetention
+  ) {
+    issues.push(
+      issue(
+        'review',
+        'cell-diagonal-transition-loss',
+        `diagonal cell transition retention ${formatNum(metrics.cellDiagonalTransitionRetention)}`,
+      ),
+    )
+  }
+  if (
+    ((metrics.sourceCellDiagonalTransitionDownRightCount ?? 0) >=
+      QUALITY_RULES.minCellDiagonalTransitionCount &&
+      (metrics.cellDiagonalTransitionDownRightRetention ?? 1) <
+        QUALITY_RULES.minCellDiagonalTransitionRetention) ||
+    ((metrics.sourceCellDiagonalTransitionDownLeftCount ?? 0) >=
+      QUALITY_RULES.minCellDiagonalTransitionCount &&
+      (metrics.cellDiagonalTransitionDownLeftRetention ?? 1) <
+        QUALITY_RULES.minCellDiagonalTransitionRetention)
+  ) {
+    issues.push(
+      issue(
+        'review',
+        'directional-cell-diagonal-transition-loss',
+        `min diagonal cell transition retention ${formatNum(
+          metrics.cellDiagonalTransitionDirectionRetentionMin,
+        )}`,
+      ),
+    )
+  }
+  if (
+    (metrics.outputCellDiagonalTransitionCount ?? 0) >=
+      QUALITY_RULES.minCellDiagonalTransitionCount &&
+    (metrics.cellDiagonalTransitionSpuriousRatio ?? 0) >
+      QUALITY_RULES.maxCellDiagonalTransitionSpuriousRatio
+  ) {
+    issues.push(
+      issue(
+        'review',
+        'spurious-cell-diagonal-transitions',
+        `diagonal cell transition spurious ratio ${formatNum(
+          metrics.cellDiagonalTransitionSpuriousRatio,
+        )}`,
+      ),
+    )
+  }
+  if (
+    ((metrics.outputCellDiagonalTransitionDownRightCount ?? 0) >=
+      QUALITY_RULES.minCellDiagonalTransitionCount &&
+      (metrics.cellDiagonalTransitionDownRightSpuriousRatio ?? 0) >
+        QUALITY_RULES.maxCellDiagonalTransitionSpuriousRatio) ||
+    ((metrics.outputCellDiagonalTransitionDownLeftCount ?? 0) >=
+      QUALITY_RULES.minCellDiagonalTransitionCount &&
+      (metrics.cellDiagonalTransitionDownLeftSpuriousRatio ?? 0) >
+        QUALITY_RULES.maxCellDiagonalTransitionSpuriousRatio)
+  ) {
+    issues.push(
+      issue(
+        'review',
+        'directional-spurious-cell-diagonal-transitions',
+        `max diagonal cell transition spurious ratio ${formatNum(
+          metrics.cellDiagonalTransitionDirectionSpuriousRatioMax,
+        )}`,
+      ),
+    )
+  }
   if (metrics.cellMae > QUALITY_RULES.highCellMae) {
     issues.push(issue('review', 'noisy-cells', `cell MAE ${formatNum(metrics.cellMae)}`))
   }
@@ -909,6 +979,30 @@ export function objective(metrics) {
     ) *
       30 +
     metrics.cellTransitionErrorMean * 0.1 +
+    Math.max(
+      0,
+      QUALITY_RULES.minCellDiagonalTransitionRetention -
+        (metrics.cellDiagonalTransitionRetention ?? 1),
+    ) *
+      35 +
+    Math.max(
+      0,
+      QUALITY_RULES.minCellDiagonalTransitionRetention -
+        (metrics.cellDiagonalTransitionDirectionRetentionMin ?? 1),
+    ) *
+      25 +
+    Math.max(
+      0,
+      (metrics.cellDiagonalTransitionSpuriousRatio ?? 0) -
+        QUALITY_RULES.maxCellDiagonalTransitionSpuriousRatio,
+    ) *
+      30 +
+    Math.max(
+      0,
+      (metrics.cellDiagonalTransitionDirectionSpuriousRatioMax ?? 0) -
+        QUALITY_RULES.maxCellDiagonalTransitionSpuriousRatio,
+    ) *
+      20 +
     Math.max(0, QUALITY_RULES.minSourceCellSize - metrics.sourceCellSize) * 500 +
     Math.max(0, metrics.shortAxisCells - QUALITY_RULES.maxShortAxisCells) * 10 +
     Math.max(0, metrics.sourceCellSize - QUALITY_RULES.maxSourceCellSizeReview) * 2 +
