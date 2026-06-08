@@ -1,7 +1,5 @@
 import fs from 'node:fs/promises'
 import path from 'node:path'
-import { performance } from 'node:perf_hooks'
-import { snap } from '../../dist/index.js'
 import {
   DEFAULT_OUT_DIR,
   KNOWN_EXPECTATIONS,
@@ -9,19 +7,9 @@ import {
   ROOT,
   defaultDatasets,
 } from './config.mjs'
-import { classifyMetrics, formatNum, objective } from './classify.mjs'
-import { cellColorDominanceMetrics } from './cell-dominance.mjs'
+import { evaluateFile } from './evaluate-file.mjs'
 import { generateSyntheticDataset } from './synthetic.mjs'
-import { listImages, loadImage, writePng } from './image-io.mjs'
-import {
-  cellUniformityMetrics,
-  gridBoundarySignals,
-  gridPhaseSignals,
-  meanAxisGradient,
-  preservationStats,
-  uniqueColorCount,
-  uniqueRgbColorCount,
-} from './metrics.mjs'
+import { listImages } from './image-io.mjs'
 import { summarize, summarizeByDataset, toMarkdown } from './report.mjs'
 
 function parseDataset(value) {
@@ -64,157 +52,6 @@ function parseArgs(argv) {
   }
 
   return args
-}
-
-function gridGap(a, b) {
-  return Math.abs(a.width - b.width) + Math.abs(a.height - b.height)
-}
-
-async function timedSnap(input, options) {
-  const start = performance.now()
-  const result = snap(input, options)
-  return { result, durationMs: performance.now() - start }
-}
-
-async function evaluateFile(file, dataset, options, expectations) {
-  const input = await loadImage(file)
-  const original = await timedSnap(input, {
-    colorVariety: options.colorVariety,
-    output: 'original',
-  })
-  const resized = await timedSnap(input, { colorVariety: options.colorVariety, output: 'resized' })
-  const deterministic = snap(input, { colorVariety: options.colorVariety, output: 'resized' })
-  const deterministicOriginal = snap(input, {
-    colorVariety: options.colorVariety,
-    output: 'original',
-  })
-  const repeat = snap(original.result, { colorVariety: options.colorVariety, output: 'resized' })
-  const repeatOriginal = snap(original.result, {
-    colorVariety: options.colorVariety,
-    output: 'original',
-  })
-  const repeatAgain = snap(repeatOriginal, {
-    colorVariety: options.colorVariety,
-    output: 'resized',
-  })
-  const cols = resized.result.width
-  const rows = resized.result.height
-  const name = path.basename(file)
-  const expected = expectations.get(`${dataset.name}/${name}`) ?? expectations.get(name)
-  const targetAspect = expected ? expected.cols / expected.rows : input.width / input.height
-  const gridAspect = cols / rows
-  const fullGradient = meanAxisGradient(input)
-  const boundary = gridBoundarySignals(input, cols, rows)
-  const phase = gridPhaseSignals(input, cols, rows)
-  const uniformity = cellUniformityMetrics(input, cols, rows)
-  const dominance = cellColorDominanceMetrics(input, cols, rows)
-  const outputUniformity = cellUniformityMetrics(original.result, cols, rows)
-  const preserve = await preservationStats(input, original.result)
-  const repeatPreserve = await preservationStats(original.result, repeatOriginal)
-  const deterministicPreserve = await preservationStats(original.result, deterministicOriginal)
-  const outputCellWidth = original.result.width / cols
-  const outputCellHeight = original.result.height / rows
-  const outputCoverage = Math.min(
-    original.result.width / input.width,
-    original.result.height / input.height,
-  )
-  const inputRgbColorCount = uniqueRgbColorCount(input)
-  const outputRgbColorCount = uniqueRgbColorCount(resized.result)
-  const lowPaletteRetention =
-    inputRgbColorCount > 0 && inputRgbColorCount <= options.colorVariety + 1
-      ? outputRgbColorCount / inputRgbColorCount
-      : 1
-  const metrics = {
-    cols,
-    rows,
-    aspectError: Math.abs(gridAspect / targetAspect - 1),
-    shortAxisCells: Math.min(cols, rows),
-    sourceCellSize: Math.min(input.width / cols, input.height / rows),
-    repeatGridGap: gridGap(repeat, resized.result),
-    stabilityDepthGap: gridGap(repeatAgain, repeat),
-    determinismGridGap: gridGap(deterministic, resized.result),
-    repeatVisualMae: repeatPreserve.mae,
-    repeatVisualP95: repeatPreserve.p95,
-    determinismVisualMae: deterministicPreserve.mae,
-    determinismVisualP95: deterministicPreserve.p95,
-    expectedGridGap: expected ? Math.abs(cols - expected.cols) + Math.abs(rows - expected.rows) : 0,
-    edgeAlignment: boundary.mean / (fullGradient + 1e-9),
-    axisEdgeAlignmentMin: boundary.min / (fullGradient + 1e-9),
-    phaseAlignment: phase.mean,
-    axisPhaseAlignmentMin: phase.min,
-    cellColorDominance: dominance.mean,
-    cellColorDominanceP05: dominance.p05,
-    cellMae: uniformity.cellMae,
-    outputCellMae: outputUniformity.cellMae,
-    preservationMae: preserve.mae,
-    preservationP95: preserve.p95,
-    alphaMae: preserve.alphaMae,
-    alphaP95: preserve.alphaP95,
-    contrastRatio: preserve.contrastRatio,
-    lineEdgeRatio: preserve.lineEdgeRatio,
-    squareCellError: Math.abs(outputCellWidth / outputCellHeight - 1),
-    outputCoverage,
-    outputRgbPaletteOverage: Math.max(0, outputRgbColorCount - (options.colorVariety + 1)),
-    lowPaletteRetention,
-  }
-  const classification = classifyMetrics(metrics)
-  const item = {
-    dataset: dataset.name,
-    file: name,
-    input: `${input.width}x${input.height}`,
-    output: `${original.result.width}x${original.result.height}`,
-    outputCoverage: formatNum(metrics.outputCoverage),
-    grid: `${cols}x${rows}`,
-    expectedGrid: expected ? `${expected.cols}x${expected.rows}` : '',
-    detectedResolution: original.result.detectedResolution,
-    sourceCellSize: formatNum(metrics.sourceCellSize),
-    squareCellError: formatNum(metrics.squareCellError),
-    aspectError: formatNum(metrics.aspectError),
-    edgeAlignment: formatNum(metrics.edgeAlignment),
-    axisEdgeAlignmentMin: formatNum(metrics.axisEdgeAlignmentMin),
-    phaseAlignment: formatNum(metrics.phaseAlignment),
-    axisPhaseAlignmentMin: formatNum(metrics.axisPhaseAlignmentMin),
-    cellColorDominance: formatNum(metrics.cellColorDominance),
-    cellColorDominanceP05: formatNum(metrics.cellColorDominanceP05),
-    cellMae: formatNum(metrics.cellMae),
-    cellStdDev: formatNum(uniformity.cellStdDev),
-    outputCellMae: formatNum(metrics.outputCellMae),
-    preservationMae: formatNum(metrics.preservationMae),
-    preservationP95: formatNum(metrics.preservationP95),
-    alphaMae: formatNum(metrics.alphaMae),
-    alphaP95: formatNum(metrics.alphaP95),
-    contrastRatio: formatNum(metrics.contrastRatio),
-    lineEdgeRatio: formatNum(metrics.lineEdgeRatio),
-    repeatGridGap: metrics.repeatGridGap,
-    repeatVisualMae: formatNum(metrics.repeatVisualMae),
-    repeatVisualP95: formatNum(metrics.repeatVisualP95),
-    stabilityDepthGap: metrics.stabilityDepthGap,
-    determinismGridGap: metrics.determinismGridGap,
-    determinismVisualMae: formatNum(metrics.determinismVisualMae),
-    determinismVisualP95: formatNum(metrics.determinismVisualP95),
-    expectedGridGap: metrics.expectedGridGap,
-    inputColorCount: uniqueColorCount(input),
-    inputRgbColorCount,
-    outputColorCount: uniqueColorCount(resized.result),
-    outputRgbColorCount,
-    outputRgbPaletteOverage: metrics.outputRgbPaletteOverage,
-    lowPaletteRetention: formatNum(metrics.lowPaletteRetention),
-    snapOriginalMs: formatNum(original.durationMs),
-    snapResizedMs: formatNum(resized.durationMs),
-    status: classification.status,
-    issues: classification.issues,
-    issueSummary: classification.issues.map((issue) => issue.code).join(', ') || 'none',
-    objective: formatNum(objective(metrics)),
-  }
-
-  if (options.writeImages) {
-    const datasetOutDir = path.join(options.outDir, dataset.name)
-    await fs.mkdir(datasetOutDir, { recursive: true })
-    await writePng(path.join(datasetOutDir, `${path.parse(name).name}.snap.png`), original.result)
-    await writePng(path.join(datasetOutDir, `${path.parse(name).name}.grid.png`), resized.result)
-  }
-
-  return item
 }
 
 export async function runSnapQualityEval(argv) {

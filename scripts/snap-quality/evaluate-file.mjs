@@ -1,0 +1,216 @@
+import fs from 'node:fs/promises'
+import path from 'node:path'
+import { performance } from 'node:perf_hooks'
+import { snap } from '../../dist/index.js'
+import { classifyMetrics, formatNum, objective } from './classify.mjs'
+import { cellColorDominanceMetrics } from './cell-dominance.mjs'
+import { loadImage, writePng } from './image-io.mjs'
+import {
+  cellUniformityMetrics,
+  gridBoundarySignals,
+  gridPhaseSignals,
+  meanAxisGradient,
+  preservationStats,
+  uniqueColorCount,
+  uniqueRgbColorCount,
+} from './metrics.mjs'
+
+function gridGap(a, b) {
+  return Math.abs(a.width - b.width) + Math.abs(a.height - b.height)
+}
+
+async function timedSnap(input, options) {
+  const start = performance.now()
+  const result = snap(input, options)
+  return { result, durationMs: performance.now() - start }
+}
+
+function lowPaletteRetention(inputRgbColorCount, outputRgbColorCount, colorVariety) {
+  return inputRgbColorCount > 0 && inputRgbColorCount <= colorVariety + 1
+    ? outputRgbColorCount / inputRgbColorCount
+    : 1
+}
+
+function outputCoverage(input, result) {
+  return Math.min(result.width / input.width, result.height / input.height)
+}
+
+function toItem({ dataset, expected, input, metrics, name, original, resized, uniformity }) {
+  const classification = classifyMetrics(metrics)
+  return {
+    dataset: dataset.name,
+    file: name,
+    input: `${input.width}x${input.height}`,
+    output: `${original.result.width}x${original.result.height}`,
+    outputCoverage: formatNum(metrics.outputCoverage),
+    grid: `${metrics.cols}x${metrics.rows}`,
+    expectedGrid: expected ? `${expected.cols}x${expected.rows}` : '',
+    detectedResolution: original.result.detectedResolution,
+    sourceCellSize: formatNum(metrics.sourceCellSize),
+    squareCellError: formatNum(metrics.squareCellError),
+    aspectError: formatNum(metrics.aspectError),
+    edgeAlignment: formatNum(metrics.edgeAlignment),
+    axisEdgeAlignmentMin: formatNum(metrics.axisEdgeAlignmentMin),
+    phaseAlignment: formatNum(metrics.phaseAlignment),
+    axisPhaseAlignmentMin: formatNum(metrics.axisPhaseAlignmentMin),
+    cellColorDominance: formatNum(metrics.cellColorDominance),
+    cellColorDominanceP05: formatNum(metrics.cellColorDominanceP05),
+    cellMae: formatNum(metrics.cellMae),
+    cellStdDev: formatNum(uniformity.cellStdDev),
+    outputCellMae: formatNum(metrics.outputCellMae),
+    preservationMae: formatNum(metrics.preservationMae),
+    preservationP95: formatNum(metrics.preservationP95),
+    alphaMae: formatNum(metrics.alphaMae),
+    alphaP95: formatNum(metrics.alphaP95),
+    contrastRatio: formatNum(metrics.contrastRatio),
+    lineEdgeRatio: formatNum(metrics.lineEdgeRatio),
+    repeatGridGap: metrics.repeatGridGap,
+    repeatVisualMae: formatNum(metrics.repeatVisualMae),
+    repeatVisualP95: formatNum(metrics.repeatVisualP95),
+    stabilityDepthGap: metrics.stabilityDepthGap,
+    determinismGridGap: metrics.determinismGridGap,
+    determinismVisualMae: formatNum(metrics.determinismVisualMae),
+    determinismVisualP95: formatNum(metrics.determinismVisualP95),
+    expectedGridGap: metrics.expectedGridGap,
+    inputColorCount: uniqueColorCount(input),
+    inputRgbColorCount: metrics.inputRgbColorCount,
+    outputColorCount: uniqueColorCount(resized.result),
+    outputRgbColorCount: metrics.outputRgbColorCount,
+    outputRgbPaletteOverage: metrics.outputRgbPaletteOverage,
+    lowPaletteRetention: formatNum(metrics.lowPaletteRetention),
+    snapOriginalMs: formatNum(original.durationMs),
+    snapResizedMs: formatNum(resized.durationMs),
+    status: classification.status,
+    issues: classification.issues,
+    issueSummary: classification.issues.map((issue) => issue.code).join(', ') || 'none',
+    objective: formatNum(objective(metrics)),
+  }
+}
+
+async function buildMetrics(input, expected, snapshots, colorVariety) {
+  const {
+    deterministic,
+    deterministicOriginal,
+    original,
+    repeat,
+    repeatAgain,
+    repeatOriginal,
+    resized,
+  } = snapshots
+  const cols = resized.result.width
+  const rows = resized.result.height
+  const targetAspect = expected ? expected.cols / expected.rows : input.width / input.height
+  const fullGradient = meanAxisGradient(input)
+  const boundary = gridBoundarySignals(input, cols, rows)
+  const phase = gridPhaseSignals(input, cols, rows)
+  const uniformity = cellUniformityMetrics(input, cols, rows)
+  const dominance = cellColorDominanceMetrics(input, cols, rows)
+  const outputUniformity = cellUniformityMetrics(original.result, cols, rows)
+  const preserve = await preservationStats(input, original.result)
+  const repeatPreserve = await preservationStats(original.result, repeatOriginal)
+  const deterministicPreserve = await preservationStats(original.result, deterministicOriginal)
+  const inputRgbColorCount = uniqueRgbColorCount(input)
+  const outputRgbColorCount = uniqueRgbColorCount(resized.result)
+
+  return {
+    metrics: {
+      cols,
+      rows,
+      aspectError: Math.abs(cols / rows / targetAspect - 1),
+      shortAxisCells: Math.min(cols, rows),
+      sourceCellSize: Math.min(input.width / cols, input.height / rows),
+      repeatGridGap: gridGap(repeat, resized.result),
+      stabilityDepthGap: gridGap(repeatAgain, repeat),
+      determinismGridGap: gridGap(deterministic, resized.result),
+      repeatVisualMae: repeatPreserve.mae,
+      repeatVisualP95: repeatPreserve.p95,
+      determinismVisualMae: deterministicPreserve.mae,
+      determinismVisualP95: deterministicPreserve.p95,
+      expectedGridGap: expected
+        ? Math.abs(cols - expected.cols) + Math.abs(rows - expected.rows)
+        : 0,
+      edgeAlignment: boundary.mean / (fullGradient + 1e-9),
+      axisEdgeAlignmentMin: boundary.min / (fullGradient + 1e-9),
+      phaseAlignment: phase.mean,
+      axisPhaseAlignmentMin: phase.min,
+      cellColorDominance: dominance.mean,
+      cellColorDominanceP05: dominance.p05,
+      cellMae: uniformity.cellMae,
+      outputCellMae: outputUniformity.cellMae,
+      preservationMae: preserve.mae,
+      preservationP95: preserve.p95,
+      alphaMae: preserve.alphaMae,
+      alphaP95: preserve.alphaP95,
+      contrastRatio: preserve.contrastRatio,
+      lineEdgeRatio: preserve.lineEdgeRatio,
+      squareCellError: Math.abs(original.result.width / cols / (original.result.height / rows) - 1),
+      outputCoverage: outputCoverage(input, original.result),
+      outputRgbPaletteOverage: Math.max(0, outputRgbColorCount - (colorVariety + 1)),
+      inputRgbColorCount,
+      outputRgbColorCount,
+      lowPaletteRetention: lowPaletteRetention(
+        inputRgbColorCount,
+        outputRgbColorCount,
+        colorVariety,
+      ),
+    },
+    uniformity,
+  }
+}
+
+async function snapVariants(input, colorVariety) {
+  const original = await timedSnap(input, { colorVariety, output: 'original' })
+  const resized = await timedSnap(input, { colorVariety, output: 'resized' })
+  const deterministic = snap(input, { colorVariety, output: 'resized' })
+  const deterministicOriginal = snap(input, { colorVariety, output: 'original' })
+  const repeat = snap(original.result, { colorVariety, output: 'resized' })
+  const repeatOriginal = snap(original.result, { colorVariety, output: 'original' })
+  const repeatAgain = snap(repeatOriginal, { colorVariety, output: 'resized' })
+
+  return {
+    deterministic,
+    deterministicOriginal,
+    original,
+    repeat,
+    repeatAgain,
+    repeatOriginal,
+    resized,
+  }
+}
+
+export async function evaluateFile(file, dataset, options, expectations) {
+  const input = await loadImage(file)
+  const name = path.basename(file)
+  const expected = expectations.get(`${dataset.name}/${name}`) ?? expectations.get(name)
+  const snapshots = await snapVariants(input, options.colorVariety)
+  const { metrics, uniformity } = await buildMetrics(
+    input,
+    expected,
+    snapshots,
+    options.colorVariety,
+  )
+
+  if (options.writeImages) {
+    const datasetOutDir = path.join(options.outDir, dataset.name)
+    await fs.mkdir(datasetOutDir, { recursive: true })
+    await writePng(
+      path.join(datasetOutDir, `${path.parse(name).name}.snap.png`),
+      snapshots.original.result,
+    )
+    await writePng(
+      path.join(datasetOutDir, `${path.parse(name).name}.grid.png`),
+      snapshots.resized.result,
+    )
+  }
+
+  return toItem({
+    dataset,
+    expected,
+    input,
+    metrics,
+    name,
+    original: snapshots.original,
+    resized: snapshots.resized,
+    uniformity,
+  })
+}
