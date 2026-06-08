@@ -98,6 +98,10 @@ export function summarize(results) {
     outputCellMaeMean: mean(results, 'outputCellMae'),
     cellColorDominanceMean: mean(results, 'cellColorDominance'),
     cellColorDominanceP05Mean: mean(results, 'cellColorDominanceP05'),
+    cellColorDominanceMinMin: results.reduce(
+      (min, item) => Math.min(min, item.cellColorDominanceMin ?? 1),
+      results.length > 0 ? 1 : 0,
+    ),
     exactLowPaletteCellColorEligibleCount: results.filter(
       (item) => item.exactLowPaletteCellColorEligible,
     ).length,
@@ -272,6 +276,7 @@ function criteriaMarkdown() {
     `- Axis phase alignment: review when either axis scores below ${QUALITY_RULES.minAxisPhaseAlignment} against nearby gradient peaks.`,
     `- Cell color dominance: review when the average bucketed majority color share per inferred cell is below ${QUALITY_RULES.minCellColorDominance}.`,
     `- Localized cell color dominance: review when the bottom 5% bucketed majority color share per inferred cell is below ${QUALITY_RULES.minCellColorDominanceP05}.`,
+    `- Rare cell color dominance: review when any inferred cell's bucketed majority color share is below ${QUALITY_RULES.minCellColorDominanceMin}.`,
     `- Cell representative color: review when snapped grid-cell color differs from source cell average by mean > ${QUALITY_RULES.maxCellColorErrorMean} or p95 > ${QUALITY_RULES.maxCellColorErrorP95}.`,
     `- Rare representative color outliers: review when any snapped grid-cell color differs from the source cell average by more than ${QUALITY_RULES.maxCellColorErrorMaxReview}.`,
     `- Cell representative alpha: review when snapped grid-cell alpha differs from source cell average by mean > ${QUALITY_RULES.maxCellAlphaErrorMean} or p95 > ${QUALITY_RULES.maxCellAlphaErrorP95}.`,
@@ -332,6 +337,7 @@ export function toMarkdown(summary) {
     'axisPhaseAlignmentMin',
     'cellColorDominance',
     'cellColorDominanceP05',
+    'cellColorDominanceMin',
     'exactLowPaletteCellColorEligible',
     'sourceCellColorAdjacencyCount',
     'outputCellColorAdjacencyCount',

@@ -33,6 +33,7 @@ export function cellColorDominanceMetrics(input, cols, rows) {
   }
 
   const dominance = []
+  let min = 1
   let weighted = 0
   let samples = 0
   for (let cell = 0; cell < cellCount; cell++) {
@@ -42,6 +43,7 @@ export function cellColorDominanceMetrics(input, cols, rows) {
     for (const value of buckets[cell].values()) best = Math.max(best, value)
     const score = best / count
     dominance.push(score)
+    min = Math.min(min, score)
     weighted += score * count
     samples += count
   }
@@ -49,6 +51,7 @@ export function cellColorDominanceMetrics(input, cols, rows) {
   dominance.sort((a, b) => a - b)
   return {
     mean: samples > 0 ? weighted / samples : 1,
+    min: samples > 0 ? min : 1,
     p05: dominance.length > 0 ? dominance[Math.floor(dominance.length * 0.05)] : 1,
   }
 }

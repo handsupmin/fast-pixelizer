@@ -623,6 +623,23 @@ test('cell color dominance separates clean and ambiguous cells', () => {
   assert.ok(ambiguous.mean < 0.51, `expected ambiguous dominance near half, got ${ambiguous.mean}`)
 })
 
+test('cell color dominance exposes rare ambiguous cells hidden by p05', () => {
+  const image = makeSolid(64, 64, 0)
+  for (let y = 0; y < 8; y++) {
+    for (let x = 0; x < 8; x++) {
+      const i = (y * image.width + x) * 4
+      image.data[i] = x * 16
+      image.data[i + 1] = y * 16
+      image.data[i + 2] = ((x + y) % 16) * 16
+    }
+  }
+
+  const metrics = cellColorDominanceMetrics(image, 8, 8)
+
+  assert.equal(metrics.p05, 1)
+  assert.equal(metrics.min, 1 / 64)
+})
+
 test('quality classification reviews localized cell color ambiguity hidden by the mean', () => {
   const result = classifyMetrics({
     cellColorDominance: 0.9,
@@ -631,6 +648,17 @@ test('quality classification reviews localized cell color ambiguity hidden by th
 
   assert.equal(result.status, 'review')
   assert.ok(result.issues.some((issue) => issue.code === 'localized-ambiguous-cell-colors'))
+})
+
+test('quality classification reviews rare cell color ambiguity hidden by p05', () => {
+  const result = classifyMetrics({
+    cellColorDominance: 0.9,
+    cellColorDominanceMin: 0.03,
+    cellColorDominanceP05: 0.9,
+  })
+
+  assert.equal(result.status, 'review')
+  assert.ok(result.issues.some((issue) => issue.code === 'rare-ambiguous-cell-colors'))
 })
 
 test('cell color error tracks representative source cell color drift', () => {
