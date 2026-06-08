@@ -10,6 +10,7 @@ export const MAX_METRIC_SAMPLES = 500_000
 export const QUALITY_RULES = {
   maxAspectError: 0.03,
   maxShortAxisCells: 256,
+  maxLongAxisCellsReview: 1024,
   minSourceCellSize: 3,
   maxSourceCellSizeReview: 64,
   maxRepeatGridGapFloor: 2,

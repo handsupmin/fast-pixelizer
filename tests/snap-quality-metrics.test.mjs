@@ -1061,6 +1061,18 @@ test('quality classification fails when output alpha cells are not uniform', () 
   assert.ok(result.issues.some((issue) => issue.code === 'non-uniform-output-alpha-cells'))
 })
 
+test('quality classification reviews runaway long-axis grids', () => {
+  const result = classifyMetrics({
+    cols: 2048,
+    longAxisCells: 2048,
+    rows: 8,
+    shortAxisCells: 8,
+  })
+
+  assert.equal(result.status, 'review')
+  assert.ok(result.issues.some((issue) => issue.code === 'runaway-long-axis-grid'))
+})
+
 test('quality classification reviews representative alpha drift', () => {
   const result = classifyMetrics({
     cellAlphaErrorMean: 9,

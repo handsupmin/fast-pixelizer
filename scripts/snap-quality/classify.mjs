@@ -30,6 +30,11 @@ export function classifyMetrics(metrics) {
   if (metrics.shortAxisCells > QUALITY_RULES.maxShortAxisCells) {
     issues.push(issue('fail', 'micro-grid', `short axis cells ${metrics.shortAxisCells}`))
   }
+  if ((metrics.longAxisCells ?? 0) > QUALITY_RULES.maxLongAxisCellsReview) {
+    issues.push(
+      issue('review', 'runaway-long-axis-grid', `long axis cells ${metrics.longAxisCells}`),
+    )
+  }
   if (metrics.sourceCellSize < QUALITY_RULES.minSourceCellSize) {
     issues.push(
       issue('fail', 'subpixel-texture', `source cell size ${formatNum(metrics.sourceCellSize)}px`),
@@ -1127,6 +1132,7 @@ export function objective(metrics) {
     (metrics.determinismVisualAlphaP95 ?? 0) * 20 +
     metrics.expectedGridGap * 150 +
     metrics.aspectError * 50 +
+    Math.max(0, (metrics.longAxisCells ?? 0) - QUALITY_RULES.maxLongAxisCellsReview) * 0.1 +
     (metrics.cellAlphaErrorMean ?? 0) * 0.5 +
     (metrics.cellAlphaErrorP95 ?? 0) * 0.2 +
     metrics.cellColorErrorMean * 0.5 +
