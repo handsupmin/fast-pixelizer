@@ -6,7 +6,11 @@ import { cellColorErrorMetrics } from '../scripts/snap-quality/cell-color-error.
 import { classifyMetrics } from '../scripts/snap-quality/classify.mjs'
 import { cellColorDominanceMetrics } from '../scripts/snap-quality/cell-dominance.mjs'
 import { edgeOverlapStats } from '../scripts/snap-quality/edge-overlap.mjs'
-import { gridBoundarySignals, preservationStats } from '../scripts/snap-quality/metrics.mjs'
+import {
+  cellUniformityMetrics,
+  gridBoundarySignals,
+  preservationStats,
+} from '../scripts/snap-quality/metrics.mjs'
 import { cellTransitionMetrics } from '../scripts/snap-quality/cell-transition.mjs'
 import { paletteDominanceMetrics } from '../scripts/snap-quality/palette-dominance.mjs'
 import { paletteUtilizationMetrics } from '../scripts/snap-quality/palette-utilization.mjs'
@@ -216,6 +220,15 @@ test('tile preservation catches small localized loss below pixel p95', async () 
   assert.equal(stats.p95, 0)
   assert.equal(stats.tileMaxMae, 255)
   assert.equal(stats.tileP95Mae, 0)
+})
+
+test('cell uniformity tracks alpha variation separately from RGB variation', () => {
+  const image = makeSolid(16, 16, 96)
+  setAlphaRect(image, 0, 0, 4, 8, 0)
+  const stats = cellUniformityMetrics(image, 2, 2)
+
+  assert.equal(stats.cellMae, 0)
+  assert.ok(stats.alphaCellMae > 31, `expected alpha cell MAE above 31, got ${stats.alphaCellMae}`)
 })
 
 test('chroma ratio detects desaturated colorful output', async () => {
@@ -466,6 +479,16 @@ test('cell transitions distinguish retained, removed, and spurious boundaries', 
   assert.equal(spurious.sourceCellTransitionCount, 0)
   assert.equal(spurious.cellTransitionSpuriousRatio, 1)
   assert.equal(spurious.cellTransitionAxisSpuriousRatioMax, 1)
+})
+
+test('quality classification fails when output alpha cells are not uniform', () => {
+  const result = classifyMetrics({
+    outputAlphaCellMae: 0.02,
+    outputCellMae: 0,
+  })
+
+  assert.equal(result.status, 'fail')
+  assert.ok(result.issues.some((issue) => issue.code === 'non-uniform-output-alpha-cells'))
 })
 
 test('quality classification fails when repeat snap changes visuals', () => {

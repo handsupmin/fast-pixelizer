@@ -68,6 +68,7 @@ export const QUALITY_RULES = {
   maxAlphaEdgeSpuriousRatio: 0.1,
   minAlphaEdgeJaccard: 0.85,
   maxOutputCellMae: 0.01,
+  maxOutputAlphaCellMae: 0.01,
   maxOutputSquareCellError: 0.001,
   maxOutputRgbPaletteOverage: 0,
   maxOutputColorDominance: 0.65,

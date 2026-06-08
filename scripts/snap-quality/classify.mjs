@@ -85,6 +85,15 @@ export function classifyMetrics(metrics) {
       ),
     )
   }
+  if (metrics.outputAlphaCellMae > QUALITY_RULES.maxOutputAlphaCellMae) {
+    issues.push(
+      issue(
+        'fail',
+        'non-uniform-output-alpha-cells',
+        `output alpha cell MAE ${formatNum(metrics.outputAlphaCellMae)}`,
+      ),
+    )
+  }
   if (metrics.outputRgbPaletteOverage > QUALITY_RULES.maxOutputRgbPaletteOverage) {
     issues.push(
       issue(
@@ -640,6 +649,7 @@ export function objective(metrics) {
       50 +
     Math.max(0, QUALITY_RULES.minAlphaEdgeJaccard - (metrics.alphaEdgeJaccard ?? 1)) * 60 +
     metrics.outputCellMae * 500 +
+    (metrics.outputAlphaCellMae ?? 0) * 500 +
     metrics.outputRgbPaletteOverage * 50 +
     Math.max(0, metrics.outputColorDominance - QUALITY_RULES.maxOutputColorDominance) *
       Math.max(0, metrics.paletteDominanceDelta - QUALITY_RULES.maxPaletteDominanceDelta) *

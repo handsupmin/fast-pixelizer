@@ -129,6 +129,7 @@ export function cellUniformityMetrics(input, cols, rows) {
   const cellCount = cols * rows
   const sums = new Float64Array(cellCount * 3)
   const sumsSq = new Float64Array(cellCount * 3)
+  const alphaSums = new Float64Array(cellCount)
   const counts = new Uint32Array(cellCount)
   const stride = Math.max(1, Math.floor((width * height) / MAX_METRIC_SAMPLES))
 
@@ -144,10 +145,12 @@ export function cellUniformityMetrics(input, cols, rows) {
       sums[cell * 3 + ch] += value
       sumsSq[cell * 3 + ch] += value * value
     }
+    alphaSums[cell] += data[i + 3]
     counts[cell]++
   }
 
   let weightedVariance = 0
+  let alphaWeightedMae = 0
   let weightedMae = 0
   let sampleCount = 0
 
@@ -171,12 +174,14 @@ export function cellUniformityMetrics(input, cols, rows) {
     const cell = row * cols + col
     const count = counts[cell] || 1
     const i = pixel * 4
+    alphaWeightedMae += Math.abs(data[i + 3] - alphaSums[cell] / count)
     for (let ch = 0; ch < 3; ch++) {
       weightedMae += Math.abs(data[i + ch] - sums[cell * 3 + ch] / count)
     }
   }
 
   return {
+    alphaCellMae: sampleCount > 0 ? alphaWeightedMae / sampleCount : 0,
     cellStdDev: sampleCount > 0 ? Math.sqrt(weightedVariance / (sampleCount * 3)) : 0,
     cellMae: sampleCount > 0 ? weightedMae / (sampleCount * 3) : 0,
   }
