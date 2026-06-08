@@ -131,6 +131,19 @@ function setRgbRect(image, left, top, right, bottom, value) {
   return image
 }
 
+function setColorRect(image, left, top, right, bottom, color) {
+  for (let y = top; y < bottom; y++) {
+    for (let x = left; x < right; x++) {
+      const i = (y * image.width + x) * 4
+      image.data[i] = color[0]
+      image.data[i + 1] = color[1]
+      image.data[i + 2] = color[2]
+      image.data[i + 3] = color[3] ?? 255
+    }
+  }
+  return image
+}
+
 function makeTransparentBox(width, height, left, top, right, bottom) {
   const data = new Uint8ClampedArray(width * height * 4)
   for (let y = top; y < bottom; y++) {
@@ -347,6 +360,19 @@ test('rgb coverage drift tracks low-palette color area changes', async () => {
 
   assert.equal(stats.rgbCoverageDrift, 0.25)
   assert.equal(stats.rgbCoverageRetention, 0.75)
+})
+
+test('regional rgb coverage catches color relocation with unchanged global coverage', async () => {
+  const source = makeRgbSolid(64, 64, 0, 0, 0)
+  const output = makeRgbSolid(64, 64, 0, 0, 0)
+  setColorRect(source, 0, 0, 16, 16, [255, 0, 0])
+  setColorRect(output, 48, 48, 64, 64, [255, 0, 0])
+  const stats = await preservationStats(source, output)
+
+  assert.equal(stats.rgbCoverageDrift, 0)
+  assert.equal(stats.rgbCoverageRetention, 1)
+  assert.equal(stats.rgbTileCoverageDriftMax, 1)
+  assert.equal(stats.rgbTileCoverageRetentionMin, 0)
 })
 
 test('edge overlap distinguishes preserved and removed line positions', () => {
@@ -1174,6 +1200,18 @@ test('quality classification reviews exact cell color window pattern drift', () 
 
   assert.equal(result.status, 'review')
   assert.ok(result.issues.some((issue) => issue.code === 'exact-cell-color-window-pattern-drift'))
+})
+
+test('quality classification reviews low-palette regional coverage drift', () => {
+  const result = classifyMetrics({
+    lowPaletteCoverageEligible: true,
+    lowPaletteTileCoverageDriftMax: 1,
+    lowPaletteTileCoverageRetentionMin: 0,
+    lowPaletteTileCoverageTileCount: 1,
+  })
+
+  assert.equal(result.status, 'review')
+  assert.ok(result.issues.some((issue) => issue.code === 'low-palette-regional-coverage-drift'))
 })
 
 test('quality classification reviews exact cell color horizontal run drift', () => {

@@ -299,16 +299,52 @@ function rgbCoverageStats(inputColors, inputCount, outputColors, outputCount) {
   }
 }
 
+function createTileCoverage(tileCount) {
+  return Array.from({ length: tileCount }, () => new Map())
+}
+
+function rgbTileCoverageStats(inputTiles, inputCounts, outputTiles, outputCounts) {
+  let driftMax = 0
+  let retentionMin = 1
+  let retentionTileCount = 0
+  let tileCount = 0
+
+  for (let tile = 0; tile < inputTiles.length; tile++) {
+    const inputCount = inputCounts[tile]
+    const outputCount = outputCounts[tile]
+    if (inputCount === 0 && outputCount === 0) continue
+
+    const stats = rgbCoverageStats(inputTiles[tile], inputCount, outputTiles[tile], outputCount)
+    driftMax = Math.max(driftMax, stats.rgbCoverageDrift)
+    tileCount++
+    if (inputCount > 0) {
+      retentionMin = Math.min(retentionMin, stats.rgbCoverageRetention)
+      retentionTileCount++
+    }
+  }
+
+  return {
+    rgbTileCoverageDriftMax: driftMax,
+    rgbTileCoverageRetentionMin: retentionTileCount > 0 ? retentionMin : 1,
+    rgbTileCoverageTileCount: tileCount,
+  }
+}
+
 export async function preservationStats(input, result, options = {}) {
   const resized = await resizeToInput(result, input)
   const stride = Math.max(1, Math.floor((input.width * input.height) / MAX_METRIC_SAMPLES))
   const tileGrid = options.tileGrid ?? 8
-  const tileSums = new Float64Array(tileGrid * tileGrid)
-  const alphaTileSums = new Float64Array(tileGrid * tileGrid)
-  const tileCounts = new Uint32Array(tileGrid * tileGrid)
+  const tileCount = tileGrid * tileGrid
+  const tileSums = new Float64Array(tileCount)
+  const alphaTileSums = new Float64Array(tileCount)
+  const tileCounts = new Uint32Array(tileCount)
   const hueMinChroma = options.hueMinChroma ?? 16
   const inputRgbCoverage = new Map()
   const outputRgbCoverage = new Map()
+  const inputRgbTileCoverage = createTileCoverage(tileCount)
+  const outputRgbTileCoverage = createTileCoverage(tileCount)
+  const inputRgbTileCoverageCounts = new Uint32Array(tileCount)
+  const outputRgbTileCoverageCounts = new Uint32Array(tileCount)
   const hueErrors = []
   const errors = []
   const alphaErrors = []
@@ -323,13 +359,22 @@ export async function preservationStats(input, result, options = {}) {
     const x = pixel % input.width
     const y = Math.floor(pixel / input.width)
     const i = pixel * 4
+    const tileX = Math.min(tileGrid - 1, Math.floor((x * tileGrid) / input.width))
+    const tileY = Math.min(tileGrid - 1, Math.floor((y * tileGrid) / input.height))
+    const tile = tileY * tileGrid + tileX
     if (input.data[i + 3] > 0) {
-      increment(inputRgbCoverage, rgbKey(input.data, i))
+      const key = rgbKey(input.data, i)
+      increment(inputRgbCoverage, key)
+      increment(inputRgbTileCoverage[tile], key)
       inputRgbCoverageCount++
+      inputRgbTileCoverageCounts[tile]++
     }
     if (resized[i + 3] > 0) {
-      increment(outputRgbCoverage, rgbKey(resized, i))
+      const key = rgbKey(resized, i)
+      increment(outputRgbCoverage, key)
+      increment(outputRgbTileCoverage[tile], key)
       outputRgbCoverageCount++
+      outputRgbTileCoverageCounts[tile]++
     }
     let pixelError = 0
     for (let ch = 0; ch < 3; ch++) {
@@ -339,9 +384,6 @@ export async function preservationStats(input, result, options = {}) {
       count++
     }
     const alphaError = Math.abs(input.data[i + 3] - resized[i + 3])
-    const tileX = Math.min(tileGrid - 1, Math.floor((x * tileGrid) / input.width))
-    const tileY = Math.min(tileGrid - 1, Math.floor((y * tileGrid) / input.height))
-    const tile = tileY * tileGrid + tileX
     tileSums[tile] += pixelError / 3
     alphaTileSums[tile] += alphaError
     tileCounts[tile]++
@@ -375,6 +417,12 @@ export async function preservationStats(input, result, options = {}) {
     inputRgbCoverageCount,
     outputRgbCoverage,
     outputRgbCoverageCount,
+  )
+  const rgbTileCoverage = rgbTileCoverageStats(
+    inputRgbTileCoverage,
+    inputRgbTileCoverageCounts,
+    outputRgbTileCoverage,
+    outputRgbTileCoverageCounts,
   )
   const edgeOverlap = options.edgeOverlap
     ? edgeOverlapStats(input, resized)
@@ -465,6 +513,9 @@ export async function preservationStats(input, result, options = {}) {
     chromaRatio: inputChroma.mean > 0 ? outputChroma.mean / inputChroma.mean : 1,
     rgbCoverageDrift: rgbCoverage.rgbCoverageDrift,
     rgbCoverageRetention: rgbCoverage.rgbCoverageRetention,
+    rgbTileCoverageDriftMax: rgbTileCoverage.rgbTileCoverageDriftMax,
+    rgbTileCoverageRetentionMin: rgbTileCoverage.rgbTileCoverageRetentionMin,
+    rgbTileCoverageTileCount: rgbTileCoverage.rgbTileCoverageTileCount,
     hueErrorMean:
       hueErrors.length > 0
         ? hueErrors.reduce((total, value) => total + value, 0) / hueErrors.length

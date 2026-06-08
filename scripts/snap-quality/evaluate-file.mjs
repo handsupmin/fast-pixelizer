@@ -211,6 +211,9 @@ function toItem({ dataset, expected, input, metrics, name, original, resized, un
     chromaRatio: formatNum(metrics.chromaRatio),
     lowPaletteCoverageDrift: formatNum(metrics.lowPaletteCoverageDrift),
     lowPaletteCoverageRetention: formatNum(metrics.lowPaletteCoverageRetention),
+    lowPaletteTileCoverageDriftMax: formatNum(metrics.lowPaletteTileCoverageDriftMax),
+    lowPaletteTileCoverageRetentionMin: formatNum(metrics.lowPaletteTileCoverageRetentionMin),
+    lowPaletteTileCoverageTileCount: metrics.lowPaletteTileCoverageTileCount,
     lowPaletteCoverageEligible: metrics.lowPaletteCoverageEligible,
     hueErrorMean: formatNum(metrics.hueErrorMean),
     hueErrorP95: formatNum(metrics.hueErrorP95),
@@ -533,6 +536,15 @@ async function buildMetrics(input, expected, snapshots, colorVariety) {
       chromaRatio: preserve.chromaRatio,
       lowPaletteCoverageDrift: lowPaletteCoverageEligible ? preserve.rgbCoverageDrift : 0,
       lowPaletteCoverageRetention: lowPaletteCoverageEligible ? preserve.rgbCoverageRetention : 1,
+      lowPaletteTileCoverageDriftMax: lowPaletteCoverageEligible
+        ? preserve.rgbTileCoverageDriftMax
+        : 0,
+      lowPaletteTileCoverageRetentionMin: lowPaletteCoverageEligible
+        ? preserve.rgbTileCoverageRetentionMin
+        : 1,
+      lowPaletteTileCoverageTileCount: lowPaletteCoverageEligible
+        ? preserve.rgbTileCoverageTileCount
+        : 0,
       lowPaletteCoverageEligible,
       hueErrorMean: preserve.hueErrorMean,
       hueErrorP95: preserve.hueErrorP95,

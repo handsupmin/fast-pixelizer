@@ -153,6 +153,24 @@ export function classifyMetrics(metrics) {
       ),
     )
   }
+  if (
+    metrics.lowPaletteCoverageEligible &&
+    (metrics.lowPaletteTileCoverageTileCount ?? 0) >=
+      QUALITY_RULES.minLowPaletteTileCoverageCount &&
+    ((metrics.lowPaletteTileCoverageDriftMax ?? 0) > QUALITY_RULES.maxLowPaletteTileCoverageDrift ||
+      (metrics.lowPaletteTileCoverageRetentionMin ?? 1) <
+        QUALITY_RULES.minLowPaletteTileCoverageRetention)
+  ) {
+    issues.push(
+      issue(
+        'review',
+        'low-palette-regional-coverage-drift',
+        `low-palette regional coverage drift ${formatNum(
+          metrics.lowPaletteTileCoverageDriftMax,
+        )}, min retention ${formatNum(metrics.lowPaletteTileCoverageRetentionMin)}`,
+      ),
+    )
+  }
   if (metrics.outputCoverage < QUALITY_RULES.minOutputCoverage) {
     issues.push(
       issue('review', 'output-shrink', `output coverage ${formatNum(metrics.outputCoverage)}`),
@@ -1291,6 +1309,20 @@ export function objective(metrics) {
       QUALITY_RULES.minLowPaletteCoverageRetention - (metrics.lowPaletteCoverageRetention ?? 1),
     ) *
       80 +
+    Math.max(
+      0,
+      (metrics.lowPaletteCoverageEligible ? (metrics.lowPaletteTileCoverageDriftMax ?? 0) : 0) -
+        QUALITY_RULES.maxLowPaletteTileCoverageDrift,
+    ) *
+      40 +
+    Math.max(
+      0,
+      QUALITY_RULES.minLowPaletteTileCoverageRetention -
+        (metrics.lowPaletteCoverageEligible
+          ? (metrics.lowPaletteTileCoverageRetentionMin ?? 1)
+          : 1),
+    ) *
+      40 +
     Math.max(0, QUALITY_RULES.minOutputCoverage - metrics.outputCoverage) * 50 +
     Math.max(0, 1 - metrics.edgeAlignment) * 25 +
     Math.max(0, 1 - metrics.axisEdgeAlignmentMin) * 15 +
