@@ -211,6 +211,36 @@ function chromaStats(data, width, height) {
   return { mean: count > 0 ? sum / count : 0 }
 }
 
+function chromaAt(data, index) {
+  return (
+    Math.max(data[index], data[index + 1], data[index + 2]) -
+    Math.min(data[index], data[index + 1], data[index + 2])
+  )
+}
+
+function hueAt(data, index) {
+  const r = data[index] / 255
+  const g = data[index + 1] / 255
+  const b = data[index + 2] / 255
+  const max = Math.max(r, g, b)
+  const min = Math.min(r, g, b)
+  const delta = max - min
+  if (delta === 0) return 0
+
+  let hue
+  if (max === r) hue = ((g - b) / delta) % 6
+  else if (max === g) hue = (b - r) / delta + 2
+  else hue = (r - g) / delta + 4
+
+  const degrees = hue * 60
+  return degrees < 0 ? degrees + 360 : degrees
+}
+
+function hueDistance(a, b) {
+  const distance = Math.abs(a - b) % 360
+  return Math.min(distance, 360 - distance)
+}
+
 function percentile(sortedValues, quantile) {
   return sortedValues.length > 0
     ? sortedValues[Math.min(sortedValues.length - 1, Math.floor(sortedValues.length * quantile))]
@@ -232,6 +262,8 @@ export async function preservationStats(input, result, options = {}) {
   const tileGrid = options.tileGrid ?? 8
   const tileSums = new Float64Array(tileGrid * tileGrid)
   const tileCounts = new Uint32Array(tileGrid * tileGrid)
+  const hueMinChroma = options.hueMinChroma ?? 16
+  const hueErrors = []
   const errors = []
   const alphaErrors = []
   let sum = 0
@@ -256,6 +288,14 @@ export async function preservationStats(input, result, options = {}) {
     const tile = tileY * tileGrid + tileX
     tileSums[tile] += pixelError / 3
     tileCounts[tile]++
+    if (
+      input.data[i + 3] > 0 &&
+      resized[i + 3] > 0 &&
+      chromaAt(input.data, i) >= hueMinChroma &&
+      chromaAt(resized, i) >= hueMinChroma
+    ) {
+      hueErrors.push(hueDistance(hueAt(input.data, i), hueAt(resized, i)))
+    }
     alphaSum += alphaError
     alphaCount++
     errors.push(pixelError / 3)
@@ -264,6 +304,7 @@ export async function preservationStats(input, result, options = {}) {
 
   errors.sort((a, b) => a - b)
   alphaErrors.sort((a, b) => a - b)
+  hueErrors.sort((a, b) => a - b)
   const tileValues = tilePreservationValues(tileSums, tileCounts)
   const inputLuma = lumaStats(input.data, input.width, input.height)
   const outputLuma = lumaStats(resized, input.width, input.height)
@@ -292,6 +333,12 @@ export async function preservationStats(input, result, options = {}) {
     inputChromaMean: inputChroma.mean,
     outputChromaMean: outputChroma.mean,
     chromaRatio: inputChroma.mean > 0 ? outputChroma.mean / inputChroma.mean : 1,
+    hueErrorMean:
+      hueErrors.length > 0
+        ? hueErrors.reduce((total, value) => total + value, 0) / hueErrors.length
+        : 0,
+    hueErrorP95: percentile(hueErrors, 0.95),
+    hueSampleCount: hueErrors.length,
     contrastRatio: inputLuma.stdDev > 0 ? outputLuma.stdDev / inputLuma.stdDev : 1,
     lineEdgeRatio: inputEdge > 0 ? outputEdge / inputEdge : 1,
     edgeRecall: edgeOverlap.edgeRecall,

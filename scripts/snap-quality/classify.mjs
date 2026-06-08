@@ -354,6 +354,19 @@ export function classifyMetrics(metrics) {
     )
   }
   if (
+    metrics.hueSampleCount >= QUALITY_RULES.minHueSampleCount &&
+    (metrics.hueErrorMean > QUALITY_RULES.maxHueErrorMean ||
+      metrics.hueErrorP95 > QUALITY_RULES.maxHueErrorP95)
+  ) {
+    issues.push(
+      issue(
+        'review',
+        'hue-drift',
+        `hue error mean ${formatNum(metrics.hueErrorMean)}, p95 ${formatNum(metrics.hueErrorP95)}`,
+      ),
+    )
+  }
+  if (
     metrics.lineEdgeRatio < QUALITY_RULES.minLineEdgeRatio ||
     metrics.lineEdgeRatio > QUALITY_RULES.maxLineEdgeRatio
   ) {
@@ -439,6 +452,8 @@ export function objective(metrics) {
     Math.abs(1 - metrics.contrastRatio) * 10 +
     Math.max(0, QUALITY_RULES.minChromaRatio - metrics.chromaRatio) * 40 +
     Math.max(0, metrics.chromaRatio - QUALITY_RULES.maxChromaRatio) * 35 +
+    Math.max(0, metrics.hueErrorMean - QUALITY_RULES.maxHueErrorMean) * 0.5 +
+    Math.max(0, metrics.hueErrorP95 - QUALITY_RULES.maxHueErrorP95) * 0.2 +
     Math.abs(1 - metrics.lineEdgeRatio) * 8 +
     Math.max(0, QUALITY_RULES.minEdgeRecall - metrics.edgeRecall) * 60 +
     Math.max(0, metrics.edgeSpuriousRatio - QUALITY_RULES.maxEdgeSpuriousRatio) * 40 +
