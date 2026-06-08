@@ -309,6 +309,23 @@ export function classifyMetrics(metrics) {
   }
   if (
     metrics.exactLowPaletteCellColorEligible &&
+    Math.max(
+      metrics.sourceCellColorComponentHoleCount ?? 0,
+      metrics.outputCellColorComponentHoleCount ?? 0,
+    ) >= QUALITY_RULES.minExactCellColorComponentHoleCount &&
+    (metrics.cellColorComponentHoleCountDrift ?? 0) >
+      QUALITY_RULES.maxExactCellColorComponentHoleCountDrift
+  ) {
+    issues.push(
+      issue(
+        'review',
+        'exact-cell-color-component-hole-drift',
+        `exact cell color component holes ${metrics.sourceCellColorComponentHoleCount}->${metrics.outputCellColorComponentHoleCount}`,
+      ),
+    )
+  }
+  if (
+    metrics.exactLowPaletteCellColorEligible &&
     Math.max(metrics.sourceCellColorComponentCount, metrics.outputCellColorComponentCount) >=
       QUALITY_RULES.minExactCellColorComponentCount &&
     (metrics.cellColorComponentPerimeterDrift ?? 0) >
@@ -563,6 +580,19 @@ export function classifyMetrics(metrics) {
     )
   }
   if (
+    Math.max(metrics.alphaHoleCount ?? 0, metrics.outputAlphaHoleCount ?? 0) >=
+      QUALITY_RULES.minAlphaHoleCount &&
+    (metrics.alphaHoleCountDrift ?? 0) > QUALITY_RULES.maxAlphaHoleCountDrift
+  ) {
+    issues.push(
+      issue(
+        'review',
+        'alpha-hole-drift',
+        `alpha holes ${metrics.alphaHoleCount}->${metrics.outputAlphaHoleCount}`,
+      ),
+    )
+  }
+  if (
     Math.max(metrics.alphaSmallComponentCount ?? 0, metrics.outputAlphaSmallComponentCount ?? 0) >=
       QUALITY_RULES.minAlphaSmallComponentCount &&
     metrics.alphaSmallComponentCountDrift > QUALITY_RULES.maxAlphaSmallComponentCountDrift
@@ -756,6 +786,13 @@ export function objective(metrics) {
     Math.max(
       0,
       (metrics.exactLowPaletteCellColorEligible
+        ? (metrics.cellColorComponentHoleCountDrift ?? 0)
+        : 0) - QUALITY_RULES.maxExactCellColorComponentHoleCountDrift,
+    ) *
+      20 +
+    Math.max(
+      0,
+      (metrics.exactLowPaletteCellColorEligible
         ? (metrics.cellColorComponentPerimeterDrift ?? 0)
         : 0) - QUALITY_RULES.maxExactCellColorComponentPerimeterDrift,
     ) *
@@ -804,6 +841,7 @@ export function objective(metrics) {
       (metrics.alphaComponentPositionDrift ?? 0) - QUALITY_RULES.maxAlphaComponentPositionDrift,
     ) *
       0.5 +
+    Math.max(0, (metrics.alphaHoleCountDrift ?? 0) - QUALITY_RULES.maxAlphaHoleCountDrift) * 30 +
     Math.max(
       0,
       (metrics.alphaSmallComponentCountDrift ?? 0) - QUALITY_RULES.maxAlphaSmallComponentCountDrift,

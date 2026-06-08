@@ -429,6 +429,24 @@ test('alpha component stats detect same-area same-center same-bounds perimeter d
   assert.equal(stats.alphaComponentPerimeterDrift, 2)
 })
 
+test('alpha mask stats detect filled internal holes', () => {
+  const sourceCells = []
+  const outputCells = []
+  for (let y = 0; y < 5; y++) {
+    for (let x = 0; x < 5; x++) {
+      outputCells.push([x, y])
+      if (x !== 2 || y !== 2) sourceCells.push([x, y])
+    }
+  }
+  const source = makeAlphaCells(5, 5, sourceCells)
+  const output = makeAlphaCells(5, 5, outputCells)
+  const stats = alphaMaskStats(source, output.data)
+
+  assert.equal(stats.alphaHoleCount, 1)
+  assert.equal(stats.outputAlphaHoleCount, 0)
+  assert.equal(stats.alphaHoleCountDrift, 1)
+})
+
 test('alpha semitransparency stats detect collapsed rare shadows with low alpha MAE', async () => {
   const source = setAlphaRect(makeSolid(64, 64, 96), 4, 4, 8, 8, 128)
   const output = makeSolid(64, 64, 96)
@@ -641,6 +659,28 @@ test('cell color components detect same-area same-center same-bounds perimeter d
   assert.equal(metrics.cellColorComponentPerimeterDrift, 2)
 })
 
+test('cell color components detect filled internal holes', () => {
+  const transparent = [0, 0, 0, 0]
+  const red = [255, 0, 0, 255]
+  const sourceKeys = Array.from({ length: 25 }, () => transparent)
+  const outputKeys = Array.from({ length: 25 }, () => transparent)
+  for (let row = 0; row < 5; row++) {
+    for (let col = 0; col < 5; col++) {
+      const index = row * 5 + col
+      outputKeys[index] = red
+      if (col !== 2 || row !== 2) sourceKeys[index] = red
+    }
+  }
+  const metrics = cellColorComponentMetrics(
+    makeCellImage(sourceKeys, 5, 5, 8),
+    makeCellGrid(outputKeys, 5, 5),
+  )
+
+  assert.equal(metrics.sourceCellColorComponentHoleCount, 1)
+  assert.equal(metrics.outputCellColorComponentHoleCount, 0)
+  assert.equal(metrics.cellColorComponentHoleCountDrift, 1)
+})
+
 test('cell transitions distinguish retained, removed, and spurious boundaries', () => {
   const input = makeChecker(64, 64, 8)
   const retained = cellTransitionMetrics(input, makeChecker(8, 8, 1))
@@ -753,6 +793,25 @@ test('quality classification reviews exact cell color component perimeter drift'
   assert.ok(
     result.issues.some((issue) => issue.code === 'exact-cell-color-component-perimeter-drift'),
   )
+})
+
+test('quality classification reviews exact cell color component hole drift', () => {
+  const result = classifyMetrics({
+    cellColorComponentAreaDrift: 0,
+    cellColorComponentBBoxDrift: 0,
+    cellColorComponentCountDrift: 0,
+    cellColorComponentHoleCountDrift: 1,
+    cellColorComponentPerimeterDrift: 0,
+    cellColorComponentPositionDrift: 0,
+    exactLowPaletteCellColorEligible: true,
+    outputCellColorComponentCount: 2,
+    outputCellColorComponentHoleCount: 0,
+    sourceCellColorComponentCount: 2,
+    sourceCellColorComponentHoleCount: 1,
+  })
+
+  assert.equal(result.status, 'review')
+  assert.ok(result.issues.some((issue) => issue.code === 'exact-cell-color-component-hole-drift'))
 })
 
 test('quality classification fails when repeat snap changes visuals', () => {
@@ -1035,6 +1094,17 @@ test('quality classification reviews alpha component shape drift', () => {
   assert.ok(result.issues.some((issue) => issue.code === 'alpha-component-bounds-drift'))
   assert.ok(result.issues.some((issue) => issue.code === 'alpha-component-perimeter-drift'))
   assert.ok(result.issues.some((issue) => issue.code === 'alpha-component-position-drift'))
+})
+
+test('quality classification reviews alpha hole drift', () => {
+  const result = classifyMetrics({
+    alphaHoleCount: 1,
+    alphaHoleCountDrift: 1,
+    outputAlphaHoleCount: 0,
+  })
+
+  assert.equal(result.status, 'review')
+  assert.ok(result.issues.some((issue) => issue.code === 'alpha-hole-drift'))
 })
 
 test('quality classification reviews alpha semitransparency drift', () => {

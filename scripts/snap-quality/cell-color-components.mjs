@@ -59,6 +59,7 @@ function componentStats(keys, cols, rows) {
     let top = rows
     let bottom = -1
     let perimeter = 0
+    const cells = []
     seen[cell] = 1
     stack.push(cell)
 
@@ -67,6 +68,7 @@ function componentStats(keys, cols, rows) {
       size++
       const x = index % cols
       const y = Math.floor(index / cols)
+      cells.push(index)
       sumX += x
       sumY += y
       left = Math.min(left, x)
@@ -99,11 +101,75 @@ function componentStats(keys, cols, rows) {
     count++
     if (size <= smallLimit) smallCount++
     const components = byColor.get(key) ?? []
-    components.push({ bottom, left, perimeter, right, size, top, x: sumX / size, y: sumY / size })
+    components.push({
+      bottom,
+      cells,
+      left,
+      perimeter,
+      right,
+      size,
+      top,
+      x: sumX / size,
+      y: sumY / size,
+    })
     byColor.set(key, components)
   }
 
   return { byColor, count, smallCount }
+}
+
+function componentHoleCount(component, cols) {
+  const bboxWidth = component.right - component.left + 1
+  const bboxHeight = component.bottom - component.top + 1
+  const bboxArea = bboxWidth * bboxHeight
+  if (bboxArea === component.size) return 0
+
+  const solid = new Uint8Array(bboxArea)
+  const seen = new Uint8Array(bboxArea)
+  const stack = []
+  let holes = 0
+
+  for (const cell of component.cells) {
+    const x = (cell % cols) - component.left
+    const y = Math.floor(cell / cols) - component.top
+    solid[y * bboxWidth + x] = 1
+  }
+
+  function flood(start) {
+    let touchesEdge = false
+    seen[start] = 1
+    stack.push(start)
+
+    while (stack.length > 0) {
+      const index = stack.pop()
+      const x = index % bboxWidth
+      const y = Math.floor(index / bboxWidth)
+      if (x === 0 || y === 0 || x === bboxWidth - 1 || y === bboxHeight - 1) touchesEdge = true
+
+      for (const [nx, ny] of [
+        [x + 1, y],
+        [x - 1, y],
+        [x, y + 1],
+        [x, y - 1],
+      ]) {
+        if (nx < 0 || ny < 0 || nx >= bboxWidth || ny >= bboxHeight) continue
+        const next = ny * bboxWidth + nx
+        if (seen[next] === 1 || solid[next] === 1) continue
+
+        seen[next] = 1
+        stack.push(next)
+      }
+    }
+
+    return touchesEdge
+  }
+
+  for (let index = 0; index < bboxArea; index++) {
+    if (seen[index] === 1 || solid[index] === 1) continue
+    if (!flood(index)) holes++
+  }
+
+  return holes
 }
 
 function componentAreaDrift(source, output) {
@@ -186,22 +252,52 @@ function componentPerimeterDrift(source, output) {
   return drift
 }
 
+function componentHoleCountDrift(source, output, cols) {
+  const colors = new Set([...source.byColor.keys(), ...output.byColor.keys()])
+  let drift = 0
+  let sourceCount = 0
+  let outputCount = 0
+
+  for (const color of colors) {
+    const sourceComponents = sortComponents(source.byColor.get(color) ?? [])
+    const outputComponents = sortComponents(output.byColor.get(color) ?? [])
+    const componentCount = Math.max(sourceComponents.length, outputComponents.length)
+    for (let index = 0; index < componentCount; index++) {
+      const sourceHoles = sourceComponents[index]
+        ? componentHoleCount(sourceComponents[index], cols)
+        : 0
+      const outputHoles = outputComponents[index]
+        ? componentHoleCount(outputComponents[index], cols)
+        : 0
+      sourceCount += sourceHoles
+      outputCount += outputHoles
+      drift += Math.abs(sourceHoles - outputHoles)
+    }
+  }
+
+  return { drift, outputCount, sourceCount }
+}
+
 export function cellColorComponentMetrics(input, grid) {
   const cols = grid.width
   const rows = grid.height
   const source = componentStats(sourceCellKeys(input, cols, rows), cols, rows)
   const output = componentStats(outputCellKeys(grid), cols, rows)
+  const holes = componentHoleCountDrift(source, output, cols)
 
   return {
     cellColorComponentAreaDrift: componentAreaDrift(source, output),
     cellColorComponentBBoxDrift: componentBBoxDrift(source, output),
     cellColorComponentCountDrift: Math.abs(source.count - output.count),
+    cellColorComponentHoleCountDrift: holes.drift,
     cellColorComponentPerimeterDrift: componentPerimeterDrift(source, output),
     cellColorComponentPositionDrift: componentPositionDrift(source, output),
     outputCellColorComponentCount: output.count,
+    outputCellColorComponentHoleCount: holes.outputCount,
     outputSmallCellColorComponentCount: output.smallCount,
     smallCellColorComponentCountDrift: Math.abs(source.smallCount - output.smallCount),
     sourceCellColorComponentCount: source.count,
+    sourceCellColorComponentHoleCount: holes.sourceCount,
     sourceSmallCellColorComponentCount: source.smallCount,
   }
 }

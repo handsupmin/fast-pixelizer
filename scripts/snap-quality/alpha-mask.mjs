@@ -159,6 +159,50 @@ function alphaSemitransparentStats(input, resized) {
   }
 }
 
+function alphaHoleCount(data, width, height) {
+  const seen = new Uint8Array(width * height)
+  const stack = []
+  let holes = 0
+
+  function flood(start) {
+    let touchesEdge = false
+    seen[start] = 1
+    stack.push(start)
+
+    while (stack.length > 0) {
+      const index = stack.pop()
+      const x = index % width
+      const y = Math.floor(index / width)
+      if (x === 0 || y === 0 || x === width - 1 || y === height - 1) touchesEdge = true
+
+      for (const [nx, ny] of [
+        [x + 1, y],
+        [x - 1, y],
+        [x, y + 1],
+        [x, y - 1],
+      ]) {
+        if (nx < 0 || ny < 0 || nx >= width || ny >= height) continue
+        const next = ny * width + nx
+        if (seen[next] === 1 || alphaAt(data, width, nx, ny) > VISIBLE_ALPHA_THRESHOLD) continue
+
+        seen[next] = 1
+        stack.push(next)
+      }
+    }
+
+    return touchesEdge
+  }
+
+  for (let index = 0; index < width * height; index++) {
+    const x = index % width
+    const y = Math.floor(index / width)
+    if (seen[index] === 1 || alphaAt(data, width, x, y) > VISIBLE_ALPHA_THRESHOLD) continue
+    if (!flood(index)) holes++
+  }
+
+  return holes
+}
+
 function componentStats(data, width, height) {
   const seen = new Uint8Array(width * height)
   const components = []
@@ -287,6 +331,8 @@ function componentPerimeterDrift(source, output) {
 
 function alphaComponentStats(input, resized) {
   const { width, height } = input
+  const sourceHoleCount = alphaHoleCount(input.data, width, height)
+  const outputHoleCount = alphaHoleCount(resized, width, height)
   const smallLimit = Math.max(64, Math.floor(width * height * SMALL_COMPONENT_AREA_RATIO))
   const source = componentStats(input.data, width, height)
   const output = componentStats(resized, width, height)
@@ -300,9 +346,12 @@ function alphaComponentStats(input, resized) {
     alphaComponentCountDrift: Math.abs(source.length - output.length),
     alphaComponentPerimeterDrift: componentPerimeterDrift(source, output),
     alphaComponentPositionDrift: componentPositionDrift(source, output),
+    alphaHoleCount: sourceHoleCount,
+    alphaHoleCountDrift: Math.abs(sourceHoleCount - outputHoleCount),
     alphaSmallComponentCount: sourceSmall,
     alphaSmallComponentCountDrift: Math.abs(sourceSmall - outputSmall),
     outputAlphaComponentCount: output.length,
+    outputAlphaHoleCount: outputHoleCount,
     outputAlphaSmallComponentCount: outputSmall,
   }
 }
