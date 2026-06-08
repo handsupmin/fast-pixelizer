@@ -223,6 +223,15 @@ export function classifyMetrics(metrics) {
       ),
     )
   }
+  if ((metrics.outputCellIntegerError ?? 0) > QUALITY_RULES.maxOutputCellIntegerError) {
+    issues.push(
+      issue(
+        'review',
+        'non-integer-output-cells',
+        `output cell integer error ${formatNum(metrics.outputCellIntegerError)}`,
+      ),
+    )
+  }
   if (metrics.edgeAlignment < QUALITY_RULES.minEdgeAlignment) {
     issues.push(
       issue('review', 'weak-boundaries', `edge alignment ${formatNum(metrics.edgeAlignment)}`),
@@ -1451,6 +1460,8 @@ export function objective(metrics) {
     Math.max(0, QUALITY_RULES.minSourceCellSize - metrics.sourceCellSize) * 500 +
     Math.max(0, metrics.shortAxisCells - QUALITY_RULES.maxShortAxisCells) * 10 +
     Math.max(0, metrics.sourceCellSize - QUALITY_RULES.maxSourceCellSizeReview) * 2 +
+    Math.max(0, (metrics.outputCellIntegerError ?? 0) - QUALITY_RULES.maxOutputCellIntegerError) *
+      100 +
     Math.abs(1 - metrics.contrastRatio) * 10 +
     Math.max(0, QUALITY_RULES.minChromaRatio - metrics.chromaRatio) * 40 +
     Math.max(0, metrics.chromaRatio - QUALITY_RULES.maxChromaRatio) * 35 +

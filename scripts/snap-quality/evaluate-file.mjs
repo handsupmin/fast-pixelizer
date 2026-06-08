@@ -45,6 +45,15 @@ function outputExpansion(input, result) {
   return Math.max(result.width / input.width, result.height / input.height)
 }
 
+function outputCellIntegerError(result, cols, rows) {
+  const cellWidth = result.width / cols
+  const cellHeight = result.height / rows
+  return Math.max(
+    Math.abs(cellWidth - Math.round(cellWidth)),
+    Math.abs(cellHeight - Math.round(cellHeight)),
+  )
+}
+
 function toItem({ dataset, expected, input, metrics, name, original, resized, uniformity }) {
   const classification = classifyMetrics(metrics)
   return {
@@ -60,6 +69,7 @@ function toItem({ dataset, expected, input, metrics, name, original, resized, un
     detectedResolution: original.result.detectedResolution,
     sourceCellSize: formatNum(metrics.sourceCellSize),
     squareCellError: formatNum(metrics.squareCellError),
+    outputCellIntegerError: formatNum(metrics.outputCellIntegerError),
     aspectError: formatNum(metrics.aspectError),
     edgeAlignment: formatNum(metrics.edgeAlignment),
     axisEdgeAlignmentMin: formatNum(metrics.axisEdgeAlignmentMin),
@@ -579,6 +589,7 @@ async function buildMetrics(input, expected, snapshots, colorVariety) {
       edgeTileRecallMin: preserve.edgeTileRecallMin,
       edgeTileSpuriousMax: preserve.edgeTileSpuriousMax,
       squareCellError: Math.abs(original.result.width / cols / (original.result.height / rows) - 1),
+      outputCellIntegerError: outputCellIntegerError(original.result, cols, rows),
       outputCoverage: outputCoverage(input, original.result),
       outputExpansion: outputExpansion(input, original.result),
       outputRgbPaletteOverage: Math.max(0, outputRgbColorCount - (colorVariety + 1)),

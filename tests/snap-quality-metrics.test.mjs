@@ -1783,6 +1783,17 @@ test('quality classification reviews original-size output expansion', () => {
   assert.ok(!result.issues.some((issue) => issue.code === 'output-shrink'))
 })
 
+test('quality classification reviews non-integer original-size output cells', () => {
+  const result = classifyMetrics({
+    outputCellIntegerError: 0.25,
+    squareCellError: 0,
+  })
+
+  assert.equal(result.status, 'review')
+  assert.ok(result.issues.some((issue) => issue.code === 'non-integer-output-cells'))
+  assert.ok(!result.issues.some((issue) => issue.code === 'non-square-output-cells'))
+})
+
 test('quality classification reviews alpha preservation outliers hidden by p95', () => {
   const result = classifyMetrics({
     alphaMae: 0,
