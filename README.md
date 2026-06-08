@@ -96,6 +96,7 @@ Current criteria include:
 | Idempotence         | `snap(snap(image))` changing the detected grid                 |
 | Visual idempotence  | `snap(snap(image))` changing snapped colors or edge pixels     |
 | Determinism         | Two snaps of the same source disagreeing on grid size          |
+| Visual determinism  | Two snaps of the same source producing different pixels        |
 | Output purity       | Snapped output cells that are not single-color or square       |
 | Output coverage     | Original-size snap output shrinking too far from input size    |
 | Transparent padding | Large transparent sprite margins causing coarse grid selection |

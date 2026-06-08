@@ -83,6 +83,10 @@ async function evaluateFile(file, dataset, options, expectations) {
   })
   const resized = await timedSnap(input, { colorVariety: options.colorVariety, output: 'resized' })
   const deterministic = snap(input, { colorVariety: options.colorVariety, output: 'resized' })
+  const deterministicOriginal = snap(input, {
+    colorVariety: options.colorVariety,
+    output: 'original',
+  })
   const repeat = snap(original.result, { colorVariety: options.colorVariety, output: 'resized' })
   const repeatOriginal = snap(original.result, {
     colorVariety: options.colorVariety,
@@ -105,6 +109,7 @@ async function evaluateFile(file, dataset, options, expectations) {
   const outputUniformity = cellUniformityMetrics(original.result, cols, rows)
   const preserve = await preservationStats(input, original.result)
   const repeatPreserve = await preservationStats(original.result, repeatOriginal)
+  const deterministicPreserve = await preservationStats(original.result, deterministicOriginal)
   const outputCellWidth = original.result.width / cols
   const outputCellHeight = original.result.height / rows
   const outputCoverage = Math.min(
@@ -128,6 +133,8 @@ async function evaluateFile(file, dataset, options, expectations) {
     determinismGridGap: gridGap(deterministic, resized.result),
     repeatVisualMae: repeatPreserve.mae,
     repeatVisualP95: repeatPreserve.p95,
+    determinismVisualMae: deterministicPreserve.mae,
+    determinismVisualP95: deterministicPreserve.p95,
     expectedGridGap: expected ? Math.abs(cols - expected.cols) + Math.abs(rows - expected.rows) : 0,
     edgeAlignment: boundary.mean / (fullGradient + 1e-9),
     axisEdgeAlignmentMin: boundary.min / (fullGradient + 1e-9),
@@ -177,6 +184,8 @@ async function evaluateFile(file, dataset, options, expectations) {
     repeatVisualP95: formatNum(metrics.repeatVisualP95),
     stabilityDepthGap: metrics.stabilityDepthGap,
     determinismGridGap: metrics.determinismGridGap,
+    determinismVisualMae: formatNum(metrics.determinismVisualMae),
+    determinismVisualP95: formatNum(metrics.determinismVisualP95),
     expectedGridGap: metrics.expectedGridGap,
     inputColorCount: uniqueColorCount(input),
     inputRgbColorCount,

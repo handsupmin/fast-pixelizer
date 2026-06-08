@@ -62,6 +62,20 @@ export function classifyMetrics(metrics) {
       issue('fail', 'non-deterministic-grid', `same input grid gap ${metrics.determinismGridGap}`),
     )
   }
+  if (
+    metrics.determinismVisualMae > QUALITY_RULES.maxDeterminismVisualMae ||
+    metrics.determinismVisualP95 > QUALITY_RULES.maxDeterminismVisualP95
+  ) {
+    issues.push(
+      issue(
+        'fail',
+        'non-deterministic-visuals',
+        `same input visual MAE ${formatNum(metrics.determinismVisualMae)}, p95 ${formatNum(
+          metrics.determinismVisualP95,
+        )}`,
+      ),
+    )
+  }
   if (metrics.outputCellMae > QUALITY_RULES.maxOutputCellMae) {
     issues.push(
       issue(
@@ -201,6 +215,8 @@ export function objective(metrics) {
     metrics.stabilityDepthGap * 100 +
     metrics.repeatVisualMae * 80 +
     metrics.repeatVisualP95 * 20 +
+    metrics.determinismVisualMae * 80 +
+    metrics.determinismVisualP95 * 20 +
     metrics.expectedGridGap * 150 +
     metrics.aspectError * 50 +
     metrics.cellMae +

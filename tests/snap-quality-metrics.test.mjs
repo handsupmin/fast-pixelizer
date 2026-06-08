@@ -65,6 +65,8 @@ test('quality classification fails when repeat snap changes visuals', () => {
     cols: 32,
     contrastRatio: 1,
     determinismGridGap: 0,
+    determinismVisualMae: 0,
+    determinismVisualP95: 0,
     edgeAlignment: 1,
     expectedGridGap: 0,
     lineEdgeRatio: 1,
@@ -86,4 +88,40 @@ test('quality classification fails when repeat snap changes visuals', () => {
 
   assert.equal(result.status, 'fail')
   assert.ok(result.issues.some((issue) => issue.code === 'unstable-repeat-visuals'))
+})
+
+test('quality classification fails when same input snap is visually non-deterministic', () => {
+  const result = classifyMetrics({
+    alphaMae: 0,
+    alphaP95: 0,
+    aspectError: 0,
+    axisEdgeAlignmentMin: 1,
+    axisPhaseAlignmentMin: 1,
+    cellMae: 0,
+    cols: 32,
+    contrastRatio: 1,
+    determinismGridGap: 0,
+    determinismVisualMae: 0.001,
+    determinismVisualP95: 0,
+    edgeAlignment: 1,
+    expectedGridGap: 0,
+    lineEdgeRatio: 1,
+    lowPaletteRetention: 1,
+    outputCellMae: 0,
+    outputCoverage: 1,
+    outputRgbPaletteOverage: 0,
+    preservationMae: 0,
+    preservationP95: 0,
+    repeatGridGap: 0,
+    repeatVisualMae: 0,
+    repeatVisualP95: 0,
+    rows: 32,
+    shortAxisCells: 32,
+    sourceCellSize: 8,
+    squareCellError: 0,
+    stabilityDepthGap: 0,
+  })
+
+  assert.equal(result.status, 'fail')
+  assert.ok(result.issues.some((issue) => issue.code === 'non-deterministic-visuals'))
 })
