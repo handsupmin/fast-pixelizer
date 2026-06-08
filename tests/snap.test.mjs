@@ -29,6 +29,23 @@ function makePattern(width, height, mode = 'dense') {
   return { data, width, height }
 }
 
+function makeTransparentBorderPattern(width, height, border) {
+  const data = new Uint8ClampedArray(width * height * 4)
+  for (let y = 0; y < height; y++) {
+    for (let x = 0; x < width; x++) {
+      const i = (y * width + x) * 4
+      const inside = x >= border && y >= border && x < width - border && y < height - border
+      const block = Math.floor(x / 4) + Math.floor(y / 5)
+      const seed = x * 19 + y * 41 + block * 53
+      data[i] = seed % 256
+      data[i + 1] = (seed * 3 + x * 7) % 256
+      data[i + 2] = (seed * 5 + y * 11) % 256
+      data[i + 3] = inside ? 255 : 0
+    }
+  }
+  return { data, width, height }
+}
+
 async function scaleImage(image, scale, kernel) {
   const { data, info } = await sharp(Buffer.from(image.data), {
     raw: { width: image.width, height: image.height, channels: 4 },
@@ -150,6 +167,13 @@ test('non-square scaled pixel art recovers the square source grid', async () => 
   const grid = detectImage(input)
 
   assert.deepEqual(grid, { cols: 40, rows: 40 })
+})
+
+test('transparent padded pixel art keeps the full source grid', async () => {
+  const input = await scaleImage(makeTransparentBorderPattern(32, 32, 8), 8, 'nearest')
+  const grid = detectImage(input)
+
+  assert.deepEqual(grid, { cols: 32, rows: 32 })
 })
 
 test('package 64px clean example recovers its generated source grid', async () => {

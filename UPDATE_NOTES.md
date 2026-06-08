@@ -2,12 +2,19 @@
 
 ## Unreleased
 
+## 1.3.5
+
+- Improved `snap()` on square sprites with wide transparent padding by preferring a high-confidence uniform-cell grid over a coarser exact-transition candidate.
+- Added a transparent-border synthetic fixture with a known `32x32` grid.
+- Expanded snap quality eval with low-palette retention metrics and an 8-color indexed synthetic fixture.
+- Expanded snap quality eval with output-coverage metrics for original-size snap results.
+
+## 1.3.4
+
 - Expanded snap quality eval with phase-alignment, alpha-preservation, and RGB palette-budget criteria.
 - Added a semi-transparent synthetic fixture with a known `48x32` grid.
 - Added known-grid expectations for package-generated `32x32` and `64x64` demo pixelate examples.
 - Improved `snap()` on exact square pixelate outputs by detecting raw transition grids before falling back to noisier profile estimates.
-- Expanded snap quality eval with low-palette retention metrics and an 8-color indexed synthetic fixture.
-- Expanded snap quality eval with output-coverage metrics for original-size snap results.
 
 ## 1.3.3
 

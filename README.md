@@ -20,9 +20,9 @@ As of `1.3.2`, the quality loop also includes generated synthetic fixtures with 
 
 As of `1.3.3`, the synthetic coverage also includes JPEG compression, non-integer scaling, and non-square scaled pixels, so a square source grid stretched with different X/Y scale factors can still be recovered.
 
-The unreleased eval criteria additionally track boundary phase alignment, alpha preservation, RGB palette budget, low-palette retention, and output coverage so future snap changes can catch shifted grids, broken transparency, accidental palette expansion, color collapse, and excessive canvas shrink.
+As of `1.3.4`, the detector also recovers exact square pixelate outputs whose original-size render uses uneven `5px/6px` cell widths, fixing package-generated `64×64` examples that previously snapped to `39×39` or `66×66`.
 
-The unreleased detector also recovers exact square pixelate outputs whose original-size render uses uneven `5px/6px` cell widths, fixing package-generated `64×64` examples that previously snapped to `39×39` or `66×66`.
+As of `1.3.5`, the eval criteria additionally track boundary phase alignment, alpha preservation, RGB palette budget, low-palette retention, output coverage, and transparent padding. The detector now prefers a high-confidence uniform grid over a coarser transition grid when large transparent margins would otherwise dominate square sprites.
 
 Recent regression examples:
 
@@ -46,9 +46,10 @@ Recent regression examples:
 5. **Uniform-cell detection** — preserves already-snapped square-cell outputs on repeated runs
 6. **Gated peak recovery** — recovers blurred scaled pixel art only when the current grid is clearly under-detected
 7. **Exact transition recovery** — recovers clean square pixelate outputs with uneven original-size cell widths
-8. **Lattice regularization** — rebuilds a globally uniform grid instead of letting local cut drift accumulate
-9. **Majority-vote resampling** — picks the dominant color per cell
-10. **Uniform re-rendering** — every cell gets the exact same pixel size
+8. **Transparent-padding arbitration** — keeps high-confidence uniform grids when transparent margins create stronger coarse transitions
+9. **Lattice regularization** — rebuilds a globally uniform grid instead of letting local cut drift accumulate
+10. **Majority-vote resampling** — picks the dominant color per cell
+11. **Uniform re-rendering** — every cell gets the exact same pixel size
 
 No manual resolution input needed. The grid is auto-detected.
 
@@ -82,6 +83,7 @@ Current criteria include:
 | Determinism         | Two snaps of the same source disagreeing on grid size          |
 | Output purity       | Snapped output cells that are not single-color or square       |
 | Output coverage     | Original-size snap output shrinking too far from input size    |
+| Transparent padding | Large transparent sprite margins causing coarse grid selection |
 | Palette budget      | Snapped RGB colors exceeding the requested color variety       |
 | Palette retention   | Limited-palette inputs losing too many original RGB colors     |
 | Boundary evidence   | Weak inferred boundaries compared with average image gradients |
@@ -96,6 +98,8 @@ The June 2026 model/demo fixture run improved from `5 fail / 5 pass / 6 review` 
 The expanded model/demo/synthetic run improved from `2 fail / 13 pass / 6 review`, expected-grid gap `78`, and repeat gap `54` to `0 fail / 15 pass / 6 review`, expected-grid gap `0`, and repeat gap `0`.
 
 The `1.3.3` fixture expansion keeps the same hard failures at `0` across `24` fixtures: `0 fail / 17 pass / 7 review`, expected-grid gap `0`, and repeat gap `0`. A newly covered non-square scale case, a `40x40` source stretched to `320x240`, changed from `5x4` in `1.3.2` to the expected `40x40`.
+
+The `1.3.5` transparent-padding run keeps hard failures at `0` across `27` images: `0 fail / 22 pass / 5 review`, expected-grid gap `0`, and repeat gap `0`. A `32x32` sprite with an 8-cell transparent border changed from `4x4` to the expected `32x32`.
 
 ```ts
 import { snap } from 'fast-pixelizer'

@@ -31,7 +31,11 @@ function makeLowResPattern(cols, rows, mode) {
         data[i + 1] = (value * 3 + x * 5) % 256
         data[i + 2] = (value * 7 + y * 11) % 256
       }
+      const transparentBorder =
+        mode === 'transparent-border' &&
+        (x < cols / 4 || y < rows / 4 || x >= (cols * 3) / 4 || y >= (rows * 3) / 4)
       if (mode === 'transparent' && x < cols / 5 && y < rows / 5) data[i + 3] = 0
+      else if (transparentBorder) data[i + 3] = 0
       else if (mode === 'semi-transparent' && (x + y) % 5 === 0) data[i + 3] = 128
       else data[i + 3] = 255
     }
@@ -103,6 +107,13 @@ export async function generateSyntheticDataset(outDir) {
     {
       file: 'transparent-32x32-scale8.png',
       image: makeLowResPattern(32, 32, 'transparent'),
+      scale: 8,
+      kernel: 'nearest',
+      expected: { cols: 32, rows: 32 },
+    },
+    {
+      file: 'transparent-border-32x32-scale8.png',
+      image: makeLowResPattern(32, 32, 'transparent-border'),
       scale: 8,
       kernel: 'nearest',
       expected: { cols: 32, rows: 32 },

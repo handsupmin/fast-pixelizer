@@ -109,6 +109,17 @@ function shouldUsePeakGrid(
   )
 }
 
+function shouldPreferUniformGrid(
+  uniformGrid: { cols: number; rows: number; confidence: number } | null,
+  transitionGrid: { cols: number; rows: number; confidence: number } | null,
+): boolean {
+  if (!uniformGrid || !transitionGrid) return false
+
+  const uniformShortAxis = Math.min(uniformGrid.cols, uniformGrid.rows)
+  const transitionShortAxis = Math.min(transitionGrid.cols, transitionGrid.rows)
+  return uniformGrid.confidence >= 0.95 && uniformShortAxis >= transitionShortAxis * 2
+}
+
 /**
  * Detects the pixel grid in an existing pixel-art image and re-snaps it
  * to a clean, uniform grid. Fixes anti-aliasing artifacts, sub-pixel
@@ -129,8 +140,11 @@ export function snap(input: ImageLike, options?: SnapOptions): SnapResult {
   const quantData = kmeansQuantize(data, pixelCount, colorVariety)
   const uniformGrid = detectUniformCellGrid(data, width, height)
   const transitionGrid = detectExactTransitionGrid(data, width, height)
-  let numCols = transitionGrid?.cols ?? uniformGrid?.cols ?? 0
-  let numRows = transitionGrid?.rows ?? uniformGrid?.rows ?? 0
+  const initialGrid = shouldPreferUniformGrid(uniformGrid, transitionGrid)
+    ? uniformGrid
+    : (transitionGrid ?? uniformGrid)
+  let numCols = initialGrid?.cols ?? 0
+  let numRows = initialGrid?.rows ?? 0
 
   if (!transitionGrid && !uniformGrid) {
     const colProfile = computeColProfile(quantData, width, height)

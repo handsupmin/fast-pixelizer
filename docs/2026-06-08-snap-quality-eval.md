@@ -10,7 +10,7 @@ Build an objective loop for model-generated "pixel art" and package demo images,
 | ------------------ | ----------------------------------------------------------- | ----: |
 | Model examples     | `/Users/sangmin/sources/mono-pix/src/assets/examples`       |     5 |
 | Demo examples      | `examples/`                                                 |    11 |
-| Synthetic fixtures | generated under `.tmp/snap-quality-eval-*/synthetic-source` |    10 |
+| Synthetic fixtures | generated under `.tmp/snap-quality-eval-*/synthetic-source` |    11 |
 
 The model examples use the prompt `탑뷰 도트 중세 판타지 용사 파티의 모험 픽셀아트 그려줘`.
 
@@ -27,6 +27,7 @@ The model examples use the prompt `탑뷰 도트 중세 판타지 용사 파티�
 | Determinism         | two snaps of the same source disagree on grid size                 | Catches non-deterministic detection                                 |
 | Output purity       | snapped output cells are not single-color or square                | Verifies the core promise of snap output                            |
 | Output coverage     | original-size output keeps less than `90%` of input on either axis | Flags snap results that visually shrink too far                     |
+| Transparent padding | known-grid transparent-border sprite misses its expected grid      | Prevents transparent margins from being mistaken for coarse cells   |
 | Palette budget      | snapped RGB palette exceeds `colorVariety + 1`                     | Catches accidental color explosion while allowing transparency      |
 | Palette retention   | limited-palette input keeps less than `95%` of its RGB colors      | Catches color collapse on already-indexed or hand-authored sprites  |
 | Boundary evidence   | inferred boundaries are weaker than `0.6x` average axis gradient   | Flags weak or hallucinated grids                                    |
@@ -55,6 +56,8 @@ The model examples use the prompt `탑뷰 도트 중세 판타지 용사 파티�
 15. Added an exact-transition recovery path for square pixelate outputs with uneven original-size cell widths.
 16. Added low-palette retention metrics and an 8-color indexed synthetic fixture.
 17. Added output-coverage metrics for original-size snap results.
+18. Added a transparent-border known-grid synthetic fixture.
+19. Changed square-grid candidate selection to prefer high-confidence uniform-cell grids over much coarser exact-transition grids.
 
 ## Rejected Experiments
 
@@ -195,8 +198,23 @@ Output-coverage checks:
 | `anisotropic-40x40-to-320x240.png` | `320x240`   | `240x240`   |   `0.75` | `output-shrink` | `review` |
 | `gpt-image-2.png`                  | `1448x1097` | `1336x1012` | `0.9227` | none            | `pass`   |
 
+After transparent-padding recovery:
+
+| Scope              | Status counts                 | Objective mean | Repeat gap total | Expected-grid gap total | Output coverage mean |
+| ------------------ | ----------------------------- | -------------: | ---------------: | ----------------------: | -------------------: |
+| Overall            | `0 fail / 22 pass / 5 review` |      `31.6013` |              `0` |                     `0` |             `0.9693` |
+| Model examples     | `0 fail / 4 pass / 1 review`  |      `45.2232` |              `0` |                     `0` |             `0.9661` |
+| Demo examples      | `0 fail / 9 pass / 2 review`  |      `24.3586` |              `0` |                     `0` |             `0.9688` |
+| Synthetic fixtures | `0 fail / 9 pass / 2 review`  |      `32.6522` |              `0` |                     `0` |             `0.9712` |
+
+Transparent-padding check:
+
+| Fixture                               | Before | After   | Expected | Gap change | Status |
+| ------------------------------------- | ------ | ------- | -------- | ---------: | ------ |
+| `transparent-border-32x32-scale8.png` | `4x4`  | `32x32` | `32x32`  |  `56 -> 0` | `pass` |
+
 Final detailed output is written by:
 
 ```bash
-npm run eval:snap-quality -- --out-dir .tmp/snap-quality-eval-output-coverage
+npm run eval:snap-quality -- --out-dir .tmp/snap-quality-eval-transparent-padding
 ```
