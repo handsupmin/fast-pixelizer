@@ -10,7 +10,7 @@ Build an objective loop for model-generated "pixel art" and package demo images,
 | ------------------ | ----------------------------------------------------------- | ----: |
 | Model examples     | `/Users/sangmin/sources/mono-pix/src/assets/examples`       |     5 |
 | Demo examples      | `examples/`                                                 |    11 |
-| Synthetic fixtures | generated under `.tmp/snap-quality-eval-*/synthetic-source` |     9 |
+| Synthetic fixtures | generated under `.tmp/snap-quality-eval-*/synthetic-source` |    10 |
 
 The model examples use the prompt `탑뷰 도트 중세 판타지 용사 파티의 모험 픽셀아트 그려줘`.
 
@@ -27,6 +27,7 @@ The model examples use the prompt `탑뷰 도트 중세 판타지 용사 파티�
 | Determinism         | two snaps of the same source disagree on grid size                | Catches non-deterministic detection                                 |
 | Output purity       | snapped output cells are not single-color or square               | Verifies the core promise of snap output                            |
 | Palette budget      | snapped RGB palette exceeds `colorVariety + 1`                    | Catches accidental color explosion while allowing transparency      |
+| Palette retention   | limited-palette input keeps less than `95%` of its RGB colors     | Catches color collapse on already-indexed or hand-authored sprites  |
 | Boundary evidence   | inferred boundaries are weaker than `0.6x` average axis gradient  | Flags weak or hallucinated grids                                    |
 | Phase alignment     | inferred boundaries score below `0.5` against nearby peaks        | Flags grids that are strong but shifted off the true lattice phase  |
 | Source disorder     | intra-cell MAE exceeds `18`                                       | Flags painterly/noisy cells inside the inferred grid                |
@@ -51,6 +52,7 @@ The model examples use the prompt `탑뷰 도트 중세 판타지 용사 파티�
 13. Added a semi-transparent known-grid synthetic fixture.
 14. Added known-grid expectations for package-generated `32x32` and `64x64` demo pixelate examples.
 15. Added an exact-transition recovery path for square pixelate outputs with uneven original-size cell widths.
+16. Added low-palette retention metrics and an 8-color indexed synthetic fixture.
 
 ## Rejected Experiments
 
@@ -157,8 +159,25 @@ Exact-transition fixes:
 | `example-64-clean.png`  | `39x39` | `64x64` | `64x64`  |        `0` | `pass` |
 | `example-64-detail.png` | `66x66` | `64x64` | `64x64`  |        `0` | `pass` |
 
+After low-palette retention expansion:
+
+| Scope              | Status counts                 | Objective mean | Repeat gap total | Expected-grid gap total | Low-palette retention mean |
+| ------------------ | ----------------------------- | -------------: | ---------------: | ----------------------: | -------------------------: |
+| Overall            | `0 fail / 21 pass / 5 review` |      `32.2563` |              `0` |                     `0` |                        `1` |
+| Model examples     | `0 fail / 4 pass / 1 review`  |      `45.2232` |              `0` |                     `0` |                        `1` |
+| Demo examples      | `0 fail / 9 pass / 2 review`  |      `24.2361` |              `0` |                     `0` |                        `1` |
+| Synthetic fixtures | `0 fail / 8 pass / 2 review`  |      `34.5952` |              `0` |                     `0` |                        `1` |
+
+Low-palette checks:
+
+| Fixture or image                   | Grid    | Input RGB | Output RGB | Retention | Status |
+| ---------------------------------- | ------- | --------: | ---------: | --------: | ------ |
+| `indexed-8-color-48x32-scale8.png` | `48x32` |       `8` |        `8` |       `1` | `pass` |
+| `example-32-clean.png`             | `32x32` |       `6` |        `6` |       `1` | `pass` |
+| `example-64-clean.png`             | `64x64` |       `9` |        `9` |       `1` | `pass` |
+
 Final detailed output is written by:
 
 ```bash
-npm run eval:snap-quality -- --out-dir .tmp/snap-quality-eval-exact-transitions
+npm run eval:snap-quality -- --out-dir .tmp/snap-quality-eval-palette-retention
 ```

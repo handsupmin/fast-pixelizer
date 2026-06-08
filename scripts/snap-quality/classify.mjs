@@ -66,6 +66,15 @@ export function classifyMetrics(metrics) {
       ),
     )
   }
+  if (metrics.lowPaletteRetention < QUALITY_RULES.minLowPaletteRetention) {
+    issues.push(
+      issue(
+        'review',
+        'palette-collapse',
+        `low-palette retention ${formatNum(metrics.lowPaletteRetention)}`,
+      ),
+    )
+  }
   if (metrics.squareCellError > QUALITY_RULES.maxOutputSquareCellError) {
     issues.push(
       issue(
@@ -154,6 +163,7 @@ export function objective(metrics) {
     metrics.alphaP95 * 0.1 +
     metrics.outputCellMae * 500 +
     metrics.outputRgbPaletteOverage * 50 +
+    Math.max(0, QUALITY_RULES.minLowPaletteRetention - metrics.lowPaletteRetention) * 50 +
     Math.max(0, 1 - metrics.edgeAlignment) * 25 +
     Math.max(0, 1 - metrics.phaseAlignment) * 15 +
     Math.max(0, QUALITY_RULES.minSourceCellSize - metrics.sourceCellSize) * 500 +

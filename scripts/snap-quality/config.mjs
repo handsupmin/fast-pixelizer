@@ -25,6 +25,7 @@ export const QUALITY_RULES = {
   maxOutputCellMae: 0.01,
   maxOutputSquareCellError: 0.001,
   maxOutputRgbPaletteOverage: 0,
+  minLowPaletteRetention: 0.95,
   minContrastRatio: 0.45,
   maxContrastRatio: 1.8,
 }

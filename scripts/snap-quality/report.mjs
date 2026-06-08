@@ -23,6 +23,7 @@ export function summarize(results) {
     alphaMaeMean: mean(results, 'alphaMae'),
     outputCellMaeMean: mean(results, 'outputCellMae'),
     phaseAlignmentMean: mean(results, 'phaseAlignment'),
+    lowPaletteRetentionMean: mean(results, 'lowPaletteRetention'),
     sourceCellSizeMean: mean(results, 'sourceCellSize'),
   }
 }
@@ -48,6 +49,7 @@ function criteriaMarkdown() {
     `- Determinism: fail when two snaps of the same source disagree on grid size.`,
     `- Output purity: fail when snapped output cells are not single-color or square.`,
     `- Palette budget: fail when snapped RGB colors exceed colorVariety plus transparency allowance by more than ${QUALITY_RULES.maxOutputRgbPaletteOverage}.`,
+    `- Low-palette retention: review when limited-palette inputs keep less than ${(QUALITY_RULES.minLowPaletteRetention * 100).toFixed(0)}% of their RGB colors.`,
     `- Boundary evidence: review when inferred grid boundaries are weaker than ${QUALITY_RULES.minEdgeAlignment}x the average axis gradient.`,
     `- Phase alignment: review when inferred grid boundaries score below ${QUALITY_RULES.minPhaseAlignment} against nearby gradient peaks.`,
     `- Source disorder: review when intra-cell source MAE exceeds ${QUALITY_RULES.highCellMae}.`,
@@ -77,8 +79,10 @@ export function toMarkdown(summary) {
     'alphaP95',
     'repeatGridGap',
     'expectedGridGap',
+    'inputRgbColorCount',
     'outputRgbColorCount',
     'outputRgbPaletteOverage',
+    'lowPaletteRetention',
     'status',
     'issueSummary',
     'objective',

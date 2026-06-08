@@ -105,7 +105,12 @@ async function evaluateFile(file, dataset, options, expectations) {
   const preserve = await preservationStats(input, original.result)
   const outputCellWidth = original.result.width / cols
   const outputCellHeight = original.result.height / rows
+  const inputRgbColorCount = uniqueRgbColorCount(input)
   const outputRgbColorCount = uniqueRgbColorCount(resized.result)
+  const lowPaletteRetention =
+    inputRgbColorCount > 0 && inputRgbColorCount <= options.colorVariety + 1
+      ? outputRgbColorCount / inputRgbColorCount
+      : 1
   const metrics = {
     cols,
     rows,
@@ -127,6 +132,7 @@ async function evaluateFile(file, dataset, options, expectations) {
     contrastRatio: preserve.contrastRatio,
     squareCellError: Math.abs(outputCellWidth / outputCellHeight - 1),
     outputRgbPaletteOverage: Math.max(0, outputRgbColorCount - (options.colorVariety + 1)),
+    lowPaletteRetention,
   }
   const classification = classifyMetrics(metrics)
   const item = {
@@ -155,9 +161,11 @@ async function evaluateFile(file, dataset, options, expectations) {
     determinismGridGap: metrics.determinismGridGap,
     expectedGridGap: metrics.expectedGridGap,
     inputColorCount: uniqueColorCount(input),
+    inputRgbColorCount,
     outputColorCount: uniqueColorCount(resized.result),
     outputRgbColorCount,
     outputRgbPaletteOverage: metrics.outputRgbPaletteOverage,
+    lowPaletteRetention: formatNum(metrics.lowPaletteRetention),
     snapOriginalMs: formatNum(original.durationMs),
     snapResizedMs: formatNum(resized.durationMs),
     status: classification.status,

@@ -2,6 +2,17 @@ import fs from 'node:fs/promises'
 import path from 'node:path'
 import sharp from 'sharp'
 
+const INDEXED_PALETTE = [
+  [33, 30, 39],
+  [82, 43, 58],
+  [139, 72, 82],
+  [190, 123, 92],
+  [229, 181, 103],
+  [151, 179, 108],
+  [73, 135, 112],
+  [52, 78, 91],
+]
+
 function makeLowResPattern(cols, rows, mode) {
   const data = new Uint8ClampedArray(cols * rows * 4)
   for (let y = 0; y < rows; y++) {
@@ -10,9 +21,16 @@ function makeLowResPattern(cols, rows, mode) {
       const block = Math.floor(x / 5) + Math.floor(y / 7)
       const seed = mode === 'sparse' ? block * 37 : x * 17 + y * 31 + block * 53
       const value = seed % 256
-      data[i] = value
-      data[i + 1] = (value * 3 + x * 5) % 256
-      data[i + 2] = (value * 7 + y * 11) % 256
+      if (mode === 'indexed-8') {
+        const color = INDEXED_PALETTE[(x * 3 + y * 5 + block) % INDEXED_PALETTE.length]
+        data[i] = color[0]
+        data[i + 1] = color[1]
+        data[i + 2] = color[2]
+      } else {
+        data[i] = value
+        data[i + 1] = (value * 3 + x * 5) % 256
+        data[i + 2] = (value * 7 + y * 11) % 256
+      }
       if (mode === 'transparent' && x < cols / 5 && y < rows / 5) data[i + 3] = 0
       else if (mode === 'semi-transparent' && (x + y) % 5 === 0) data[i + 3] = 128
       else data[i + 3] = 255
@@ -92,6 +110,13 @@ export async function generateSyntheticDataset(outDir) {
     {
       file: 'semi-transparent-48x32-scale8.png',
       image: makeLowResPattern(48, 32, 'semi-transparent'),
+      scale: 8,
+      kernel: 'nearest',
+      expected: { cols: 48, rows: 32 },
+    },
+    {
+      file: 'indexed-8-color-48x32-scale8.png',
+      image: makeLowResPattern(48, 32, 'indexed-8'),
       scale: 8,
       kernel: 'nearest',
       expected: { cols: 48, rows: 32 },
