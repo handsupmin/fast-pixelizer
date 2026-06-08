@@ -530,6 +530,47 @@ function quadPatternDrift(source, output) {
   return drift
 }
 
+function windowColorKey(keys, cols, rows, col, row) {
+  if (col < 0 || row < 0 || col >= cols || row >= rows) return -2
+  return keys[row * cols + col]
+}
+
+function countWindowPatterns(keys, cols, rows) {
+  const patterns = new Map()
+  let count = 0
+
+  for (let row = 0; row < rows; row++) {
+    for (let col = 0; col < cols; col++) {
+      const cell = row * cols + col
+      if (keys[cell] < 0) continue
+
+      const pattern = []
+      for (let dy = -1; dy <= 1; dy++) {
+        for (let dx = -1; dx <= 1; dx++) {
+          pattern.push(windowColorKey(keys, cols, rows, col + dx, row + dy))
+        }
+      }
+
+      const key = pattern.join(',')
+      patterns.set(key, (patterns.get(key) ?? 0) + 1)
+      count++
+    }
+  }
+
+  return { count, patterns }
+}
+
+function windowPatternDrift(source, output) {
+  const patterns = new Set([...source.patterns.keys(), ...output.patterns.keys()])
+  let drift = 0
+
+  for (const pattern of patterns) {
+    drift += Math.abs((source.patterns.get(pattern) ?? 0) - (output.patterns.get(pattern) ?? 0))
+  }
+
+  return drift
+}
+
 function createRunStats() {
   return {
     horizontalCount: 0,
@@ -679,6 +720,8 @@ export function cellColorComponentMetrics(input, grid) {
   const outputNeighborMasks = countNeighborMasks(outputKeys, cols, rows)
   const sourceQuadPatterns = countQuadPatterns(sourceKeys, cols, rows)
   const outputQuadPatterns = countQuadPatterns(outputKeys, cols, rows)
+  const sourceWindowPatterns = countWindowPatterns(sourceKeys, cols, rows)
+  const outputWindowPatterns = countWindowPatterns(outputKeys, cols, rows)
   const sourceRuns = countSameColorRuns(sourceKeys, cols, rows)
   const outputRuns = countSameColorRuns(outputKeys, cols, rows)
   const sourceProjections = countColorProjections(sourceKeys, cols, rows)
@@ -719,6 +762,7 @@ export function cellColorComponentMetrics(input, grid) {
     cellColorQuadPatternDrift: quadPatternDrift(sourceQuadPatterns, outputQuadPatterns),
     cellColorRowProjectionDrift: projectionDrift(sourceProjections, outputProjections, 'row'),
     cellColorVerticalRunDrift: runDrift(sourceRuns, outputRuns, 'vertical'),
+    cellColorWindowPatternDrift: windowPatternDrift(sourceWindowPatterns, outputWindowPatterns),
     outputCellColorAdjacencyCount: outputAdjacency.orthogonalCount,
     outputCellColorBoundaryHorizontalRunCount: outputBoundaryRuns.horizontalCount,
     outputCellColorBoundaryPairCount: outputBoundaryPairs.orthogonalCount,
@@ -734,6 +778,8 @@ export function cellColorComponentMetrics(input, grid) {
     outputCellColorQuadPatternCount: outputQuadPatterns.count,
     outputCellColorRowProjectionCount: outputProjections.rowCount,
     outputCellColorVerticalRunCount: outputRuns.verticalCount,
+    outputCellColorDistinctWindowPatternCount: outputWindowPatterns.patterns.size,
+    outputCellColorWindowPatternCount: outputWindowPatterns.count,
     outputSmallCellColorComponentCount: output.smallCount,
     smallCellColorComponentCountDrift: Math.abs(source.smallCount - output.smallCount),
     sourceCellColorAdjacencyCount: sourceAdjacency.orthogonalCount,
@@ -751,6 +797,8 @@ export function cellColorComponentMetrics(input, grid) {
     sourceCellColorQuadPatternCount: sourceQuadPatterns.count,
     sourceCellColorRowProjectionCount: sourceProjections.rowCount,
     sourceCellColorVerticalRunCount: sourceRuns.verticalCount,
+    sourceCellColorDistinctWindowPatternCount: sourceWindowPatterns.patterns.size,
+    sourceCellColorWindowPatternCount: sourceWindowPatterns.count,
     sourceSmallCellColorComponentCount: source.smallCount,
   }
 }
