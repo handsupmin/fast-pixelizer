@@ -26,6 +26,8 @@ export const QUALITY_RULES = {
   minCellColorDominance: 0.18,
   maxCellColorErrorMean: 30,
   maxCellColorErrorP95: 55,
+  minExactLowPaletteCellDominance: 0.999,
+  maxExactLowPaletteCellColorErrorMax: 0.01,
   minCellTransitionCount: 24,
   minCellTransitionRetention: 0.7,
   maxCellTransitionSpuriousRatio: 0.45,

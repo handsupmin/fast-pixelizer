@@ -219,6 +219,18 @@ export function classifyMetrics(metrics) {
     )
   }
   if (
+    metrics.exactLowPaletteCellColorEligible &&
+    metrics.cellColorErrorMax > QUALITY_RULES.maxExactLowPaletteCellColorErrorMax
+  ) {
+    issues.push(
+      issue(
+        'review',
+        'rare-cell-color-drift',
+        `exact low-palette max cell color error ${formatNum(metrics.cellColorErrorMax)}`,
+      ),
+    )
+  }
+  if (
     metrics.sourceCellTransitionCount >= QUALITY_RULES.minCellTransitionCount &&
     metrics.cellTransitionRetention < QUALITY_RULES.minCellTransitionRetention
   ) {
@@ -449,6 +461,12 @@ export function objective(metrics) {
     metrics.aspectError * 50 +
     metrics.cellColorErrorMean * 0.5 +
     metrics.cellColorErrorP95 * 0.2 +
+    Math.max(
+      0,
+      (metrics.exactLowPaletteCellColorEligible ? metrics.cellColorErrorMax : 0) -
+        QUALITY_RULES.maxExactLowPaletteCellColorErrorMax,
+    ) *
+      0.5 +
     metrics.cellMae +
     metrics.preservationMae +
     metrics.preservationP95 * 0.25 +

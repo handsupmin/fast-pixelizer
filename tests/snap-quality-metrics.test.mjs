@@ -623,6 +623,19 @@ test('quality classification reviews cell representative color drift', () => {
   assert.ok(result.issues.some((issue) => issue.code === 'cell-color-drift'))
 })
 
+test('quality classification reviews rare exact low-palette cell drift', () => {
+  const result = classifyMetrics({
+    cellColorErrorMax: 128,
+    cellColorErrorMean: 0.1,
+    cellColorErrorP95: 0,
+    exactLowPaletteCellColorEligible: true,
+  })
+
+  assert.equal(result.status, 'review')
+  assert.ok(result.issues.some((issue) => issue.code === 'rare-cell-color-drift'))
+  assert.ok(!result.issues.some((issue) => issue.code === 'cell-color-drift'))
+})
+
 test('quality classification reviews palette dominance collapse', () => {
   const result = classifyMetrics({
     alphaMae: 0,

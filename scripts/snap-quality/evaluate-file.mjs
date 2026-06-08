@@ -2,6 +2,7 @@ import fs from 'node:fs/promises'
 import path from 'node:path'
 import { performance } from 'node:perf_hooks'
 import { snap } from '../../dist/index.js'
+import { QUALITY_RULES } from './config.mjs'
 import { classifyMetrics, formatNum, objective } from './classify.mjs'
 import { cellColorDominanceMetrics } from './cell-dominance.mjs'
 import { cellColorErrorMetrics } from './cell-color-error.mjs'
@@ -59,6 +60,7 @@ function toItem({ dataset, expected, input, metrics, name, original, resized, un
     axisPhaseAlignmentMin: formatNum(metrics.axisPhaseAlignmentMin),
     cellColorDominance: formatNum(metrics.cellColorDominance),
     cellColorDominanceP05: formatNum(metrics.cellColorDominanceP05),
+    exactLowPaletteCellColorEligible: metrics.exactLowPaletteCellColorEligible,
     cellColorErrorMean: formatNum(metrics.cellColorErrorMean),
     cellColorErrorP95: formatNum(metrics.cellColorErrorP95),
     cellColorErrorMax: formatNum(metrics.cellColorErrorMax),
@@ -171,6 +173,8 @@ async function buildMetrics(input, expected, snapshots, colorVariety) {
   const outputRgbColorCount = uniqueRgbColorCount(resized.result)
   const lowPaletteCoverageEligible =
     inputRgbColorCount > 0 && inputRgbColorCount <= colorVariety + 1
+  const exactLowPaletteCellColorEligible =
+    lowPaletteCoverageEligible && dominance.mean >= QUALITY_RULES.minExactLowPaletteCellDominance
   const paletteDominance = paletteDominanceMetrics(input, resized.result)
   const paletteUtilization = paletteUtilizationMetrics(input, resized.result, colorVariety)
 
@@ -197,6 +201,7 @@ async function buildMetrics(input, expected, snapshots, colorVariety) {
       axisPhaseAlignmentMin: phase.min,
       cellColorDominance: dominance.mean,
       cellColorDominanceP05: dominance.p05,
+      exactLowPaletteCellColorEligible,
       cellColorErrorMean: colorError.cellColorErrorMean,
       cellColorErrorP95: colorError.cellColorErrorP95,
       cellColorErrorMax: colorError.cellColorErrorMax,
