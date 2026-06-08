@@ -335,9 +335,54 @@ test('alpha component stats detect lost detached details with high mask IoU', ()
   assert.equal(stats.alphaComponentCount, 2)
   assert.equal(stats.outputAlphaComponentCount, 1)
   assert.equal(stats.alphaComponentCountDrift, 1)
+  assert.equal(stats.alphaComponentAreaDrift, 4)
+  assert.equal(stats.alphaComponentBBoxDrift, 0)
+  assert.equal(stats.alphaComponentPositionDrift, 0)
   assert.equal(stats.alphaSmallComponentCount, 1)
   assert.equal(stats.outputAlphaSmallComponentCount, 0)
   assert.equal(stats.alphaSmallComponentCountDrift, 1)
+})
+
+test('alpha component stats detect same-count component movement', () => {
+  const source = makeTransparentBox(64, 64, 8, 8, 24, 24)
+  const detached = makeTransparentBox(64, 64, 40, 40, 44, 44)
+  for (let i = 0; i < detached.data.length; i += 4) {
+    if (detached.data[i + 3] === 0) continue
+    source.data[i] = detached.data[i]
+    source.data[i + 1] = detached.data[i + 1]
+    source.data[i + 2] = detached.data[i + 2]
+    source.data[i + 3] = detached.data[i + 3]
+  }
+  const output = makeTransparentBox(64, 64, 8, 8, 24, 24)
+  const shifted = makeTransparentBox(64, 64, 42, 40, 46, 44)
+  for (let i = 0; i < shifted.data.length; i += 4) {
+    if (shifted.data[i + 3] === 0) continue
+    output.data[i] = shifted.data[i]
+    output.data[i + 1] = shifted.data[i + 1]
+    output.data[i + 2] = shifted.data[i + 2]
+    output.data[i + 3] = shifted.data[i + 3]
+  }
+  const stats = alphaMaskStats(source, output.data)
+
+  assert.equal(stats.alphaComponentCount, 2)
+  assert.equal(stats.outputAlphaComponentCount, 2)
+  assert.equal(stats.alphaComponentCountDrift, 0)
+  assert.equal(stats.alphaComponentAreaDrift, 0)
+  assert.equal(stats.alphaComponentBBoxDrift, 4)
+  assert.equal(stats.alphaComponentPositionDrift, 2)
+})
+
+test('alpha component stats detect same-area same-center bounds drift', () => {
+  const source = makeTransparentBox(32, 32, 16, 15, 17, 18)
+  const output = makeTransparentBox(32, 32, 15, 16, 18, 17)
+  const stats = alphaMaskStats(source, output.data)
+
+  assert.equal(stats.alphaComponentCount, 1)
+  assert.equal(stats.outputAlphaComponentCount, 1)
+  assert.equal(stats.alphaComponentCountDrift, 0)
+  assert.equal(stats.alphaComponentAreaDrift, 0)
+  assert.equal(stats.alphaComponentPositionDrift, 0)
+  assert.equal(stats.alphaComponentBBoxDrift, 4)
 })
 
 test('alpha semitransparency stats detect collapsed rare shadows with low alpha MAE', async () => {
@@ -876,8 +921,11 @@ test('quality classification reviews spurious alpha edge growth', () => {
 
 test('quality classification reviews alpha component count drift', () => {
   const result = classifyMetrics({
+    alphaComponentAreaDrift: 0,
+    alphaComponentBBoxDrift: 0,
     alphaComponentCount: 2,
     alphaComponentCountDrift: 1,
+    alphaComponentPositionDrift: 0,
     alphaSmallComponentCount: 1,
     alphaSmallComponentCountDrift: 1,
     outputAlphaComponentCount: 1,
@@ -887,6 +935,22 @@ test('quality classification reviews alpha component count drift', () => {
   assert.equal(result.status, 'review')
   assert.ok(result.issues.some((issue) => issue.code === 'alpha-component-drift'))
   assert.ok(result.issues.some((issue) => issue.code === 'alpha-small-component-drift'))
+})
+
+test('quality classification reviews alpha component shape drift', () => {
+  const result = classifyMetrics({
+    alphaComponentAreaDrift: 4,
+    alphaComponentBBoxDrift: 2,
+    alphaComponentCount: 2,
+    alphaComponentCountDrift: 0,
+    alphaComponentPositionDrift: 1,
+    outputAlphaComponentCount: 2,
+  })
+
+  assert.equal(result.status, 'review')
+  assert.ok(result.issues.some((issue) => issue.code === 'alpha-component-area-drift'))
+  assert.ok(result.issues.some((issue) => issue.code === 'alpha-component-bounds-drift'))
+  assert.ok(result.issues.some((issue) => issue.code === 'alpha-component-position-drift'))
 })
 
 test('quality classification reviews alpha semitransparency drift', () => {

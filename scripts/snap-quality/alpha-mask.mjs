@@ -159,9 +159,9 @@ function alphaSemitransparentStats(input, resized) {
   }
 }
 
-function componentSizes(data, width, height) {
+function componentStats(data, width, height) {
   const seen = new Uint8Array(width * height)
-  const sizes = []
+  const components = []
   const stack = []
 
   for (let y = 0; y < height; y++) {
@@ -170,6 +170,12 @@ function componentSizes(data, width, height) {
       if (seen[start] === 1 || alphaAt(data, width, x, y) <= VISIBLE_ALPHA_THRESHOLD) continue
 
       let size = 0
+      let sumX = 0
+      let sumY = 0
+      let left = width
+      let right = -1
+      let top = height
+      let bottom = -1
       seen[start] = 1
       stack.push(start)
 
@@ -178,6 +184,12 @@ function componentSizes(data, width, height) {
         size++
         const px = index % width
         const py = Math.floor(index / width)
+        sumX += px
+        sumY += py
+        left = Math.min(left, px)
+        right = Math.max(right, px)
+        top = Math.min(top, py)
+        bottom = Math.max(bottom, py)
 
         for (const [nx, ny] of [
           [px + 1, py],
@@ -194,24 +206,76 @@ function componentSizes(data, width, height) {
         }
       }
 
-      sizes.push(size)
+      components.push({ bottom, left, right, size, top, x: sumX / size, y: sumY / size })
     }
   }
 
-  return sizes
+  return components
+}
+
+function sortComponents(components) {
+  return [...components].sort((a, b) => b.size - a.size || a.y - b.y || a.x - b.x)
+}
+
+function componentAreaDrift(source, output) {
+  const sourceComponents = sortComponents(source)
+  const outputComponents = sortComponents(output)
+  const componentCount = Math.max(sourceComponents.length, outputComponents.length)
+  let drift = 0
+
+  for (let index = 0; index < componentCount; index++) {
+    drift += Math.abs((sourceComponents[index]?.size ?? 0) - (outputComponents[index]?.size ?? 0))
+  }
+
+  return drift
+}
+
+function componentPositionDrift(source, output) {
+  const sourceComponents = sortComponents(source)
+  const outputComponents = sortComponents(output)
+  const componentCount = Math.min(sourceComponents.length, outputComponents.length)
+  let drift = 0
+
+  for (let index = 0; index < componentCount; index++) {
+    drift +=
+      Math.abs(sourceComponents[index].x - outputComponents[index].x) +
+      Math.abs(sourceComponents[index].y - outputComponents[index].y)
+  }
+
+  return drift
+}
+
+function componentBBoxDrift(source, output) {
+  const sourceComponents = sortComponents(source)
+  const outputComponents = sortComponents(output)
+  const componentCount = Math.min(sourceComponents.length, outputComponents.length)
+  let drift = 0
+
+  for (let index = 0; index < componentCount; index++) {
+    drift +=
+      Math.abs(sourceComponents[index].left - outputComponents[index].left) +
+      Math.abs(sourceComponents[index].right - outputComponents[index].right) +
+      Math.abs(sourceComponents[index].top - outputComponents[index].top) +
+      Math.abs(sourceComponents[index].bottom - outputComponents[index].bottom)
+  }
+
+  return drift
 }
 
 function alphaComponentStats(input, resized) {
   const { width, height } = input
   const smallLimit = Math.max(64, Math.floor(width * height * SMALL_COMPONENT_AREA_RATIO))
-  const source = componentSizes(input.data, width, height)
-  const output = componentSizes(resized, width, height)
-  const sourceSmall = source.filter((size) => size <= smallLimit).length
-  const outputSmall = output.filter((size) => size <= smallLimit).length
+  const source = componentStats(input.data, width, height)
+  const output = componentStats(resized, width, height)
+  const sourceSmall = source.filter((component) => component.size <= smallLimit).length
+  const outputSmall = output.filter((component) => component.size <= smallLimit).length
 
   return {
+    alphaComponentAreaDrift: componentAreaDrift(source, output),
+    alphaComponentBBoxDrift: componentBBoxDrift(source, output),
     alphaComponentCount: source.length,
     alphaComponentCountDrift: Math.abs(source.length - output.length),
+    alphaComponentPositionDrift: componentPositionDrift(source, output),
     alphaSmallComponentCount: sourceSmall,
     alphaSmallComponentCountDrift: Math.abs(sourceSmall - outputSmall),
     outputAlphaComponentCount: output.length,

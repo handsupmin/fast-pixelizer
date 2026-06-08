@@ -496,6 +496,45 @@ export function classifyMetrics(metrics) {
     )
   }
   if (
+    Math.max(metrics.alphaComponentCount ?? 0, metrics.outputAlphaComponentCount ?? 0) >=
+      QUALITY_RULES.minAlphaComponentCount &&
+    (metrics.alphaComponentAreaDrift ?? 0) > QUALITY_RULES.maxAlphaComponentAreaDrift
+  ) {
+    issues.push(
+      issue(
+        'review',
+        'alpha-component-area-drift',
+        `alpha component area drift ${metrics.alphaComponentAreaDrift}`,
+      ),
+    )
+  }
+  if (
+    Math.max(metrics.alphaComponentCount ?? 0, metrics.outputAlphaComponentCount ?? 0) >=
+      QUALITY_RULES.minAlphaComponentCount &&
+    (metrics.alphaComponentBBoxDrift ?? 0) > QUALITY_RULES.maxAlphaComponentBBoxDrift
+  ) {
+    issues.push(
+      issue(
+        'review',
+        'alpha-component-bounds-drift',
+        `alpha component bounds drift ${metrics.alphaComponentBBoxDrift}`,
+      ),
+    )
+  }
+  if (
+    Math.max(metrics.alphaComponentCount ?? 0, metrics.outputAlphaComponentCount ?? 0) >=
+      QUALITY_RULES.minAlphaComponentCount &&
+    (metrics.alphaComponentPositionDrift ?? 0) > QUALITY_RULES.maxAlphaComponentPositionDrift
+  ) {
+    issues.push(
+      issue(
+        'review',
+        'alpha-component-position-drift',
+        `alpha component position drift ${formatNum(metrics.alphaComponentPositionDrift)}`,
+      ),
+    )
+  }
+  if (
     Math.max(metrics.alphaSmallComponentCount ?? 0, metrics.outputAlphaSmallComponentCount ?? 0) >=
       QUALITY_RULES.minAlphaSmallComponentCount &&
     metrics.alphaSmallComponentCountDrift > QUALITY_RULES.maxAlphaSmallComponentCountDrift
@@ -716,6 +755,15 @@ export function objective(metrics) {
       (metrics.alphaComponentCountDrift ?? 0) - QUALITY_RULES.maxAlphaComponentCountDrift,
     ) *
       40 +
+    Math.max(0, (metrics.alphaComponentAreaDrift ?? 0) - QUALITY_RULES.maxAlphaComponentAreaDrift) *
+      0.25 +
+    Math.max(0, (metrics.alphaComponentBBoxDrift ?? 0) - QUALITY_RULES.maxAlphaComponentBBoxDrift) *
+      0.5 +
+    Math.max(
+      0,
+      (metrics.alphaComponentPositionDrift ?? 0) - QUALITY_RULES.maxAlphaComponentPositionDrift,
+    ) *
+      0.5 +
     Math.max(
       0,
       (metrics.alphaSmallComponentCountDrift ?? 0) - QUALITY_RULES.maxAlphaSmallComponentCountDrift,
