@@ -261,6 +261,7 @@ function criteriaMarkdown() {
     `- Phase alignment: review when inferred grid boundaries score below ${QUALITY_RULES.minPhaseAlignment} against nearby gradient peaks.`,
     `- Axis phase alignment: review when either axis scores below ${QUALITY_RULES.minAxisPhaseAlignment} against nearby gradient peaks.`,
     `- Cell color dominance: review when the average bucketed majority color share per inferred cell is below ${QUALITY_RULES.minCellColorDominance}.`,
+    `- Localized cell color dominance: review when the bottom 5% bucketed majority color share per inferred cell is below ${QUALITY_RULES.minCellColorDominanceP05}.`,
     `- Cell representative color: review when snapped grid-cell color differs from source cell average by mean > ${QUALITY_RULES.maxCellColorErrorMean} or p95 > ${QUALITY_RULES.maxCellColorErrorP95}.`,
     `- Cell representative alpha: review when snapped grid-cell alpha differs from source cell average by mean > ${QUALITY_RULES.maxCellAlphaErrorMean} or p95 > ${QUALITY_RULES.maxCellAlphaErrorP95}.`,
     `- Rare exact-palette cell color: review when exact low-palette inputs with cell dominance at least ${QUALITY_RULES.minExactLowPaletteCellDominance} have any grid-cell color error above ${QUALITY_RULES.maxExactLowPaletteCellColorErrorMax}.`,

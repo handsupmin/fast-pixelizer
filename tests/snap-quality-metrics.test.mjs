@@ -609,6 +609,16 @@ test('cell color dominance separates clean and ambiguous cells', () => {
   assert.ok(ambiguous.mean < 0.51, `expected ambiguous dominance near half, got ${ambiguous.mean}`)
 })
 
+test('quality classification reviews localized cell color ambiguity hidden by the mean', () => {
+  const result = classifyMetrics({
+    cellColorDominance: 0.9,
+    cellColorDominanceP05: 0.04,
+  })
+
+  assert.equal(result.status, 'review')
+  assert.ok(result.issues.some((issue) => issue.code === 'localized-ambiguous-cell-colors'))
+})
+
 test('cell color error tracks representative source cell color drift', () => {
   const clean = cellColorErrorMetrics(makeChecker(64, 64, 8), makeChecker(8, 8, 1))
   const drifted = cellColorErrorMetrics(makeChecker(64, 64, 8), makeSolid(8, 8, 127))

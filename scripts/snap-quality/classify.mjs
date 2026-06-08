@@ -259,6 +259,15 @@ export function classifyMetrics(metrics) {
       ),
     )
   }
+  if ((metrics.cellColorDominanceP05 ?? 1) < QUALITY_RULES.minCellColorDominanceP05) {
+    issues.push(
+      issue(
+        'review',
+        'localized-ambiguous-cell-colors',
+        `cell color dominance p05 ${formatNum(metrics.cellColorDominanceP05)}`,
+      ),
+    )
+  }
   if (
     metrics.cellColorErrorMean > QUALITY_RULES.maxCellColorErrorMean ||
     metrics.cellColorErrorP95 > QUALITY_RULES.maxCellColorErrorP95
@@ -1361,6 +1370,8 @@ export function objective(metrics) {
     Math.max(0, 1 - metrics.phaseAlignment) * 15 +
     Math.max(0, 1 - metrics.axisPhaseAlignmentMin) * 10 +
     Math.max(0, QUALITY_RULES.minCellColorDominance - metrics.cellColorDominance) * 120 +
+    Math.max(0, QUALITY_RULES.minCellColorDominanceP05 - (metrics.cellColorDominanceP05 ?? 1)) *
+      120 +
     Math.max(0, QUALITY_RULES.minCellTransitionRetention - metrics.cellTransitionRetention) * 50 +
     Math.max(0, QUALITY_RULES.minCellTransitionRetention - metrics.cellTransitionAxisRetentionMin) *
       35 +
