@@ -77,6 +77,14 @@ npm run eval:snap-quality
 
 The eval writes `summary.json`, `summary.md`, snapped images, and resized grid images under `.tmp/snap-quality-eval/`.
 
+For release candidates, compare visual output against a published baseline before changing snap behavior:
+
+```bash
+npm run compare:examples -- --before 1.3.6 --after local
+```
+
+The comparison uses the same default model/demo image sets as the quality eval and writes `summary.json`, `index.html`, `contact-sheet.png`, and per-image before/after/diff PNGs under `.tmp/example-version-compare/`. Use this as the visual gate for checking whether candidate changes preserve natural line extraction on existing examples instead of silently trading one artifact for another.
+
 Current criteria include:
 
 | Criterion           | What it catches                                                |

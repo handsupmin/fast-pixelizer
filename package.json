@@ -49,6 +49,7 @@
     "examples": "npm run build && node scripts/generate-examples.mjs",
     "eval:model-examples": "npm run eval:snap-quality",
     "eval:snap-quality": "npm run build && node scripts/evaluate-model-examples.mjs",
+    "compare:examples": "npm run build && node scripts/compare-example-versions.mjs",
     "prepublishOnly": "npm run build"
   },
   "devDependencies": {
