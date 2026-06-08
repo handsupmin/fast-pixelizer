@@ -33,6 +33,7 @@ export const QUALITY_RULES = {
   maxExactLowPaletteCellAlphaErrorMax: 0.01,
   minExactCellColorComponentCount: 2,
   maxExactCellColorComponentCountDrift: 0,
+  maxExactCellColorComponentAreaDrift: 0,
   minExactSmallCellColorComponentCount: 1,
   maxExactSmallCellColorComponentCountDrift: 0,
   minCellTransitionCount: 24,

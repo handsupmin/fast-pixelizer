@@ -281,6 +281,20 @@ export function classifyMetrics(metrics) {
   }
   if (
     metrics.exactLowPaletteCellColorEligible &&
+    Math.max(metrics.sourceCellColorComponentCount, metrics.outputCellColorComponentCount) >=
+      QUALITY_RULES.minExactCellColorComponentCount &&
+    (metrics.cellColorComponentAreaDrift ?? 0) > QUALITY_RULES.maxExactCellColorComponentAreaDrift
+  ) {
+    issues.push(
+      issue(
+        'review',
+        'exact-cell-color-component-area-drift',
+        `exact cell color component area drift ${metrics.cellColorComponentAreaDrift}`,
+      ),
+    )
+  }
+  if (
+    metrics.exactLowPaletteCellColorEligible &&
     Math.max(
       metrics.sourceSmallCellColorComponentCount,
       metrics.outputSmallCellColorComponentCount,
@@ -629,6 +643,12 @@ export function objective(metrics) {
         QUALITY_RULES.maxExactCellColorComponentCountDrift,
     ) *
       20 +
+    Math.max(
+      0,
+      (metrics.exactLowPaletteCellColorEligible ? (metrics.cellColorComponentAreaDrift ?? 0) : 0) -
+        QUALITY_RULES.maxExactCellColorComponentAreaDrift,
+    ) *
+      2 +
     Math.max(
       0,
       (metrics.exactLowPaletteCellColorEligible ? metrics.smallCellColorComponentCountDrift : 0) -

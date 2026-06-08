@@ -42,6 +42,7 @@ function outputCellKeys(grid) {
 function componentStats(keys, cols, rows) {
   const seen = new Uint8Array(keys.length)
   const stack = []
+  const byColor = new Map()
   const smallLimit = Math.max(1, Math.floor(cols * rows * 0.01))
   let count = 0
   let smallCount = 0
@@ -77,9 +78,28 @@ function componentStats(keys, cols, rows) {
 
     count++
     if (size <= smallLimit) smallCount++
+    const sizes = byColor.get(key) ?? []
+    sizes.push(size)
+    byColor.set(key, sizes)
   }
 
-  return { count, smallCount }
+  return { byColor, count, smallCount }
+}
+
+function componentAreaDrift(source, output) {
+  const colors = new Set([...source.byColor.keys(), ...output.byColor.keys()])
+  let drift = 0
+
+  for (const color of colors) {
+    const sourceSizes = [...(source.byColor.get(color) ?? [])].sort((a, b) => b - a)
+    const outputSizes = [...(output.byColor.get(color) ?? [])].sort((a, b) => b - a)
+    const sizeCount = Math.max(sourceSizes.length, outputSizes.length)
+    for (let index = 0; index < sizeCount; index++) {
+      drift += Math.abs((sourceSizes[index] ?? 0) - (outputSizes[index] ?? 0))
+    }
+  }
+
+  return drift
 }
 
 export function cellColorComponentMetrics(input, grid) {
@@ -89,6 +109,7 @@ export function cellColorComponentMetrics(input, grid) {
   const output = componentStats(outputCellKeys(grid), cols, rows)
 
   return {
+    cellColorComponentAreaDrift: componentAreaDrift(source, output),
     cellColorComponentCountDrift: Math.abs(source.count - output.count),
     outputCellColorComponentCount: output.count,
     outputSmallCellColorComponentCount: output.smallCount,

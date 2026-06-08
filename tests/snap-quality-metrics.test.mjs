@@ -477,6 +477,23 @@ test('cell color components detect lost detached exact-color parts', () => {
   assert.equal(metrics.smallCellColorComponentCountDrift, 1)
 })
 
+test('cell color components detect same-count component area drift', () => {
+  const black = [0, 0, 0, 255]
+  const red = [255, 0, 0, 255]
+  const sourceKeys = Array.from({ length: 16 }, () => black)
+  sourceKeys[0] = red
+  sourceKeys[1] = red
+  const outputKeys = Array.from({ length: 16 }, () => black)
+  outputKeys[0] = red
+  const metrics = cellColorComponentMetrics(
+    makeCellImage(sourceKeys, 4, 4, 8),
+    makeCellGrid(outputKeys, 4, 4),
+  )
+
+  assert.equal(metrics.cellColorComponentCountDrift, 0)
+  assert.equal(metrics.cellColorComponentAreaDrift, 2)
+})
+
 test('cell transitions distinguish retained, removed, and spurious boundaries', () => {
   const input = makeChecker(64, 64, 8)
   const retained = cellTransitionMetrics(input, makeChecker(8, 8, 1))
@@ -525,6 +542,19 @@ test('quality classification reviews exact low-palette alpha drift', () => {
 
   assert.equal(result.status, 'review')
   assert.ok(result.issues.some((issue) => issue.code === 'rare-cell-alpha-drift'))
+})
+
+test('quality classification reviews exact cell color component area drift', () => {
+  const result = classifyMetrics({
+    cellColorComponentAreaDrift: 2,
+    cellColorComponentCountDrift: 0,
+    exactLowPaletteCellColorEligible: true,
+    outputCellColorComponentCount: 2,
+    sourceCellColorComponentCount: 2,
+  })
+
+  assert.equal(result.status, 'review')
+  assert.ok(result.issues.some((issue) => issue.code === 'exact-cell-color-component-area-drift'))
 })
 
 test('quality classification fails when repeat snap changes visuals', () => {
