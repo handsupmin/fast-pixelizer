@@ -469,6 +469,64 @@ function runDrift(source, output, axis) {
   return drift
 }
 
+function createProjectionStats() {
+  return {
+    columnCount: 0,
+    columns: new Map(),
+    rowCount: 0,
+    rows: new Map(),
+  }
+}
+
+function addProjection(stats, axis, color, position, count) {
+  if (color < 0 || count <= 0) return
+  const key = `${color}:${position}`
+  if (axis === 'row') {
+    stats.rows.set(key, count)
+    stats.rowCount += count
+  } else {
+    stats.columns.set(key, count)
+    stats.columnCount += count
+  }
+}
+
+function countColorProjections(keys, cols, rows) {
+  const stats = createProjectionStats()
+
+  for (let row = 0; row < rows; row++) {
+    const counts = new Map()
+    for (let col = 0; col < cols; col++) {
+      const color = keys[row * cols + col]
+      if (color >= 0) counts.set(color, (counts.get(color) ?? 0) + 1)
+    }
+    for (const [color, count] of counts) addProjection(stats, 'row', color, row, count)
+  }
+
+  for (let col = 0; col < cols; col++) {
+    const counts = new Map()
+    for (let row = 0; row < rows; row++) {
+      const color = keys[row * cols + col]
+      if (color >= 0) counts.set(color, (counts.get(color) ?? 0) + 1)
+    }
+    for (const [color, count] of counts) addProjection(stats, 'column', color, col, count)
+  }
+
+  return stats
+}
+
+function projectionDrift(source, output, axis) {
+  const sourceProjection = axis === 'row' ? source.rows : source.columns
+  const outputProjection = axis === 'row' ? output.rows : output.columns
+  const positions = new Set([...sourceProjection.keys(), ...outputProjection.keys()])
+  let drift = 0
+
+  for (const position of positions) {
+    drift += Math.abs((sourceProjection.get(position) ?? 0) - (outputProjection.get(position) ?? 0))
+  }
+
+  return drift
+}
+
 export function cellColorComponentMetrics(input, grid) {
   const cols = grid.width
   const rows = grid.height
@@ -486,9 +544,12 @@ export function cellColorComponentMetrics(input, grid) {
   const outputQuadPatterns = countQuadPatterns(outputKeys, cols, rows)
   const sourceRuns = countSameColorRuns(sourceKeys, cols, rows)
   const outputRuns = countSameColorRuns(outputKeys, cols, rows)
+  const sourceProjections = countColorProjections(sourceKeys, cols, rows)
+  const outputProjections = countColorProjections(outputKeys, cols, rows)
 
   return {
     cellColorAdjacencyDrift: adjacency.orthogonalDrift,
+    cellColorColumnProjectionDrift: projectionDrift(sourceProjections, outputProjections, 'column'),
     cellColorComponentAreaDrift: componentAreaDrift(source, output),
     cellColorComponentBBoxDrift: componentBBoxDrift(source, output),
     cellColorComponentCountDrift: Math.abs(source.count - output.count),
@@ -499,8 +560,10 @@ export function cellColorComponentMetrics(input, grid) {
     cellColorHorizontalRunDrift: runDrift(sourceRuns, outputRuns, 'horizontal'),
     cellColorNeighborMaskDrift: neighborMaskDrift(sourceNeighborMasks, outputNeighborMasks),
     cellColorQuadPatternDrift: quadPatternDrift(sourceQuadPatterns, outputQuadPatterns),
+    cellColorRowProjectionDrift: projectionDrift(sourceProjections, outputProjections, 'row'),
     cellColorVerticalRunDrift: runDrift(sourceRuns, outputRuns, 'vertical'),
     outputCellColorAdjacencyCount: outputAdjacency.orthogonalCount,
+    outputCellColorColumnProjectionCount: outputProjections.columnCount,
     outputCellColorComponentCount: output.count,
     outputCellColorComponentHoleCount: holes.outputCount,
     outputCellColorDiagonalAdjacencyCount: outputAdjacency.diagonalCount,
@@ -508,10 +571,12 @@ export function cellColorComponentMetrics(input, grid) {
     outputCellColorHorizontalRunCount: outputRuns.horizontalCount,
     outputCellColorNeighborMaskCount: outputNeighborMasks.count,
     outputCellColorQuadPatternCount: outputQuadPatterns.count,
+    outputCellColorRowProjectionCount: outputProjections.rowCount,
     outputCellColorVerticalRunCount: outputRuns.verticalCount,
     outputSmallCellColorComponentCount: output.smallCount,
     smallCellColorComponentCountDrift: Math.abs(source.smallCount - output.smallCount),
     sourceCellColorAdjacencyCount: sourceAdjacency.orthogonalCount,
+    sourceCellColorColumnProjectionCount: sourceProjections.columnCount,
     sourceCellColorComponentCount: source.count,
     sourceCellColorComponentHoleCount: holes.sourceCount,
     sourceCellColorDiagonalAdjacencyCount: sourceAdjacency.diagonalCount,
@@ -519,6 +584,7 @@ export function cellColorComponentMetrics(input, grid) {
     sourceCellColorHorizontalRunCount: sourceRuns.horizontalCount,
     sourceCellColorNeighborMaskCount: sourceNeighborMasks.count,
     sourceCellColorQuadPatternCount: sourceQuadPatterns.count,
+    sourceCellColorRowProjectionCount: sourceProjections.rowCount,
     sourceCellColorVerticalRunCount: sourceRuns.verticalCount,
     sourceSmallCellColorComponentCount: source.smallCount,
   }

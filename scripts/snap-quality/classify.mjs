@@ -364,6 +364,38 @@ export function classifyMetrics(metrics) {
   }
   if (
     metrics.exactLowPaletteCellColorEligible &&
+    Math.max(
+      metrics.sourceCellColorRowProjectionCount ?? 0,
+      metrics.outputCellColorRowProjectionCount ?? 0,
+    ) >= QUALITY_RULES.minExactCellColorProjectionCount &&
+    (metrics.cellColorRowProjectionDrift ?? 0) > QUALITY_RULES.maxExactCellColorProjectionDrift
+  ) {
+    issues.push(
+      issue(
+        'review',
+        'exact-cell-color-row-projection-drift',
+        `exact cell color row projection drift ${metrics.cellColorRowProjectionDrift}`,
+      ),
+    )
+  }
+  if (
+    metrics.exactLowPaletteCellColorEligible &&
+    Math.max(
+      metrics.sourceCellColorColumnProjectionCount ?? 0,
+      metrics.outputCellColorColumnProjectionCount ?? 0,
+    ) >= QUALITY_RULES.minExactCellColorProjectionCount &&
+    (metrics.cellColorColumnProjectionDrift ?? 0) > QUALITY_RULES.maxExactCellColorProjectionDrift
+  ) {
+    issues.push(
+      issue(
+        'review',
+        'exact-cell-color-column-projection-drift',
+        `exact cell color column projection drift ${metrics.cellColorColumnProjectionDrift}`,
+      ),
+    )
+  }
+  if (
+    metrics.exactLowPaletteCellColorEligible &&
     Math.max(metrics.sourceCellColorComponentCount, metrics.outputCellColorComponentCount) >=
       QUALITY_RULES.minExactCellColorComponentCount &&
     metrics.cellColorComponentCountDrift > QUALITY_RULES.maxExactCellColorComponentCountDrift
@@ -975,6 +1007,19 @@ export function objective(metrics) {
         QUALITY_RULES.maxExactCellColorRunDrift,
     ) *
       4 +
+    Math.max(
+      0,
+      (metrics.exactLowPaletteCellColorEligible ? (metrics.cellColorRowProjectionDrift ?? 0) : 0) -
+        QUALITY_RULES.maxExactCellColorProjectionDrift,
+    ) *
+      2 +
+    Math.max(
+      0,
+      (metrics.exactLowPaletteCellColorEligible
+        ? (metrics.cellColorColumnProjectionDrift ?? 0)
+        : 0) - QUALITY_RULES.maxExactCellColorProjectionDrift,
+    ) *
+      2 +
     Math.max(
       0,
       (metrics.exactLowPaletteCellColorEligible ? (metrics.cellColorComponentAreaDrift ?? 0) : 0) -

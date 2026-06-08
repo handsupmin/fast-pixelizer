@@ -783,6 +783,38 @@ test('cell color runs detect split vertical same-color strokes', () => {
   assert.equal(metrics.cellColorHorizontalRunDrift, 0)
 })
 
+test('cell color projections detect row occupancy drift', () => {
+  const transparent = [0, 0, 0, 0]
+  const red = [255, 0, 0, 255]
+  const sourceKeys = [red, red, transparent, transparent, transparent, transparent]
+  const outputKeys = [transparent, transparent, transparent, red, red, transparent]
+  const metrics = cellColorComponentMetrics(
+    makeCellImage(sourceKeys, 3, 2, 8),
+    makeCellGrid(outputKeys, 3, 2),
+  )
+
+  assert.equal(metrics.sourceCellColorRowProjectionCount, 2)
+  assert.equal(metrics.outputCellColorRowProjectionCount, 2)
+  assert.equal(metrics.cellColorRowProjectionDrift, 4)
+  assert.equal(metrics.cellColorColumnProjectionDrift, 0)
+})
+
+test('cell color projections detect column occupancy drift', () => {
+  const transparent = [0, 0, 0, 0]
+  const red = [255, 0, 0, 255]
+  const sourceKeys = [red, transparent, transparent, red, transparent, transparent]
+  const outputKeys = [transparent, red, transparent, transparent, red, transparent]
+  const metrics = cellColorComponentMetrics(
+    makeCellImage(sourceKeys, 3, 2, 8),
+    makeCellGrid(outputKeys, 3, 2),
+  )
+
+  assert.equal(metrics.sourceCellColorColumnProjectionCount, 2)
+  assert.equal(metrics.outputCellColorColumnProjectionCount, 2)
+  assert.equal(metrics.cellColorColumnProjectionDrift, 4)
+  assert.equal(metrics.cellColorRowProjectionDrift, 0)
+})
+
 test('cell transitions distinguish retained, removed, and spurious boundaries', () => {
   const input = makeChecker(64, 64, 8)
   const retained = cellTransitionMetrics(input, makeChecker(8, 8, 1))
@@ -940,6 +972,32 @@ test('quality classification reviews exact cell color vertical run drift', () =>
 
   assert.equal(result.status, 'review')
   assert.ok(result.issues.some((issue) => issue.code === 'exact-cell-color-vertical-run-drift'))
+})
+
+test('quality classification reviews exact cell color row projection drift', () => {
+  const result = classifyMetrics({
+    cellColorRowProjectionDrift: 4,
+    exactLowPaletteCellColorEligible: true,
+    outputCellColorRowProjectionCount: 2,
+    sourceCellColorRowProjectionCount: 2,
+  })
+
+  assert.equal(result.status, 'review')
+  assert.ok(result.issues.some((issue) => issue.code === 'exact-cell-color-row-projection-drift'))
+})
+
+test('quality classification reviews exact cell color column projection drift', () => {
+  const result = classifyMetrics({
+    cellColorColumnProjectionDrift: 4,
+    exactLowPaletteCellColorEligible: true,
+    outputCellColorColumnProjectionCount: 2,
+    sourceCellColorColumnProjectionCount: 2,
+  })
+
+  assert.equal(result.status, 'review')
+  assert.ok(
+    result.issues.some((issue) => issue.code === 'exact-cell-color-column-projection-drift'),
+  )
 })
 
 test('quality classification reviews exact cell color component position drift', () => {
