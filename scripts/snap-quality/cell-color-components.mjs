@@ -278,26 +278,91 @@ function componentHoleCountDrift(source, output, cols) {
   return { drift, outputCount, sourceCount }
 }
 
+function createAdjacencyStats() {
+  return {
+    byColor: new Map(),
+    diagonalCount: 0,
+    orthogonalCount: 0,
+  }
+}
+
+function colorAdjacencyBucket(stats, color) {
+  const bucket = stats.byColor.get(color) ?? { diagonal: 0, orthogonal: 0 }
+  stats.byColor.set(color, bucket)
+  return bucket
+}
+
+function countSameColorAdjacency(keys, cols, rows) {
+  const stats = createAdjacencyStats()
+
+  function addPair(cell, next, type) {
+    const color = keys[cell]
+    if (color < 0 || keys[next] !== color) return
+    const bucket = colorAdjacencyBucket(stats, color)
+    bucket[type]++
+    if (type === 'diagonal') stats.diagonalCount++
+    else stats.orthogonalCount++
+  }
+
+  for (let row = 0; row < rows; row++) {
+    for (let col = 0; col < cols; col++) {
+      const cell = row * cols + col
+      if (col + 1 < cols) addPair(cell, cell + 1, 'orthogonal')
+      if (row + 1 < rows) addPair(cell, cell + cols, 'orthogonal')
+      if (row + 1 < rows && col + 1 < cols) addPair(cell, cell + cols + 1, 'diagonal')
+      if (row + 1 < rows && col > 0) addPair(cell, cell + cols - 1, 'diagonal')
+    }
+  }
+
+  return stats
+}
+
+function adjacencyDrift(source, output) {
+  const colors = new Set([...source.byColor.keys(), ...output.byColor.keys()])
+  let diagonalDrift = 0
+  let orthogonalDrift = 0
+
+  for (const color of colors) {
+    const sourceBucket = source.byColor.get(color) ?? { diagonal: 0, orthogonal: 0 }
+    const outputBucket = output.byColor.get(color) ?? { diagonal: 0, orthogonal: 0 }
+    diagonalDrift += Math.abs(sourceBucket.diagonal - outputBucket.diagonal)
+    orthogonalDrift += Math.abs(sourceBucket.orthogonal - outputBucket.orthogonal)
+  }
+
+  return { diagonalDrift, orthogonalDrift }
+}
+
 export function cellColorComponentMetrics(input, grid) {
   const cols = grid.width
   const rows = grid.height
-  const source = componentStats(sourceCellKeys(input, cols, rows), cols, rows)
-  const output = componentStats(outputCellKeys(grid), cols, rows)
+  const sourceKeys = sourceCellKeys(input, cols, rows)
+  const outputKeys = outputCellKeys(grid)
+  const source = componentStats(sourceKeys, cols, rows)
+  const output = componentStats(outputKeys, cols, rows)
   const holes = componentHoleCountDrift(source, output, cols)
+  const sourceAdjacency = countSameColorAdjacency(sourceKeys, cols, rows)
+  const outputAdjacency = countSameColorAdjacency(outputKeys, cols, rows)
+  const adjacency = adjacencyDrift(sourceAdjacency, outputAdjacency)
 
   return {
+    cellColorAdjacencyDrift: adjacency.orthogonalDrift,
     cellColorComponentAreaDrift: componentAreaDrift(source, output),
     cellColorComponentBBoxDrift: componentBBoxDrift(source, output),
     cellColorComponentCountDrift: Math.abs(source.count - output.count),
     cellColorComponentHoleCountDrift: holes.drift,
     cellColorComponentPerimeterDrift: componentPerimeterDrift(source, output),
     cellColorComponentPositionDrift: componentPositionDrift(source, output),
+    cellColorDiagonalAdjacencyDrift: adjacency.diagonalDrift,
+    outputCellColorAdjacencyCount: outputAdjacency.orthogonalCount,
     outputCellColorComponentCount: output.count,
     outputCellColorComponentHoleCount: holes.outputCount,
+    outputCellColorDiagonalAdjacencyCount: outputAdjacency.diagonalCount,
     outputSmallCellColorComponentCount: output.smallCount,
     smallCellColorComponentCountDrift: Math.abs(source.smallCount - output.smallCount),
+    sourceCellColorAdjacencyCount: sourceAdjacency.orthogonalCount,
     sourceCellColorComponentCount: source.count,
     sourceCellColorComponentHoleCount: holes.sourceCount,
+    sourceCellColorDiagonalAdjacencyCount: sourceAdjacency.diagonalCount,
     sourceSmallCellColorComponentCount: source.smallCount,
   }
 }

@@ -267,6 +267,39 @@ export function classifyMetrics(metrics) {
   }
   if (
     metrics.exactLowPaletteCellColorEligible &&
+    Math.max(
+      metrics.sourceCellColorAdjacencyCount ?? 0,
+      metrics.outputCellColorAdjacencyCount ?? 0,
+    ) >= QUALITY_RULES.minExactCellColorAdjacencyCount &&
+    (metrics.cellColorAdjacencyDrift ?? 0) > QUALITY_RULES.maxExactCellColorAdjacencyDrift
+  ) {
+    issues.push(
+      issue(
+        'review',
+        'exact-cell-color-adjacency-drift',
+        `exact cell color adjacencies ${metrics.sourceCellColorAdjacencyCount}->${metrics.outputCellColorAdjacencyCount}`,
+      ),
+    )
+  }
+  if (
+    metrics.exactLowPaletteCellColorEligible &&
+    Math.max(
+      metrics.sourceCellColorDiagonalAdjacencyCount ?? 0,
+      metrics.outputCellColorDiagonalAdjacencyCount ?? 0,
+    ) >= QUALITY_RULES.minExactCellColorDiagonalAdjacencyCount &&
+    (metrics.cellColorDiagonalAdjacencyDrift ?? 0) >
+      QUALITY_RULES.maxExactCellColorDiagonalAdjacencyDrift
+  ) {
+    issues.push(
+      issue(
+        'review',
+        'exact-cell-color-diagonal-adjacency-drift',
+        `exact cell color diagonal adjacencies ${metrics.sourceCellColorDiagonalAdjacencyCount}->${metrics.outputCellColorDiagonalAdjacencyCount}`,
+      ),
+    )
+  }
+  if (
+    metrics.exactLowPaletteCellColorEligible &&
     Math.max(metrics.sourceCellColorComponentCount, metrics.outputCellColorComponentCount) >=
       QUALITY_RULES.minExactCellColorComponentCount &&
     metrics.cellColorComponentCountDrift > QUALITY_RULES.maxExactCellColorComponentCountDrift
@@ -841,6 +874,19 @@ export function objective(metrics) {
         QUALITY_RULES.maxExactCellColorComponentCountDrift,
     ) *
       20 +
+    Math.max(
+      0,
+      (metrics.exactLowPaletteCellColorEligible ? (metrics.cellColorAdjacencyDrift ?? 0) : 0) -
+        QUALITY_RULES.maxExactCellColorAdjacencyDrift,
+    ) *
+      8 +
+    Math.max(
+      0,
+      (metrics.exactLowPaletteCellColorEligible
+        ? (metrics.cellColorDiagonalAdjacencyDrift ?? 0)
+        : 0) - QUALITY_RULES.maxExactCellColorDiagonalAdjacencyDrift,
+    ) *
+      8 +
     Math.max(
       0,
       (metrics.exactLowPaletteCellColorEligible ? (metrics.cellColorComponentAreaDrift ?? 0) : 0) -

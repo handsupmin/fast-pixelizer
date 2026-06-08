@@ -681,6 +681,44 @@ test('cell color components detect filled internal holes', () => {
   assert.equal(metrics.cellColorComponentHoleCountDrift, 1)
 })
 
+test('cell color adjacency detects lost same-color orthogonal neighbors', () => {
+  const transparent = [0, 0, 0, 0]
+  const red = [255, 0, 0, 255]
+  const sourceKeys = Array.from({ length: 6 }, () => transparent)
+  sourceKeys[0] = red
+  sourceKeys[1] = red
+  const outputKeys = Array.from({ length: 6 }, () => transparent)
+  outputKeys[0] = red
+  outputKeys[2] = red
+  const metrics = cellColorComponentMetrics(
+    makeCellImage(sourceKeys, 3, 2, 8),
+    makeCellGrid(outputKeys, 3, 2),
+  )
+
+  assert.equal(metrics.sourceCellColorAdjacencyCount, 1)
+  assert.equal(metrics.outputCellColorAdjacencyCount, 0)
+  assert.equal(metrics.cellColorAdjacencyDrift, 1)
+})
+
+test('cell color adjacency detects lost same-color diagonal neighbors', () => {
+  const transparent = [0, 0, 0, 0]
+  const red = [255, 0, 0, 255]
+  const sourceKeys = Array.from({ length: 9 }, () => transparent)
+  sourceKeys[0] = red
+  sourceKeys[4] = red
+  const outputKeys = Array.from({ length: 9 }, () => transparent)
+  outputKeys[0] = red
+  outputKeys[1] = red
+  const metrics = cellColorComponentMetrics(
+    makeCellImage(sourceKeys, 3, 3, 8),
+    makeCellGrid(outputKeys, 3, 3),
+  )
+
+  assert.equal(metrics.sourceCellColorDiagonalAdjacencyCount, 1)
+  assert.equal(metrics.outputCellColorDiagonalAdjacencyCount, 0)
+  assert.equal(metrics.cellColorDiagonalAdjacencyDrift, 1)
+})
+
 test('cell transitions distinguish retained, removed, and spurious boundaries', () => {
   const input = makeChecker(64, 64, 8)
   const retained = cellTransitionMetrics(input, makeChecker(8, 8, 1))
@@ -764,6 +802,32 @@ test('quality classification reviews exact cell color component area drift', () 
 
   assert.equal(result.status, 'review')
   assert.ok(result.issues.some((issue) => issue.code === 'exact-cell-color-component-area-drift'))
+})
+
+test('quality classification reviews exact cell color adjacency drift', () => {
+  const result = classifyMetrics({
+    cellColorAdjacencyDrift: 1,
+    exactLowPaletteCellColorEligible: true,
+    outputCellColorAdjacencyCount: 0,
+    sourceCellColorAdjacencyCount: 1,
+  })
+
+  assert.equal(result.status, 'review')
+  assert.ok(result.issues.some((issue) => issue.code === 'exact-cell-color-adjacency-drift'))
+})
+
+test('quality classification reviews exact cell color diagonal adjacency drift', () => {
+  const result = classifyMetrics({
+    cellColorDiagonalAdjacencyDrift: 1,
+    exactLowPaletteCellColorEligible: true,
+    outputCellColorDiagonalAdjacencyCount: 0,
+    sourceCellColorDiagonalAdjacencyCount: 1,
+  })
+
+  assert.equal(result.status, 'review')
+  assert.ok(
+    result.issues.some((issue) => issue.code === 'exact-cell-color-diagonal-adjacency-drift'),
+  )
 })
 
 test('quality classification reviews exact cell color component position drift', () => {
