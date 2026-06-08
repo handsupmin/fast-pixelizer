@@ -10,6 +10,7 @@ import {
   defaultDatasets,
 } from './config.mjs'
 import { classifyMetrics, formatNum, objective } from './classify.mjs'
+import { cellColorDominanceMetrics } from './cell-dominance.mjs'
 import { generateSyntheticDataset } from './synthetic.mjs'
 import { listImages, loadImage, writePng } from './image-io.mjs'
 import {
@@ -106,6 +107,7 @@ async function evaluateFile(file, dataset, options, expectations) {
   const boundary = gridBoundarySignals(input, cols, rows)
   const phase = gridPhaseSignals(input, cols, rows)
   const uniformity = cellUniformityMetrics(input, cols, rows)
+  const dominance = cellColorDominanceMetrics(input, cols, rows)
   const outputUniformity = cellUniformityMetrics(original.result, cols, rows)
   const preserve = await preservationStats(input, original.result)
   const repeatPreserve = await preservationStats(original.result, repeatOriginal)
@@ -140,6 +142,8 @@ async function evaluateFile(file, dataset, options, expectations) {
     axisEdgeAlignmentMin: boundary.min / (fullGradient + 1e-9),
     phaseAlignment: phase.mean,
     axisPhaseAlignmentMin: phase.min,
+    cellColorDominance: dominance.mean,
+    cellColorDominanceP05: dominance.p05,
     cellMae: uniformity.cellMae,
     outputCellMae: outputUniformity.cellMae,
     preservationMae: preserve.mae,
@@ -170,6 +174,8 @@ async function evaluateFile(file, dataset, options, expectations) {
     axisEdgeAlignmentMin: formatNum(metrics.axisEdgeAlignmentMin),
     phaseAlignment: formatNum(metrics.phaseAlignment),
     axisPhaseAlignmentMin: formatNum(metrics.axisPhaseAlignmentMin),
+    cellColorDominance: formatNum(metrics.cellColorDominance),
+    cellColorDominanceP05: formatNum(metrics.cellColorDominanceP05),
     cellMae: formatNum(metrics.cellMae),
     cellStdDev: formatNum(uniformity.cellStdDev),
     outputCellMae: formatNum(metrics.outputCellMae),

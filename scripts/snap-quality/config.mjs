@@ -23,6 +23,7 @@ export const QUALITY_RULES = {
   minAxisEdgeAlignment: 0.35,
   minPhaseAlignment: 0.5,
   minAxisPhaseAlignment: 0.35,
+  minCellColorDominance: 0.18,
   highCellMae: 18,
   maxPreservationMae: 38,
   maxPreservationP95: 86,

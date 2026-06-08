@@ -154,6 +154,15 @@ export function classifyMetrics(metrics) {
       issue('review', 'macro-grid', `source cell size ${formatNum(metrics.sourceCellSize)}px`),
     )
   }
+  if (metrics.cellColorDominance < QUALITY_RULES.minCellColorDominance) {
+    issues.push(
+      issue(
+        'review',
+        'ambiguous-cell-colors',
+        `cell color dominance ${formatNum(metrics.cellColorDominance)}`,
+      ),
+    )
+  }
   if (metrics.cellMae > QUALITY_RULES.highCellMae) {
     issues.push(issue('review', 'noisy-cells', `cell MAE ${formatNum(metrics.cellMae)}`))
   }
@@ -232,6 +241,7 @@ export function objective(metrics) {
     Math.max(0, 1 - metrics.axisEdgeAlignmentMin) * 15 +
     Math.max(0, 1 - metrics.phaseAlignment) * 15 +
     Math.max(0, 1 - metrics.axisPhaseAlignmentMin) * 10 +
+    Math.max(0, QUALITY_RULES.minCellColorDominance - metrics.cellColorDominance) * 120 +
     Math.max(0, QUALITY_RULES.minSourceCellSize - metrics.sourceCellSize) * 500 +
     Math.max(0, metrics.shortAxisCells - QUALITY_RULES.maxShortAxisCells) * 10 +
     Math.max(0, metrics.sourceCellSize - QUALITY_RULES.maxSourceCellSizeReview) * 2 +

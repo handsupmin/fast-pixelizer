@@ -1,6 +1,7 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import { classifyMetrics } from '../scripts/snap-quality/classify.mjs'
+import { cellColorDominanceMetrics } from '../scripts/snap-quality/cell-dominance.mjs'
 import { gridBoundarySignals, preservationStats } from '../scripts/snap-quality/metrics.mjs'
 
 function makeVerticalStripes(width, height, stripeWidth) {
@@ -54,6 +55,14 @@ test('line edge ratio stays near one when the snapped output is identical', asyn
   )
 })
 
+test('cell color dominance separates clean and ambiguous cells', () => {
+  const clean = cellColorDominanceMetrics(makeChecker(64, 64, 8), 8, 8)
+  const ambiguous = cellColorDominanceMetrics(makeChecker(64, 64, 1), 8, 8)
+
+  assert.equal(clean.mean, 1)
+  assert.ok(ambiguous.mean < 0.51, `expected ambiguous dominance near half, got ${ambiguous.mean}`)
+})
+
 test('quality classification fails when repeat snap changes visuals', () => {
   const result = classifyMetrics({
     alphaMae: 0,
@@ -62,6 +71,8 @@ test('quality classification fails when repeat snap changes visuals', () => {
     axisEdgeAlignmentMin: 1,
     axisPhaseAlignmentMin: 1,
     cellMae: 0,
+    cellColorDominance: 1,
+    cellColorDominanceP05: 1,
     cols: 32,
     contrastRatio: 1,
     determinismGridGap: 0,
@@ -98,6 +109,8 @@ test('quality classification fails when same input snap is visually non-determin
     axisEdgeAlignmentMin: 1,
     axisPhaseAlignmentMin: 1,
     cellMae: 0,
+    cellColorDominance: 1,
+    cellColorDominanceP05: 1,
     cols: 32,
     contrastRatio: 1,
     determinismGridGap: 0,

@@ -87,32 +87,33 @@ The comparison uses the same default model/demo image sets as the quality eval a
 
 Current criteria include:
 
-| Criterion           | What it catches                                                |
-| ------------------- | -------------------------------------------------------------- |
-| Aspect preservation | Crops or grids whose cell aspect drifts from the target ratio  |
-| Ground truth        | Synthetic fixtures whose known grid is missed                  |
-| Micro-grid snap     | Detectors that lock onto generated texture instead of cells    |
-| Macro-grid snap     | Detectors that under-detect a large same-color block as a cell |
-| Idempotence         | `snap(snap(image))` changing the detected grid                 |
-| Visual idempotence  | `snap(snap(image))` changing snapped colors or edge pixels     |
-| Determinism         | Two snaps of the same source disagreeing on grid size          |
-| Visual determinism  | Two snaps of the same source producing different pixels        |
-| Output purity       | Snapped output cells that are not single-color or square       |
-| Output coverage     | Original-size snap output shrinking too far from input size    |
-| Transparent padding | Large transparent sprite margins causing coarse grid selection |
-| Partial edge crop   | Cropped edge cells causing the visible source grid to shrink   |
-| Editor grid gutters | Thin internal grid overlay lines being counted as cells        |
-| Palette budget      | Snapped RGB colors exceeding the requested color variety       |
-| Palette retention   | Limited-palette inputs losing too many original RGB colors     |
-| Boundary evidence   | Weak inferred boundaries compared with average image gradients |
-| Axis boundary floor | One weak axis being hidden by a strong average boundary score  |
-| Phase alignment     | Inferred boundaries shifted away from nearby gradient peaks    |
-| Axis phase floor    | One phase-misaligned axis being hidden by the other axis       |
-| Source disorder     | Images whose inferred cells are internally noisy or painterly  |
-| Preservation        | Excessive average or p95 error against the original image      |
-| Alpha preservation  | Excessive average or p95 alpha error against the source        |
-| Contrast            | Snapped output drifting too far from source contrast           |
-| Line strength       | Snapped output over-softening or over-sharpening visible edges |
+| Criterion            | What it catches                                                |
+| -------------------- | -------------------------------------------------------------- |
+| Aspect preservation  | Crops or grids whose cell aspect drifts from the target ratio  |
+| Ground truth         | Synthetic fixtures whose known grid is missed                  |
+| Micro-grid snap      | Detectors that lock onto generated texture instead of cells    |
+| Macro-grid snap      | Detectors that under-detect a large same-color block as a cell |
+| Idempotence          | `snap(snap(image))` changing the detected grid                 |
+| Visual idempotence   | `snap(snap(image))` changing snapped colors or edge pixels     |
+| Determinism          | Two snaps of the same source disagreeing on grid size          |
+| Visual determinism   | Two snaps of the same source producing different pixels        |
+| Output purity        | Snapped output cells that are not single-color or square       |
+| Output coverage      | Original-size snap output shrinking too far from input size    |
+| Transparent padding  | Large transparent sprite margins causing coarse grid selection |
+| Partial edge crop    | Cropped edge cells causing the visible source grid to shrink   |
+| Editor grid gutters  | Thin internal grid overlay lines being counted as cells        |
+| Palette budget       | Snapped RGB colors exceeding the requested color variety       |
+| Palette retention    | Limited-palette inputs losing too many original RGB colors     |
+| Boundary evidence    | Weak inferred boundaries compared with average image gradients |
+| Axis boundary floor  | One weak axis being hidden by a strong average boundary score  |
+| Phase alignment      | Inferred boundaries shifted away from nearby gradient peaks    |
+| Axis phase floor     | One phase-misaligned axis being hidden by the other axis       |
+| Cell color dominance | Inferred cells whose majority color is too ambiguous           |
+| Source disorder      | Images whose inferred cells are internally noisy or painterly  |
+| Preservation         | Excessive average or p95 error against the original image      |
+| Alpha preservation   | Excessive average or p95 alpha error against the source        |
+| Contrast             | Snapped output drifting too far from source contrast           |
+| Line strength        | Snapped output over-softening or over-sharpening visible edges |
 
 The June 2026 model/demo fixture run improved from `5 fail / 5 pass / 6 review` with total repeat gap `273` to `0 fail / 11 pass / 5 review` with repeat gap `0`.
 
