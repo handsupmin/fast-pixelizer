@@ -166,6 +166,25 @@ function makeAlphaHoleSprite(cols, rows) {
   return image
 }
 
+function makeDitherPatch(cols, rows) {
+  const palette = {
+    background: [33, 30, 39, 255],
+    light: [151, 179, 108, 255],
+    mid: [73, 135, 112, 255],
+  }
+  const image = { data: new Uint8ClampedArray(cols * rows * 4), width: cols, height: rows }
+  paintRect(image, 0, 0, cols, rows, palette.background)
+
+  for (let y = 5; y < rows - 5; y++) {
+    for (let x = 6; x < cols - 6; x++) {
+      const color = (x + y) % 2 === 0 ? palette.mid : palette.light
+      paintRect(image, x, y, x + 1, y + 1, color)
+    }
+  }
+
+  return image
+}
+
 async function writeScaled(file, image, scale, kernel) {
   await sharp(Buffer.from(image.data), {
     raw: { width: image.width, height: image.height, channels: 4 },
@@ -325,6 +344,13 @@ export async function generateSyntheticDataset(outDir) {
       scale: 8,
       kernel: 'nearest',
       expected: { cols: 32, rows: 32 },
+    },
+    {
+      file: 'dither-checker-48x32-scale8.png',
+      image: makeDitherPatch(48, 32),
+      scale: 8,
+      kernel: 'nearest',
+      expected: { cols: 48, rows: 32 },
     },
     {
       file: 'non-integer-48x32-to-360x240.png',
