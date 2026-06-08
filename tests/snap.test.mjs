@@ -45,6 +45,22 @@ async function scaleImage(image, scale, kernel) {
   }
 }
 
+async function resizeImage(image, width, height, kernel) {
+  const { data, info } = await sharp(Buffer.from(image.data), {
+    raw: { width: image.width, height: image.height, channels: 4 },
+  })
+    .resize(width, height, { fit: 'fill', kernel })
+    .ensureAlpha()
+    .raw()
+    .toBuffer({ resolveWithObject: true })
+
+  return {
+    data: new Uint8ClampedArray(data.buffer, data.byteOffset, data.byteLength),
+    width: info.width,
+    height: info.height,
+  }
+}
+
 async function detect(file) {
   const input = await loadImage(file)
   const result = snap(input)
@@ -127,4 +143,11 @@ test('sparse same-color pixel art stays stable on repeated snap', async () => {
 
   assert.equal(Math.abs(first.width - repeated.width) + Math.abs(first.height - repeated.height), 0)
   assert.deepEqual({ cols: first.width, rows: first.height }, { cols: 32, rows: 32 })
+})
+
+test('non-square scaled pixel art recovers the square source grid', async () => {
+  const input = await resizeImage(makePattern(40, 40), 320, 240, 'nearest')
+  const grid = detectImage(input)
+
+  assert.deepEqual(grid, { cols: 40, rows: 40 })
 })

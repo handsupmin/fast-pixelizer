@@ -109,13 +109,12 @@ export function detectUniformCellGrid(
   const horizontal = estimateAxisStep(collectHorizontalRuns(data, width, height), width)
   const vertical = estimateAxisStep(collectVerticalRuns(data, width, height), height)
   if (!horizontal || !vertical) return null
-  if (Math.abs(horizontal.step - vertical.step) > 1) return null
 
-  const cellSize = Math.round((horizontal.step + vertical.step) / 2)
-  if (cellSize <= minimumPlausibleStep(width, height)) return null
+  const minCellSize = Math.min(horizontal.step, vertical.step)
+  if (minCellSize <= minimumPlausibleStep(width, height)) return null
 
-  const cols = Math.max(MIN_CELLS, Math.round(width / cellSize))
-  const rows = Math.max(MIN_CELLS, Math.round(height / cellSize))
+  const cols = Math.max(MIN_CELLS, Math.round(width / horizontal.step))
+  const rows = Math.max(MIN_CELLS, Math.round(height / vertical.step))
   const confidence = Math.min(horizontal.confidence, vertical.confidence)
   return { cols, rows, confidence }
 }

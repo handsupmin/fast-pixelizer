@@ -1,5 +1,13 @@
 # Update Notes
 
+## 1.3.3
+
+- Expanded `npm run eval:snap-quality` with synthetic fixtures for JPEG compression, non-integer scaling, and non-square scaled pixels.
+- Improved uniform-cell detection so exact run-length grids can use independent horizontal and vertical scale factors.
+- Fixed non-square scaled pixel art such as a `40x40` source stretched to `320x240`, which previously detected as `5x4` and now recovers `40x40`.
+- Updated the aspect metric to compare known-grid synthetic fixtures against their expected grid aspect instead of the stretched source aspect.
+- Added regression coverage for non-square scaled pixel art.
+
 ## 1.3.2
 
 - Expanded `npm run eval:snap-quality` with synthetic fixtures that have known ground-truth grids.

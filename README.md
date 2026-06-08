@@ -18,6 +18,8 @@ As of `1.3.1`, high-resolution generated images are also evaluated against model
 
 As of `1.3.2`, the quality loop also includes generated synthetic fixtures with known ground-truth grids, including blurred scaling, sparse same-color regions, rectangular grids, and transparent sprites.
 
+As of `1.3.3`, the synthetic coverage also includes JPEG compression, non-integer scaling, and non-square scaled pixels, so a square source grid stretched with different X/Y scale factors can still be recovered.
+
 Recent regression examples:
 
 | Input                  | Previous           | `1.2.0`   |
@@ -67,7 +69,7 @@ Current criteria include:
 
 | Criterion           | What it catches                                                |
 | ------------------- | -------------------------------------------------------------- |
-| Aspect preservation | Crops or grids whose cell aspect drifts from the source ratio  |
+| Aspect preservation | Crops or grids whose cell aspect drifts from the target ratio  |
 | Ground truth        | Synthetic fixtures whose known grid is missed                  |
 | Micro-grid snap     | Detectors that lock onto generated texture instead of cells    |
 | Macro-grid snap     | Detectors that under-detect a large same-color block as a cell |
@@ -82,6 +84,8 @@ Current criteria include:
 The June 2026 model/demo fixture run improved from `5 fail / 5 pass / 6 review` with total repeat gap `273` to `0 fail / 11 pass / 5 review` with repeat gap `0`.
 
 The expanded model/demo/synthetic run improved from `2 fail / 13 pass / 6 review`, expected-grid gap `78`, and repeat gap `54` to `0 fail / 15 pass / 6 review`, expected-grid gap `0`, and repeat gap `0`.
+
+The `1.3.3` fixture expansion keeps the same hard failures at `0` across `24` fixtures: `0 fail / 17 pass / 7 review`, expected-grid gap `0`, and repeat gap `0`. A newly covered non-square scale case, a `40x40` source stretched to `320x240`, changed from `5x4` in `1.3.2` to the expected `40x40`.
 
 ```ts
 import { snap } from 'fast-pixelizer'

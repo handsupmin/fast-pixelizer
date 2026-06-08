@@ -88,7 +88,7 @@ async function evaluateFile(file, dataset, options, expectations) {
   const rows = resized.result.height
   const name = path.basename(file)
   const expected = expectations.get(name)
-  const inputAspect = input.width / input.height
+  const targetAspect = expected ? expected.cols / expected.rows : input.width / input.height
   const gridAspect = cols / rows
   const fullGradient = meanAxisGradient(input)
   const boundaryGradient = gridBoundaryGradient(input, cols, rows)
@@ -100,7 +100,7 @@ async function evaluateFile(file, dataset, options, expectations) {
   const metrics = {
     cols,
     rows,
-    aspectError: Math.abs(gridAspect / inputAspect - 1),
+    aspectError: Math.abs(gridAspect / targetAspect - 1),
     shortAxisCells: Math.min(cols, rows),
     sourceCellSize: Math.min(input.width / cols, input.height / rows),
     repeatGridGap: gridGap(repeat, resized.result),

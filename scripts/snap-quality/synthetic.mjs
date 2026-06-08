@@ -23,8 +23,26 @@ async function writeScaled(file, image, scale, kernel) {
   await sharp(Buffer.from(image.data), {
     raw: { width: image.width, height: image.height, channels: 4 },
   })
-    .resize(image.width * scale, image.height * scale, { kernel })
+    .resize(image.width * scale, image.height * scale, { fit: 'fill', kernel })
     .png()
+    .toFile(file)
+}
+
+async function writeResized(file, image, width, height, kernel) {
+  await sharp(Buffer.from(image.data), {
+    raw: { width: image.width, height: image.height, channels: 4 },
+  })
+    .resize(width, height, { fit: 'fill', kernel })
+    .png()
+    .toFile(file)
+}
+
+async function writeJpeg(file, image, scale, quality) {
+  await sharp(Buffer.from(image.data), {
+    raw: { width: image.width, height: image.height, channels: 4 },
+  })
+    .resize(image.width * scale, image.height * scale, { fit: 'fill', kernel: 'nearest' })
+    .jpeg({ quality })
     .toFile(file)
 }
 
@@ -69,11 +87,38 @@ export async function generateSyntheticDataset(outDir) {
       kernel: 'nearest',
       expected: { cols: 32, rows: 32 },
     },
+    {
+      file: 'non-integer-48x32-to-360x240.png',
+      image: makeLowResPattern(48, 32, 'dense'),
+      width: 360,
+      height: 240,
+      kernel: 'nearest',
+      expected: { cols: 48, rows: 32 },
+    },
+    {
+      file: 'anisotropic-40x40-to-320x240.png',
+      image: makeLowResPattern(40, 40, 'dense'),
+      width: 320,
+      height: 240,
+      kernel: 'nearest',
+      expected: { cols: 40, rows: 40 },
+    },
+    {
+      file: 'jpeg-48x32-scale8-q45.jpg',
+      image: makeLowResPattern(48, 32, 'dense'),
+      scale: 8,
+      quality: 45,
+      expected: { cols: 48, rows: 32 },
+    },
   ]
 
   const expectations = new Map()
   for (const fixture of fixtures) {
-    await writeScaled(path.join(dir, fixture.file), fixture.image, fixture.scale, fixture.kernel)
+    const file = path.join(dir, fixture.file)
+    if (fixture.quality) await writeJpeg(file, fixture.image, fixture.scale, fixture.quality)
+    else if (fixture.width && fixture.height)
+      await writeResized(file, fixture.image, fixture.width, fixture.height, fixture.kernel)
+    else await writeScaled(file, fixture.image, fixture.scale, fixture.kernel)
     expectations.set(fixture.file, fixture.expected)
   }
 
