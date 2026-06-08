@@ -131,6 +131,28 @@ function makeTransparentLowPaletteSprite(cols, rows) {
   return image
 }
 
+function makeAsymmetricTransparentSprite(cols, rows) {
+  const palette = {
+    accent: [183, 72, 82, 255],
+    cloth: [73, 135, 112, 255],
+    highlight: [232, 218, 139, 255],
+    outline: [11, 14, 20, 255],
+    shadow: [82, 43, 58, 255],
+  }
+  const image = { data: new Uint8ClampedArray(cols * rows * 4), width: cols, height: rows }
+  paintRect(image, 2, 3, 16, 18, palette.outline)
+  paintRect(image, 4, 5, 14, 16, palette.cloth)
+  paintRect(image, 5, 6, 9, 10, palette.highlight)
+  paintRect(image, 12, 8, 13, 9, palette.outline)
+  paintRect(image, 7, 18, 11, 28, palette.outline)
+  paintRect(image, 12, 18, 16, 25, palette.shadow)
+  paintLine(image, 15, 11, 28, 5, palette.outline)
+  paintLine(image, 16, 12, 29, 6, palette.highlight)
+  paintRect(image, 38, 24, 44, 28, palette.accent)
+  paintRect(image, 40, 22, 42, 24, palette.outline)
+  return image
+}
+
 function makeDiagonalLineSprite(cols, rows) {
   const palette = {
     accent: [183, 72, 82, 255],
@@ -330,6 +352,13 @@ export async function generateSyntheticDataset(outDir) {
       scale: 8,
       kernel: 'nearest',
       expected: { cols: 32, rows: 32 },
+    },
+    {
+      file: 'asymmetric-transparent-sprite-48x32-scale8.png',
+      image: makeAsymmetricTransparentSprite(48, 32),
+      scale: 8,
+      kernel: 'nearest',
+      expected: { cols: 48, rows: 32 },
     },
     {
       file: 'diagonal-lines-48x32-scale8.png',
