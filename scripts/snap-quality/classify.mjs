@@ -287,6 +287,15 @@ export function classifyMetrics(metrics) {
       ),
     )
   }
+  if ((metrics.cellColorErrorMax ?? 0) > QUALITY_RULES.maxCellColorErrorMaxReview) {
+    issues.push(
+      issue(
+        'review',
+        'cell-color-outlier',
+        `max cell color error ${formatNum(metrics.cellColorErrorMax)}`,
+      ),
+    )
+  }
   if (
     (metrics.cellAlphaErrorMean ?? 0) > QUALITY_RULES.maxCellAlphaErrorMean ||
     (metrics.cellAlphaErrorP95 ?? 0) > QUALITY_RULES.maxCellAlphaErrorP95
@@ -298,6 +307,15 @@ export function classifyMetrics(metrics) {
         `cell alpha error mean ${formatNum(metrics.cellAlphaErrorMean)}, p95 ${formatNum(
           metrics.cellAlphaErrorP95,
         )}`,
+      ),
+    )
+  }
+  if ((metrics.cellAlphaErrorMax ?? 0) > QUALITY_RULES.maxCellAlphaErrorMaxReview) {
+    issues.push(
+      issue(
+        'review',
+        'cell-alpha-outlier',
+        `max cell alpha error ${formatNum(metrics.cellAlphaErrorMax)}`,
       ),
     )
   }
@@ -1137,6 +1155,8 @@ export function objective(metrics) {
     (metrics.cellAlphaErrorP95 ?? 0) * 0.2 +
     metrics.cellColorErrorMean * 0.5 +
     metrics.cellColorErrorP95 * 0.2 +
+    Math.max(0, (metrics.cellAlphaErrorMax ?? 0) - QUALITY_RULES.maxCellAlphaErrorMaxReview) * 0.1 +
+    Math.max(0, (metrics.cellColorErrorMax ?? 0) - QUALITY_RULES.maxCellColorErrorMaxReview) * 0.1 +
     Math.max(
       0,
       (metrics.exactLowPaletteCellColorEligible ? (metrics.cellAlphaErrorMax ?? 0) : 0) -

@@ -1083,6 +1083,18 @@ test('quality classification reviews representative alpha drift', () => {
   assert.ok(result.issues.some((issue) => issue.code === 'cell-alpha-drift'))
 })
 
+test('quality classification reviews rare representative alpha outliers hidden by p95', () => {
+  const result = classifyMetrics({
+    cellAlphaErrorMax: 241,
+    cellAlphaErrorMean: 0,
+    cellAlphaErrorP95: 0,
+  })
+
+  assert.equal(result.status, 'review')
+  assert.ok(result.issues.some((issue) => issue.code === 'cell-alpha-outlier'))
+  assert.ok(!result.issues.some((issue) => issue.code === 'cell-alpha-drift'))
+})
+
 test('quality classification reviews exact low-palette alpha drift', () => {
   const result = classifyMetrics({
     cellAlphaErrorMax: 1,
@@ -1798,6 +1810,18 @@ test('quality classification reviews cell representative color drift', () => {
 
   assert.equal(result.status, 'review')
   assert.ok(result.issues.some((issue) => issue.code === 'cell-color-drift'))
+})
+
+test('quality classification reviews rare representative color outliers hidden by p95', () => {
+  const result = classifyMetrics({
+    cellColorErrorMax: 241,
+    cellColorErrorMean: 0,
+    cellColorErrorP95: 0,
+  })
+
+  assert.equal(result.status, 'review')
+  assert.ok(result.issues.some((issue) => issue.code === 'cell-color-outlier'))
+  assert.ok(!result.issues.some((issue) => issue.code === 'cell-color-drift'))
 })
 
 test('quality classification reviews rare exact low-palette cell drift', () => {
