@@ -301,6 +301,39 @@ export function classifyMetrics(metrics) {
   if (
     metrics.exactLowPaletteCellColorEligible &&
     Math.max(
+      metrics.sourceCellColorBoundaryPairCount ?? 0,
+      metrics.outputCellColorBoundaryPairCount ?? 0,
+    ) >= QUALITY_RULES.minExactCellColorBoundaryPairCount &&
+    (metrics.cellColorBoundaryPairDrift ?? 0) > QUALITY_RULES.maxExactCellColorBoundaryPairDrift
+  ) {
+    issues.push(
+      issue(
+        'review',
+        'exact-cell-color-boundary-pair-drift',
+        `exact cell color boundary pair drift ${metrics.cellColorBoundaryPairDrift}`,
+      ),
+    )
+  }
+  if (
+    metrics.exactLowPaletteCellColorEligible &&
+    Math.max(
+      metrics.sourceCellColorDiagonalBoundaryPairCount ?? 0,
+      metrics.outputCellColorDiagonalBoundaryPairCount ?? 0,
+    ) >= QUALITY_RULES.minExactCellColorDiagonalBoundaryPairCount &&
+    (metrics.cellColorDiagonalBoundaryPairDrift ?? 0) >
+      QUALITY_RULES.maxExactCellColorDiagonalBoundaryPairDrift
+  ) {
+    issues.push(
+      issue(
+        'review',
+        'exact-cell-color-diagonal-boundary-pair-drift',
+        `exact cell color diagonal boundary pair drift ${metrics.cellColorDiagonalBoundaryPairDrift}`,
+      ),
+    )
+  }
+  if (
+    metrics.exactLowPaletteCellColorEligible &&
+    Math.max(
       metrics.sourceCellColorNeighborMaskCount ?? 0,
       metrics.outputCellColorNeighborMaskCount ?? 0,
     ) >= QUALITY_RULES.minExactCellColorNeighborMaskCount &&
@@ -983,6 +1016,19 @@ export function objective(metrics) {
         : 0) - QUALITY_RULES.maxExactCellColorDiagonalAdjacencyDrift,
     ) *
       8 +
+    Math.max(
+      0,
+      (metrics.exactLowPaletteCellColorEligible ? (metrics.cellColorBoundaryPairDrift ?? 0) : 0) -
+        QUALITY_RULES.maxExactCellColorBoundaryPairDrift,
+    ) *
+      4 +
+    Math.max(
+      0,
+      (metrics.exactLowPaletteCellColorEligible
+        ? (metrics.cellColorDiagonalBoundaryPairDrift ?? 0)
+        : 0) - QUALITY_RULES.maxExactCellColorDiagonalBoundaryPairDrift,
+    ) *
+      4 +
     Math.max(
       0,
       (metrics.exactLowPaletteCellColorEligible ? (metrics.cellColorNeighborMaskDrift ?? 0) : 0) -

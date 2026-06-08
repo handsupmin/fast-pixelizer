@@ -719,6 +719,37 @@ test('cell color adjacency detects lost same-color diagonal neighbors', () => {
   assert.equal(metrics.cellColorDiagonalAdjacencyDrift, 1)
 })
 
+test('cell color boundary pairs detect changed orthogonal color contacts', () => {
+  const red = [255, 0, 0, 255]
+  const blue = [0, 0, 255, 255]
+  const green = [0, 255, 0, 255]
+  const metrics = cellColorComponentMetrics(
+    makeCellImage([red, blue], 2, 1, 8),
+    makeCellGrid([red, green], 2, 1),
+  )
+
+  assert.equal(metrics.sourceCellColorBoundaryPairCount, 1)
+  assert.equal(metrics.outputCellColorBoundaryPairCount, 1)
+  assert.equal(metrics.cellColorBoundaryPairDrift, 2)
+  assert.equal(metrics.cellColorDiagonalBoundaryPairDrift, 0)
+})
+
+test('cell color boundary pairs detect changed diagonal color contacts', () => {
+  const transparent = [0, 0, 0, 0]
+  const red = [255, 0, 0, 255]
+  const blue = [0, 0, 255, 255]
+  const green = [0, 255, 0, 255]
+  const metrics = cellColorComponentMetrics(
+    makeCellImage([red, transparent, transparent, blue], 2, 2, 8),
+    makeCellGrid([red, transparent, transparent, green], 2, 2),
+  )
+
+  assert.equal(metrics.sourceCellColorDiagonalBoundaryPairCount, 1)
+  assert.equal(metrics.outputCellColorDiagonalBoundaryPairCount, 1)
+  assert.equal(metrics.cellColorDiagonalBoundaryPairDrift, 2)
+  assert.equal(metrics.cellColorBoundaryPairDrift, 0)
+})
+
 test('cell color quad patterns detect changed 2x2 corners', () => {
   const transparent = [0, 0, 0, 0]
   const red = [255, 0, 0, 255]
@@ -923,6 +954,32 @@ test('quality classification reviews exact cell color diagonal adjacency drift',
   assert.equal(result.status, 'review')
   assert.ok(
     result.issues.some((issue) => issue.code === 'exact-cell-color-diagonal-adjacency-drift'),
+  )
+})
+
+test('quality classification reviews exact cell color boundary pair drift', () => {
+  const result = classifyMetrics({
+    cellColorBoundaryPairDrift: 2,
+    exactLowPaletteCellColorEligible: true,
+    outputCellColorBoundaryPairCount: 1,
+    sourceCellColorBoundaryPairCount: 1,
+  })
+
+  assert.equal(result.status, 'review')
+  assert.ok(result.issues.some((issue) => issue.code === 'exact-cell-color-boundary-pair-drift'))
+})
+
+test('quality classification reviews exact cell color diagonal boundary pair drift', () => {
+  const result = classifyMetrics({
+    cellColorDiagonalBoundaryPairDrift: 2,
+    exactLowPaletteCellColorEligible: true,
+    outputCellColorDiagonalBoundaryPairCount: 1,
+    sourceCellColorDiagonalBoundaryPairCount: 1,
+  })
+
+  assert.equal(result.status, 'review')
+  assert.ok(
+    result.issues.some((issue) => issue.code === 'exact-cell-color-diagonal-boundary-pair-drift'),
   )
 })
 

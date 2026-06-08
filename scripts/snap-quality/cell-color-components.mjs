@@ -332,6 +332,61 @@ function adjacencyDrift(source, output) {
   return { diagonalDrift, orthogonalDrift }
 }
 
+function createBoundaryPairStats() {
+  return {
+    diagonalCount: 0,
+    diagonalPairs: new Map(),
+    orthogonalCount: 0,
+    orthogonalPairs: new Map(),
+  }
+}
+
+function addBoundaryPair(stats, colorA, colorB, type) {
+  if (colorA < 0 || colorB < 0 || colorA === colorB) return
+  const [first, second] = colorA < colorB ? [colorA, colorB] : [colorB, colorA]
+  const key = `${first}:${second}`
+  if (type === 'diagonal') {
+    stats.diagonalPairs.set(key, (stats.diagonalPairs.get(key) ?? 0) + 1)
+    stats.diagonalCount++
+  } else {
+    stats.orthogonalPairs.set(key, (stats.orthogonalPairs.get(key) ?? 0) + 1)
+    stats.orthogonalCount++
+  }
+}
+
+function countColorBoundaryPairs(keys, cols, rows) {
+  const stats = createBoundaryPairStats()
+
+  for (let row = 0; row < rows; row++) {
+    for (let col = 0; col < cols; col++) {
+      const cell = row * cols + col
+      if (col + 1 < cols) addBoundaryPair(stats, keys[cell], keys[cell + 1], 'orthogonal')
+      if (row + 1 < rows) addBoundaryPair(stats, keys[cell], keys[cell + cols], 'orthogonal')
+      if (row + 1 < rows && col + 1 < cols) {
+        addBoundaryPair(stats, keys[cell], keys[cell + cols + 1], 'diagonal')
+      }
+      if (row + 1 < rows && col > 0) {
+        addBoundaryPair(stats, keys[cell], keys[cell + cols - 1], 'diagonal')
+      }
+    }
+  }
+
+  return stats
+}
+
+function boundaryPairDrift(source, output, type) {
+  const sourcePairs = type === 'diagonal' ? source.diagonalPairs : source.orthogonalPairs
+  const outputPairs = type === 'diagonal' ? output.diagonalPairs : output.orthogonalPairs
+  const pairs = new Set([...sourcePairs.keys(), ...outputPairs.keys()])
+  let drift = 0
+
+  for (const pair of pairs) {
+    drift += Math.abs((sourcePairs.get(pair) ?? 0) - (outputPairs.get(pair) ?? 0))
+  }
+
+  return drift
+}
+
 function countNeighborMasks(keys, cols, rows) {
   const masks = new Map()
   let count = 0
@@ -538,6 +593,8 @@ export function cellColorComponentMetrics(input, grid) {
   const sourceAdjacency = countSameColorAdjacency(sourceKeys, cols, rows)
   const outputAdjacency = countSameColorAdjacency(outputKeys, cols, rows)
   const adjacency = adjacencyDrift(sourceAdjacency, outputAdjacency)
+  const sourceBoundaryPairs = countColorBoundaryPairs(sourceKeys, cols, rows)
+  const outputBoundaryPairs = countColorBoundaryPairs(outputKeys, cols, rows)
   const sourceNeighborMasks = countNeighborMasks(sourceKeys, cols, rows)
   const outputNeighborMasks = countNeighborMasks(outputKeys, cols, rows)
   const sourceQuadPatterns = countQuadPatterns(sourceKeys, cols, rows)
@@ -549,6 +606,11 @@ export function cellColorComponentMetrics(input, grid) {
 
   return {
     cellColorAdjacencyDrift: adjacency.orthogonalDrift,
+    cellColorBoundaryPairDrift: boundaryPairDrift(
+      sourceBoundaryPairs,
+      outputBoundaryPairs,
+      'orthogonal',
+    ),
     cellColorColumnProjectionDrift: projectionDrift(sourceProjections, outputProjections, 'column'),
     cellColorComponentAreaDrift: componentAreaDrift(source, output),
     cellColorComponentBBoxDrift: componentBBoxDrift(source, output),
@@ -557,16 +619,23 @@ export function cellColorComponentMetrics(input, grid) {
     cellColorComponentPerimeterDrift: componentPerimeterDrift(source, output),
     cellColorComponentPositionDrift: componentPositionDrift(source, output),
     cellColorDiagonalAdjacencyDrift: adjacency.diagonalDrift,
+    cellColorDiagonalBoundaryPairDrift: boundaryPairDrift(
+      sourceBoundaryPairs,
+      outputBoundaryPairs,
+      'diagonal',
+    ),
     cellColorHorizontalRunDrift: runDrift(sourceRuns, outputRuns, 'horizontal'),
     cellColorNeighborMaskDrift: neighborMaskDrift(sourceNeighborMasks, outputNeighborMasks),
     cellColorQuadPatternDrift: quadPatternDrift(sourceQuadPatterns, outputQuadPatterns),
     cellColorRowProjectionDrift: projectionDrift(sourceProjections, outputProjections, 'row'),
     cellColorVerticalRunDrift: runDrift(sourceRuns, outputRuns, 'vertical'),
     outputCellColorAdjacencyCount: outputAdjacency.orthogonalCount,
+    outputCellColorBoundaryPairCount: outputBoundaryPairs.orthogonalCount,
     outputCellColorColumnProjectionCount: outputProjections.columnCount,
     outputCellColorComponentCount: output.count,
     outputCellColorComponentHoleCount: holes.outputCount,
     outputCellColorDiagonalAdjacencyCount: outputAdjacency.diagonalCount,
+    outputCellColorDiagonalBoundaryPairCount: outputBoundaryPairs.diagonalCount,
     outputCellColorDistinctQuadPatternCount: outputQuadPatterns.patterns.size,
     outputCellColorHorizontalRunCount: outputRuns.horizontalCount,
     outputCellColorNeighborMaskCount: outputNeighborMasks.count,
@@ -576,10 +645,12 @@ export function cellColorComponentMetrics(input, grid) {
     outputSmallCellColorComponentCount: output.smallCount,
     smallCellColorComponentCountDrift: Math.abs(source.smallCount - output.smallCount),
     sourceCellColorAdjacencyCount: sourceAdjacency.orthogonalCount,
+    sourceCellColorBoundaryPairCount: sourceBoundaryPairs.orthogonalCount,
     sourceCellColorColumnProjectionCount: sourceProjections.columnCount,
     sourceCellColorComponentCount: source.count,
     sourceCellColorComponentHoleCount: holes.sourceCount,
     sourceCellColorDiagonalAdjacencyCount: sourceAdjacency.diagonalCount,
+    sourceCellColorDiagonalBoundaryPairCount: sourceBoundaryPairs.diagonalCount,
     sourceCellColorDistinctQuadPatternCount: sourceQuadPatterns.patterns.size,
     sourceCellColorHorizontalRunCount: sourceRuns.horizontalCount,
     sourceCellColorNeighborMaskCount: sourceNeighborMasks.count,
