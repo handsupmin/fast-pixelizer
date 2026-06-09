@@ -95,6 +95,8 @@ export const QUALITY_RULES = {
   maxTileLumaMeanDelta: 12,
   maxTileLumaMeanDeltaP95: 8,
   minTileLumaMeanDeltaTileCount: 1,
+  maxShadowCoverageDrift: 0.08,
+  minShadowCoveragePixelCount: 64,
   maxTileShadowCoverageDriftP95: 0.1,
   minTileShadowCoverageSampleCount: 64,
   minTileShadowCoverageTileCount: 1,

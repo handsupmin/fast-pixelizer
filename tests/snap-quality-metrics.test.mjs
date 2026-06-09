@@ -551,6 +551,22 @@ test('regional bright coverage drift catches local highlight loss', async () => 
   )
 })
 
+test('shadow coverage drift catches lost dark area', async () => {
+  const source = makeRgbSolid(64, 64, 128, 128, 128)
+  setColorRect(source, 0, 0, 32, 32, [0, 0, 0])
+  const output = makeRgbSolid(64, 64, 128, 128, 128)
+  const stats = await preservationStats(source, output)
+
+  assert.equal(stats.sourceShadowPixelCount, 1024)
+  assert.equal(stats.outputShadowPixelCount, 0)
+  assert.equal(stats.inputShadowCoverage, 0.25)
+  assert.equal(stats.outputShadowCoverage, 0)
+  assert.ok(
+    stats.shadowCoverageDrift > QUALITY_RULES.maxShadowCoverageDrift,
+    `expected shadow coverage drift above threshold, got ${stats.shadowCoverageDrift}`,
+  )
+})
+
 test('saturated coverage drift catches lost vivid color area', async () => {
   const source = makeRgbSolid(64, 64, 96, 96, 96)
   setColorRect(source, 0, 0, 32, 32, [255, 0, 0])
@@ -3555,6 +3571,21 @@ test('quality classification reviews regional bright coverage drift', () => {
 
   assert.equal(review.status, 'review')
   assert.ok(review.issues.some((issue) => issue.code === 'regional-bright-coverage-drift'))
+  assert.equal(pass.status, 'pass')
+})
+
+test('quality classification reviews shadow coverage drift', () => {
+  const review = classifyMetrics({
+    shadowCoverageDrift: QUALITY_RULES.maxShadowCoverageDrift + 0.01,
+    sourceShadowPixelCount: QUALITY_RULES.minShadowCoveragePixelCount,
+  })
+  const pass = classifyMetrics({
+    shadowCoverageDrift: QUALITY_RULES.maxShadowCoverageDrift - 0.01,
+    sourceShadowPixelCount: QUALITY_RULES.minShadowCoveragePixelCount,
+  })
+
+  assert.equal(review.status, 'review')
+  assert.ok(review.issues.some((issue) => issue.code === 'shadow-coverage-drift'))
   assert.equal(pass.status, 'pass')
 })
 
