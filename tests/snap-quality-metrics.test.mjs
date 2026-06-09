@@ -432,6 +432,20 @@ test('edge magnitude histogram drift catches changed edge strength distribution'
   )
 })
 
+test('tile edge magnitude histogram drift catches regional strength distribution changes', async () => {
+  const source = makeChecker(64, 64, 4)
+  const preserved = await preservationStats(source, source, { tileGrid: 8 })
+  const flattened = await preservationStats(source, makeSolid(64, 64, 127), { tileGrid: 8 })
+
+  assert.equal(preserved.tileEdgeMagnitudeHistogramDriftP95, 0)
+  assert.equal(preserved.tileEdgeMagnitudeHistogramTileCount, 36)
+  assert.ok(
+    flattened.tileEdgeMagnitudeHistogramDriftP95 >
+      QUALITY_RULES.maxTileEdgeMagnitudeHistogramDriftP95,
+    `expected high regional edge magnitude histogram drift, got ${flattened.tileEdgeMagnitudeHistogramDriftP95}`,
+  )
+})
+
 test('cell uniformity tracks alpha variation separately from RGB variation', () => {
   const image = makeSolid(16, 16, 96)
   setAlphaRect(image, 0, 0, 4, 8, 0)
@@ -3419,6 +3433,21 @@ test('quality classification reviews edge magnitude histogram drift', () => {
 
   assert.equal(review.status, 'review')
   assert.ok(review.issues.some((issue) => issue.code === 'edge-magnitude-histogram-drift'))
+  assert.equal(pass.status, 'pass')
+})
+
+test('quality classification reviews regional edge magnitude histogram drift', () => {
+  const review = classifyMetrics({
+    tileEdgeMagnitudeHistogramDriftP95: QUALITY_RULES.maxTileEdgeMagnitudeHistogramDriftP95 + 0.01,
+    tileEdgeMagnitudeHistogramTileCount: QUALITY_RULES.minTileEdgeMagnitudeHistogramTileCount,
+  })
+  const pass = classifyMetrics({
+    tileEdgeMagnitudeHistogramDriftP95: QUALITY_RULES.maxTileEdgeMagnitudeHistogramDriftP95 - 0.01,
+    tileEdgeMagnitudeHistogramTileCount: QUALITY_RULES.minTileEdgeMagnitudeHistogramTileCount,
+  })
+
+  assert.equal(review.status, 'review')
+  assert.ok(review.issues.some((issue) => issue.code === 'regional-edge-magnitude-histogram-drift'))
   assert.equal(pass.status, 'pass')
 })
 

@@ -555,6 +555,38 @@ function edgeMagnitudeHistogramDrift(inputHistogram, inputCount, outputHistogram
   return drift / 2
 }
 
+function tileEdgeMagnitudeHistogramStats(
+  inputHistograms,
+  inputCounts,
+  outputHistograms,
+  outputCounts,
+  minSampleCount,
+) {
+  const values = []
+  let driftMax = 0
+
+  for (let tile = 0; tile < inputHistograms.length; tile++) {
+    if (Math.max(inputCounts[tile], outputCounts[tile]) < minSampleCount) continue
+
+    const drift = edgeMagnitudeHistogramDrift(
+      inputHistograms[tile],
+      inputCounts[tile],
+      outputHistograms[tile],
+      outputCounts[tile],
+    )
+    driftMax = Math.max(driftMax, drift)
+    values.push(drift)
+  }
+
+  values.sort((a, b) => a - b)
+
+  return {
+    tileEdgeMagnitudeHistogramDriftMax: driftMax,
+    tileEdgeMagnitudeHistogramDriftP95: percentile(values, 0.95),
+    tileEdgeMagnitudeHistogramTileCount: values.length,
+  }
+}
+
 function isBorderPixel(x, y, width, height, band) {
   return x < band || y < band || x >= width - band || y >= height - band
 }
@@ -576,11 +608,24 @@ export async function preservationStats(input, result, options = {}) {
   const outputLineEdgeTileSums = new Float64Array(tileCount)
   const inputEdgeMagnitudeHistogram = new Uint32Array(EDGE_MAGNITUDE_HISTOGRAM_BINS.length - 1)
   const outputEdgeMagnitudeHistogram = new Uint32Array(EDGE_MAGNITUDE_HISTOGRAM_BINS.length - 1)
+  const inputEdgeMagnitudeTileHistograms = Array.from(
+    { length: tileCount },
+    () => new Uint32Array(EDGE_MAGNITUDE_HISTOGRAM_BINS.length - 1),
+  )
+  const outputEdgeMagnitudeTileHistograms = Array.from(
+    { length: tileCount },
+    () => new Uint32Array(EDGE_MAGNITUDE_HISTOGRAM_BINS.length - 1),
+  )
   const tileCounts = new Uint32Array(tileCount)
+  const inputEdgeMagnitudeTileCounts = new Uint32Array(tileCount)
+  const outputEdgeMagnitudeTileCounts = new Uint32Array(tileCount)
   const hueMinChroma = options.hueMinChroma ?? 16
   const tileContrastMinStdDev = options.tileContrastMinStdDev ?? 8
   const tileChromaMinMean = options.tileChromaMinMean ?? 8
   const tileLineEdgeMinMean = options.tileLineEdgeMinMean ?? 6
+  const tileEdgeMagnitudeHistogramMinSampleCount =
+    options.tileEdgeMagnitudeHistogramMinSampleCount ??
+    QUALITY_RULES.minTileEdgeMagnitudeHistogramSampleCount
   const borderBandPx = Math.max(1, Math.round(options.borderBandPx ?? 1))
   const inputRgbCoverage = new Map()
   const outputRgbCoverage = new Map()
@@ -655,18 +700,18 @@ export async function preservationStats(input, result, options = {}) {
     const outputLineEdge = localAxisGradient(resized, input.width, x, y, i)
     if (x > 0 && y > 0 && x < input.width - 1 && y < input.height - 1) {
       if (hasVisibleEdgeSupport(input.data, input.width, i)) {
-        addEdgeMagnitudeBin(
-          inputEdgeMagnitudeHistogram,
-          localEdgeMagnitude(input.data, input.width, i),
-        )
+        const magnitude = localEdgeMagnitude(input.data, input.width, i)
+        addEdgeMagnitudeBin(inputEdgeMagnitudeHistogram, magnitude)
+        addEdgeMagnitudeBin(inputEdgeMagnitudeTileHistograms[tile], magnitude)
         inputEdgeMagnitudeSampleCount++
+        inputEdgeMagnitudeTileCounts[tile]++
       }
       if (hasVisibleEdgeSupport(resized, input.width, i)) {
-        addEdgeMagnitudeBin(
-          outputEdgeMagnitudeHistogram,
-          localEdgeMagnitude(resized, input.width, i),
-        )
+        const magnitude = localEdgeMagnitude(resized, input.width, i)
+        addEdgeMagnitudeBin(outputEdgeMagnitudeHistogram, magnitude)
+        addEdgeMagnitudeBin(outputEdgeMagnitudeTileHistograms[tile], magnitude)
         outputEdgeMagnitudeSampleCount++
+        outputEdgeMagnitudeTileCounts[tile]++
       }
     }
     tileSums[tile] += pixelError / 3
@@ -725,6 +770,13 @@ export async function preservationStats(input, result, options = {}) {
     outputLineEdgeTileSums,
     tileCounts,
     tileLineEdgeMinMean,
+  )
+  const tileEdgeMagnitudeHistogram = tileEdgeMagnitudeHistogramStats(
+    inputEdgeMagnitudeTileHistograms,
+    inputEdgeMagnitudeTileCounts,
+    outputEdgeMagnitudeTileHistograms,
+    outputEdgeMagnitudeTileCounts,
+    tileEdgeMagnitudeHistogramMinSampleCount,
   )
   const inputLuma = lumaStats(input.data, input.width, input.height)
   const outputLuma = lumaStats(resized, input.width, input.height)
@@ -900,6 +952,12 @@ export async function preservationStats(input, result, options = {}) {
       outputEdgeMagnitudeHistogram,
       outputEdgeMagnitudeSampleCount,
     ),
+    tileEdgeMagnitudeHistogramDriftMax:
+      tileEdgeMagnitudeHistogram.tileEdgeMagnitudeHistogramDriftMax,
+    tileEdgeMagnitudeHistogramDriftP95:
+      tileEdgeMagnitudeHistogram.tileEdgeMagnitudeHistogramDriftP95,
+    tileEdgeMagnitudeHistogramTileCount:
+      tileEdgeMagnitudeHistogram.tileEdgeMagnitudeHistogramTileCount,
     directedEdgeJaccardMin: edgeOverlap.directedEdgeJaccardMin,
     directedEdgeRecallMin: edgeOverlap.directedEdgeRecallMin,
     directedEdgeSpuriousMax: edgeOverlap.directedEdgeSpuriousMax,

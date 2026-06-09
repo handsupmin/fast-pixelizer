@@ -1600,6 +1600,22 @@ export function classifyMetrics(metrics) {
     )
   }
   if (
+    (metrics.tileEdgeMagnitudeHistogramTileCount ?? 0) >=
+      QUALITY_RULES.minTileEdgeMagnitudeHistogramTileCount &&
+    (metrics.tileEdgeMagnitudeHistogramDriftP95 ?? 0) >
+      QUALITY_RULES.maxTileEdgeMagnitudeHistogramDriftP95
+  ) {
+    issues.push(
+      issue(
+        'review',
+        'regional-edge-magnitude-histogram-drift',
+        `tile edge magnitude histogram p95 ${formatNum(
+          metrics.tileEdgeMagnitudeHistogramDriftP95,
+        )}`,
+      ),
+    )
+  }
+  if (
     (metrics.sourceEdgeDirectionCount ?? 0) >= QUALITY_RULES.minEdgeDirectionCount &&
     (metrics.outputEdgeDirectionCount ?? 0) >= QUALITY_RULES.minEdgeDirectionCount &&
     (metrics.edgeDirectionDrift ?? 0) > QUALITY_RULES.maxEdgeDirectionDrift
@@ -2123,6 +2139,12 @@ export function objective(metrics) {
       (metrics.edgeMagnitudeHistogramDrift ?? 0) - QUALITY_RULES.maxEdgeMagnitudeHistogramDrift,
     ) *
       35 +
+    Math.max(
+      0,
+      (metrics.tileEdgeMagnitudeHistogramDriftP95 ?? 0) -
+        QUALITY_RULES.maxTileEdgeMagnitudeHistogramDriftP95,
+    ) *
+      25 +
     Math.max(0, (metrics.edgeDirectionDrift ?? 0) - QUALITY_RULES.maxEdgeDirectionDrift) * 40 +
     Math.max(0, QUALITY_RULES.minDirectedEdgeJaccard - (metrics.directedEdgeJaccardMin ?? 1)) * 25 +
     Math.max(0, QUALITY_RULES.minDirectedEdgeRecall - (metrics.directedEdgeRecallMin ?? 1)) * 30 +
