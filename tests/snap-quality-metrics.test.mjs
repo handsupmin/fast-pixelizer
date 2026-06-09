@@ -387,6 +387,26 @@ test('chroma ratio detects desaturated colorful output', async () => {
   assert.equal(stats.chromaRatio, 0)
 })
 
+test('tile chroma ratio catches localized desaturation hidden by global chroma', async () => {
+  const source = makeCellImage(
+    [
+      [255, 0, 0],
+      [0, 255, 0],
+      [0, 0, 255],
+      [255, 255, 0],
+    ],
+    2,
+    2,
+    8,
+  )
+  const output = setColorRect(copyImage(source), 0, 0, 8, 8, [128, 128, 128])
+  const stats = await preservationStats(source, output, { tileGrid: 2 })
+
+  assert.equal(stats.tileChromaTileCount, 4)
+  assert.equal(stats.tileChromaRatioMin, 0)
+  assert.equal(stats.tileChromaRatioMax, 1)
+})
+
 test('hue error detects color direction drift', async () => {
   const source = makeRgbSolid(64, 64, 255, 0, 0)
   const output = makeRgbSolid(64, 64, 0, 255, 0)
@@ -3180,6 +3200,26 @@ test('quality classification reviews chroma drift on colorful inputs', () => {
 
   assert.equal(result.status, 'review')
   assert.ok(result.issues.some((issue) => issue.code === 'chroma-drift'))
+})
+
+test('quality classification reviews regional chroma drift on colorful inputs', () => {
+  const desaturated = classifyMetrics({
+    inputChromaMean: QUALITY_RULES.minChromaMeanForRatio,
+    tileChromaRatioMin: QUALITY_RULES.minTileChromaRatio - 0.01,
+    tileChromaRatioMax: 1,
+    tileChromaTileCount: QUALITY_RULES.minTileChromaTileCount,
+  })
+  const oversaturated = classifyMetrics({
+    inputChromaMean: QUALITY_RULES.minChromaMeanForRatio,
+    tileChromaRatioMin: 1,
+    tileChromaRatioMax: QUALITY_RULES.maxTileChromaRatio + 0.01,
+    tileChromaTileCount: QUALITY_RULES.minTileChromaTileCount,
+  })
+
+  assert.equal(desaturated.status, 'review')
+  assert.ok(desaturated.issues.some((issue) => issue.code === 'regional-chroma-drift'))
+  assert.equal(oversaturated.status, 'review')
+  assert.ok(oversaturated.issues.some((issue) => issue.code === 'regional-chroma-drift'))
 })
 
 test('quality classification reviews low-palette coverage drift', () => {

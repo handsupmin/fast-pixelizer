@@ -1482,6 +1482,22 @@ export function classifyMetrics(metrics) {
     )
   }
   if (
+    metrics.inputChromaMean >= QUALITY_RULES.minChromaMeanForRatio &&
+    (metrics.tileChromaTileCount ?? 0) >= QUALITY_RULES.minTileChromaTileCount &&
+    ((metrics.tileChromaRatioMin ?? 1) < QUALITY_RULES.minTileChromaRatio ||
+      (metrics.tileChromaRatioMax ?? 1) > QUALITY_RULES.maxTileChromaRatio)
+  ) {
+    issues.push(
+      issue(
+        'review',
+        'regional-chroma-drift',
+        `tile chroma ratio ${formatNum(metrics.tileChromaRatioMin)}-${formatNum(
+          metrics.tileChromaRatioMax,
+        )}`,
+      ),
+    )
+  }
+  if (
     metrics.hueSampleCount >= QUALITY_RULES.minHueSampleCount &&
     (metrics.hueErrorMean > QUALITY_RULES.maxHueErrorMean ||
       metrics.hueErrorP95 > QUALITY_RULES.maxHueErrorP95)
@@ -1999,6 +2015,8 @@ export function objective(metrics) {
       25 +
     Math.max(0, QUALITY_RULES.minChromaRatio - metrics.chromaRatio) * 40 +
     Math.max(0, metrics.chromaRatio - QUALITY_RULES.maxChromaRatio) * 35 +
+    Math.max(0, QUALITY_RULES.minTileChromaRatio - (metrics.tileChromaRatioMin ?? 1)) * 35 +
+    Math.max(0, (metrics.tileChromaRatioMax ?? 1) - QUALITY_RULES.maxTileChromaRatio) * 30 +
     Math.max(0, metrics.hueErrorMean - QUALITY_RULES.maxHueErrorMean) * 0.5 +
     Math.max(0, metrics.hueErrorP95 - QUALITY_RULES.maxHueErrorP95) * 0.2 +
     Math.abs(1 - metrics.lineEdgeRatio) * 8 +

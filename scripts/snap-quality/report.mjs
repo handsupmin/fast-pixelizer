@@ -96,6 +96,18 @@ export function summarize(results) {
       0,
     ),
     chromaRatioMean: mean(results, 'chromaRatio'),
+    tileChromaRatioMin: results.reduce(
+      (min, item) => Math.min(min, item.tileChromaRatioMin ?? 1),
+      results.length > 0 ? 1 : 0,
+    ),
+    tileChromaRatioMax: results.reduce(
+      (max, item) => Math.max(max, item.tileChromaRatioMax ?? 1),
+      results.length > 0 ? 1 : 0,
+    ),
+    tileChromaTileCountTotal: results.reduce(
+      (sum, item) => sum + (item.tileChromaTileCount ?? 0),
+      0,
+    ),
     lowPaletteCoverageDriftMean: mean(results, 'lowPaletteCoverageDrift'),
     lowPaletteCoverageRetentionMean: mean(results, 'lowPaletteCoverageRetention'),
     lowPaletteTileCoverageDriftMax: results.reduce(
@@ -406,6 +418,7 @@ function criteriaMarkdown() {
     `- Contrast: review when snapped contrast ratio falls outside ${QUALITY_RULES.minContrastRatio}-${QUALITY_RULES.maxContrastRatio}.`,
     `- Regional contrast: review when any non-low-palette eligible 8x8 canvas tile keeps less than ${(QUALITY_RULES.minTileContrastRatio * 100).toFixed(0)}% of source luma contrast.`,
     `- Chroma: review when colorful inputs with mean chroma at least ${QUALITY_RULES.minChromaMeanForRatio} fall outside chroma ratio ${QUALITY_RULES.minChromaRatio}-${QUALITY_RULES.maxChromaRatio}.`,
+    `- Regional chroma: review when any eligible 8x8 canvas tile falls outside chroma ratio ${QUALITY_RULES.minTileChromaRatio}-${QUALITY_RULES.maxTileChromaRatio}.`,
     `- Hue: review when at least ${QUALITY_RULES.minHueSampleCount} colorful pixels have hue error mean > ${QUALITY_RULES.maxHueErrorMean} degrees or p95 > ${QUALITY_RULES.maxHueErrorP95} degrees.`,
     `- Line strength: review when resized snap edge strength falls outside ${QUALITY_RULES.minLineEdgeRatio}-${QUALITY_RULES.maxLineEdgeRatio}x the source edge strength.`,
     `- Edge direction: review when at least ${QUALITY_RULES.minEdgeDirectionCount} strong source and output edges shift x/y/diagonal direction histogram by more than ${QUALITY_RULES.maxEdgeDirectionDrift}.`,
@@ -594,6 +607,9 @@ export function toMarkdown(summary) {
     'inputChromaMean',
     'outputChromaMean',
     'chromaRatio',
+    'tileChromaRatioMin',
+    'tileChromaRatioMax',
+    'tileChromaTileCount',
     'lowPaletteCoverageDrift',
     'lowPaletteCoverageRetention',
     'lowPaletteTileCoverageDriftMax',
