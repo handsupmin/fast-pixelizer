@@ -233,6 +233,10 @@ function rgbKey(data, index) {
   return (data[index] << 16) | (data[index + 1] << 8) | data[index + 2]
 }
 
+function rgbBucketKey(data, index) {
+  return ((data[index] >> 4) << 8) | ((data[index + 1] >> 4) << 4) | (data[index + 2] >> 4)
+}
+
 function increment(map, key) {
   map.set(key, (map.get(key) ?? 0) + 1)
 }
@@ -357,6 +361,34 @@ function rgbTileCoverageStats(inputTiles, inputCounts, outputTiles, outputCounts
     rgbTileCoverageDriftMax: driftMax,
     rgbTileCoverageRetentionMin: retentionTileCount > 0 ? retentionMin : 1,
     rgbTileCoverageTileCount: tileCount,
+  }
+}
+
+function dominantBucketCoverageStats(inputBuckets, inputCount, outputBuckets, outputCount) {
+  if (inputCount === 0) {
+    return {
+      sourceDominantBucketCoverage: 1,
+      outputDominantBucketCoverage: outputCount > 0 ? 0 : 1,
+      dominantBucketCoverageDrift: outputCount > 0 ? 1 : 0,
+    }
+  }
+
+  let dominantKey = 0
+  let dominantCount = 0
+  for (const [key, value] of inputBuckets) {
+    if (value > dominantCount) {
+      dominantKey = key
+      dominantCount = value
+    }
+  }
+
+  const sourceCoverage = dominantCount / inputCount
+  const outputCoverage = outputCount > 0 ? (outputBuckets.get(dominantKey) ?? 0) / outputCount : 0
+
+  return {
+    sourceDominantBucketCoverage: sourceCoverage,
+    outputDominantBucketCoverage: outputCoverage,
+    dominantBucketCoverageDrift: Math.abs(sourceCoverage - outputCoverage),
   }
 }
 
@@ -508,6 +540,8 @@ export async function preservationStats(input, result, options = {}) {
   const borderBandPx = Math.max(1, Math.round(options.borderBandPx ?? 1))
   const inputRgbCoverage = new Map()
   const outputRgbCoverage = new Map()
+  const inputRgbBuckets = new Map()
+  const outputRgbBuckets = new Map()
   const inputRgbTileCoverage = createTileCoverage(tileCount)
   const outputRgbTileCoverage = createTileCoverage(tileCount)
   const inputRgbTileCoverageCounts = new Uint32Array(tileCount)
@@ -541,6 +575,7 @@ export async function preservationStats(input, result, options = {}) {
       const key = rgbKey(input.data, i)
       increment(inputRgbCoverage, key)
       increment(inputRgbTileCoverage[tile], key)
+      increment(inputRgbBuckets, rgbBucketKey(input.data, i))
       inputRgbCoverageCount++
       inputRgbTileCoverageCounts[tile]++
     }
@@ -548,6 +583,7 @@ export async function preservationStats(input, result, options = {}) {
       const key = rgbKey(resized, i)
       increment(outputRgbCoverage, key)
       increment(outputRgbTileCoverage[tile], key)
+      increment(outputRgbBuckets, rgbBucketKey(resized, i))
       outputRgbCoverageCount++
       outputRgbTileCoverageCounts[tile]++
     }
@@ -645,6 +681,12 @@ export async function preservationStats(input, result, options = {}) {
     inputRgbTileCoverageCounts,
     outputRgbTileCoverage,
     outputRgbTileCoverageCounts,
+  )
+  const dominantBucketCoverage = dominantBucketCoverageStats(
+    inputRgbBuckets,
+    inputRgbCoverageCount,
+    outputRgbBuckets,
+    outputRgbCoverageCount,
   )
   const edgeOverlap = options.edgeOverlap
     ? edgeOverlapStats(input, resized)
@@ -759,6 +801,9 @@ export async function preservationStats(input, result, options = {}) {
     rgbTileCoverageDriftMax: rgbTileCoverage.rgbTileCoverageDriftMax,
     rgbTileCoverageRetentionMin: rgbTileCoverage.rgbTileCoverageRetentionMin,
     rgbTileCoverageTileCount: rgbTileCoverage.rgbTileCoverageTileCount,
+    sourceDominantBucketCoverage: dominantBucketCoverage.sourceDominantBucketCoverage,
+    outputDominantBucketCoverage: dominantBucketCoverage.outputDominantBucketCoverage,
+    dominantBucketCoverageDrift: dominantBucketCoverage.dominantBucketCoverageDrift,
     sourceColorfulPixelCount,
     outputColorfulPixelCount,
     retainedColorfulPixelCount,

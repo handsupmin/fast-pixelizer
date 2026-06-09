@@ -507,6 +507,22 @@ test('rgb coverage drift tracks low-palette color area changes', async () => {
   assert.equal(stats.rgbCoverageRetention, 0.75)
 })
 
+test('dominant bucket coverage catches broad surface drift below global MAE threshold', async () => {
+  const source = makeRgbSolid(64, 64, 0, 0, 0)
+  setColorRect(source, 0, 0, 32, 32, [255, 255, 255])
+  const output = makeRgbSolid(64, 64, 16, 16, 16)
+  setColorRect(output, 0, 0, 32, 32, [255, 255, 255])
+  const stats = await preservationStats(source, output)
+
+  assert.ok(
+    stats.mae < QUALITY_RULES.maxPreservationMae,
+    `expected global MAE below preservation threshold, got ${stats.mae}`,
+  )
+  assert.equal(stats.sourceDominantBucketCoverage, 0.75)
+  assert.equal(stats.outputDominantBucketCoverage, 0)
+  assert.equal(stats.dominantBucketCoverageDrift, 0.75)
+})
+
 test('regional rgb coverage catches color relocation with unchanged global coverage', async () => {
   const source = makeRgbSolid(64, 64, 0, 0, 0)
   const output = makeRgbSolid(64, 64, 0, 0, 0)
@@ -3331,6 +3347,23 @@ test('quality classification reviews low-palette coverage drift', () => {
 
   assert.equal(result.status, 'review')
   assert.ok(result.issues.some((issue) => issue.code === 'low-palette-coverage-drift'))
+})
+
+test('quality classification reviews dominant bucket coverage drift', () => {
+  const result = classifyMetrics({
+    dominantBucketCoverageDrift: QUALITY_RULES.maxDominantBucketCoverageDrift + 0.01,
+    outputDominantBucketCoverage: 0,
+    sourceDominantBucketCoverage: QUALITY_RULES.minDominantBucketCoverage,
+  })
+  const lowCoverage = classifyMetrics({
+    dominantBucketCoverageDrift: 1,
+    outputDominantBucketCoverage: QUALITY_RULES.minDominantBucketCoverage - 0.01,
+    sourceDominantBucketCoverage: QUALITY_RULES.minDominantBucketCoverage - 0.01,
+  })
+
+  assert.equal(result.status, 'review')
+  assert.ok(result.issues.some((issue) => issue.code === 'dominant-bucket-coverage-drift'))
+  assert.equal(lowCoverage.status, 'pass')
 })
 
 test('quality classification reviews regional contrast collapse', () => {

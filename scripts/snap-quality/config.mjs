@@ -141,6 +141,8 @@ export const QUALITY_RULES = {
   maxOutputRgbPaletteOverage: 0,
   maxOutputColorDominance: 0.65,
   maxPaletteDominanceDelta: 0.2,
+  maxDominantBucketCoverageDrift: 0.08,
+  minDominantBucketCoverage: 0.05,
   minPaletteUtilizationTarget: 16,
   minOutputPaletteUtilization: 0.5,
   maxPaletteUtilizationGap: 8,

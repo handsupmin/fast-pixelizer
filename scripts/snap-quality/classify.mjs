@@ -228,6 +228,21 @@ export function classifyMetrics(metrics) {
       ),
     )
   }
+  if (
+    Math.max(
+      metrics.sourceDominantBucketCoverage ?? 0,
+      metrics.outputDominantBucketCoverage ?? 0,
+    ) >= QUALITY_RULES.minDominantBucketCoverage &&
+    (metrics.dominantBucketCoverageDrift ?? 0) > QUALITY_RULES.maxDominantBucketCoverageDrift
+  ) {
+    issues.push(
+      issue(
+        'review',
+        'dominant-bucket-coverage-drift',
+        `dominant bucket coverage drift ${formatNum(metrics.dominantBucketCoverageDrift)}`,
+      ),
+    )
+  }
   if (metrics.outputCoverage < QUALITY_RULES.minOutputCoverage) {
     issues.push(
       issue('review', 'output-shrink', `output coverage ${formatNum(metrics.outputCoverage)}`),
@@ -1959,6 +1974,16 @@ export function objective(metrics) {
           : 1),
     ) *
       40 +
+    Math.max(
+      0,
+      (Math.max(
+        metrics.sourceDominantBucketCoverage ?? 0,
+        metrics.outputDominantBucketCoverage ?? 0,
+      ) >= QUALITY_RULES.minDominantBucketCoverage
+        ? (metrics.dominantBucketCoverageDrift ?? 0)
+        : 0) - QUALITY_RULES.maxDominantBucketCoverageDrift,
+    ) *
+      60 +
     Math.max(0, QUALITY_RULES.minOutputCoverage - metrics.outputCoverage) * 50 +
     Math.max(0, QUALITY_RULES.minOutputAreaCoverage - (metrics.outputAreaCoverage ?? 1)) * 50 +
     Math.max(0, (metrics.outputExpansion ?? 1) - QUALITY_RULES.maxOutputExpansion) * 50 +
