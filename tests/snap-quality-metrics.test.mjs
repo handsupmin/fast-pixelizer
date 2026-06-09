@@ -670,11 +670,28 @@ test('cell color error tracks representative source cell color drift', () => {
   assert.equal(clean.cellAlphaErrorMax, 0)
   assert.equal(clean.cellColorErrorMean, 0)
   assert.equal(clean.cellColorErrorP95, 0)
+  assert.equal(clean.cellColorErrorP99, 0)
   assert.equal(clean.cellColorErrorMax, 0)
   assert.ok(
     drifted.cellColorErrorMean > 120,
     `expected high representative color error, got ${drifted.cellColorErrorMean}`,
   )
+})
+
+test('cell color error p99 exposes rare representative color drift hidden by p95', () => {
+  const sourceCells = Array.from({ length: 100 }, () => [0, 0, 0, 255])
+  const outputCells = Array.from({ length: 100 }, () => [0, 0, 0, 255])
+  outputCells[99] = [255, 255, 255, 255]
+
+  const stats = cellColorErrorMetrics(
+    makeCellImage(sourceCells, 10, 10, 4),
+    makeCellGrid(outputCells, 10, 10),
+  )
+
+  assert.equal(stats.cellColorErrorMean, 2.55)
+  assert.equal(stats.cellColorErrorP95, 0)
+  assert.equal(stats.cellColorErrorP99, 255)
+  assert.equal(stats.cellColorErrorMax, 255)
 })
 
 test('cell color error tracks representative source cell alpha drift', () => {
@@ -2006,16 +2023,37 @@ test('quality classification reviews cell representative p95 above the tuned bou
   const review = classifyMetrics({
     cellColorErrorMax: 0,
     cellColorErrorMean: 0,
+    cellColorErrorP99: 0,
     cellColorErrorP95: 46,
   })
   const pass = classifyMetrics({
     cellColorErrorMax: 0,
     cellColorErrorMean: 0,
+    cellColorErrorP99: 0,
     cellColorErrorP95: 44,
   })
 
   assert.equal(review.status, 'review')
   assert.ok(review.issues.some((issue) => issue.code === 'cell-color-drift'))
+  assert.equal(pass.status, 'pass')
+})
+
+test('quality classification reviews cell representative p99 outliers hidden by p95', () => {
+  const review = classifyMetrics({
+    cellColorErrorMax: 120,
+    cellColorErrorMean: 0,
+    cellColorErrorP95: 0,
+    cellColorErrorP99: 71,
+  })
+  const pass = classifyMetrics({
+    cellColorErrorMax: 120,
+    cellColorErrorMean: 0,
+    cellColorErrorP95: 0,
+    cellColorErrorP99: 69,
+  })
+
+  assert.equal(review.status, 'review')
+  assert.ok(review.issues.some((issue) => issue.code === 'localized-cell-color-outlier'))
   assert.equal(pass.status, 'pass')
 })
 

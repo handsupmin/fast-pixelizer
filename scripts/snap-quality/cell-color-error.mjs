@@ -65,6 +65,7 @@ export function cellColorErrorMetrics(input, grid) {
     cellAlphaErrorMax: alphaMax,
     cellColorErrorMean: errors.length > 0 ? sum / errors.length : 0,
     cellColorErrorP95: percentile(errors, 0.95),
+    cellColorErrorP99: percentile(errors, 0.99),
     cellColorErrorMax: max,
   }
 }

@@ -33,6 +33,7 @@ export const QUALITY_RULES = {
   minCellColorDominanceMin: 0.04,
   maxCellColorErrorMean: 30,
   maxCellColorErrorP95: 45,
+  maxCellColorErrorP99: 70,
   maxCellColorErrorMaxReview: 240,
   maxCellAlphaErrorMean: 8,
   maxCellAlphaErrorP95: 24,

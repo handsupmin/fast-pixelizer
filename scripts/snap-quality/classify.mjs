@@ -331,6 +331,15 @@ export function classifyMetrics(metrics) {
       ),
     )
   }
+  if ((metrics.cellColorErrorP99 ?? 0) > QUALITY_RULES.maxCellColorErrorP99) {
+    issues.push(
+      issue(
+        'review',
+        'localized-cell-color-outlier',
+        `cell color error p99 ${formatNum(metrics.cellColorErrorP99)}`,
+      ),
+    )
+  }
   if ((metrics.cellColorErrorMax ?? 0) > QUALITY_RULES.maxCellColorErrorMaxReview) {
     issues.push(
       issue(
@@ -1266,6 +1275,7 @@ export function objective(metrics) {
     metrics.cellColorErrorMean * 0.5 +
     metrics.cellColorErrorP95 * 0.2 +
     Math.max(0, metrics.cellColorErrorP95 - QUALITY_RULES.maxCellColorErrorP95) * 0.4 +
+    Math.max(0, (metrics.cellColorErrorP99 ?? 0) - QUALITY_RULES.maxCellColorErrorP99) * 0.2 +
     Math.max(0, (metrics.cellAlphaErrorMax ?? 0) - QUALITY_RULES.maxCellAlphaErrorMaxReview) * 0.1 +
     Math.max(0, (metrics.cellColorErrorMax ?? 0) - QUALITY_RULES.maxCellColorErrorMaxReview) * 0.1 +
     Math.max(
