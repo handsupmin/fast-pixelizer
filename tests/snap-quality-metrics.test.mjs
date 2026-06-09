@@ -1644,12 +1644,12 @@ test('quality classification reviews spurious edges above the tuned boundary', (
   const review = classifyMetrics({
     edgeJaccard: 1,
     edgeRecall: 1,
-    edgeSpuriousRatio: 0.41,
+    edgeSpuriousRatio: 0.381,
   })
   const pass = classifyMetrics({
     edgeJaccard: 1,
     edgeRecall: 1,
-    edgeSpuriousRatio: 0.39,
+    edgeSpuriousRatio: 0.379,
   })
 
   assert.equal(review.status, 'review')
