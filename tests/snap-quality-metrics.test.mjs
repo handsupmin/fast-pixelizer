@@ -1625,6 +1625,44 @@ test('quality classification reviews source edge recall below the tuned boundary
   assert.equal(pass.status, 'pass')
 })
 
+test('quality classification reviews spurious edges above the tuned boundary', () => {
+  const review = classifyMetrics({
+    edgeJaccard: 1,
+    edgeRecall: 1,
+    edgeSpuriousRatio: 0.41,
+  })
+  const pass = classifyMetrics({
+    edgeJaccard: 1,
+    edgeRecall: 1,
+    edgeSpuriousRatio: 0.39,
+  })
+
+  assert.equal(review.status, 'review')
+  assert.ok(review.issues.some((issue) => issue.code === 'spurious-edge-growth'))
+  assert.equal(pass.status, 'pass')
+})
+
+test('quality classification reviews regional spurious edges above the tuned boundary', () => {
+  const review = classifyMetrics({
+    edgeJaccard: 1,
+    edgeRecall: 1,
+    edgeSpuriousRatio: 0,
+    edgeTileSpuriousMax: 0.56,
+    outputEdgeTileCount: 1,
+  })
+  const pass = classifyMetrics({
+    edgeJaccard: 1,
+    edgeRecall: 1,
+    edgeSpuriousRatio: 0,
+    edgeTileSpuriousMax: 0.54,
+    outputEdgeTileCount: 1,
+  })
+
+  assert.equal(review.status, 'review')
+  assert.ok(review.issues.some((issue) => issue.code === 'regional-spurious-edge-growth'))
+  assert.equal(pass.status, 'pass')
+})
+
 test('quality classification reviews regional edge loss and growth', () => {
   const loss = classifyMetrics({
     edgeJaccard: 1,

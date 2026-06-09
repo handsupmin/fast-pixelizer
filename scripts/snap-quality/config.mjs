@@ -141,11 +141,11 @@ export const QUALITY_RULES = {
   minEdgeDirectionCount: 64,
   maxEdgeDirectionDrift: 0.7,
   minEdgeRecall: 0.88,
-  maxEdgeSpuriousRatio: 0.5,
+  maxEdgeSpuriousRatio: 0.4,
   minEdgeJaccard: 0.4,
   minEdgeTileCount: 1,
   minEdgeTileRecall: 0.25,
-  maxEdgeTileSpuriousRatio: 0.9,
+  maxEdgeTileSpuriousRatio: 0.55,
 }
 
 export const KNOWN_EXPECTATIONS = [
