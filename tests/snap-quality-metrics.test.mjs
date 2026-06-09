@@ -1996,6 +1996,23 @@ test('quality classification reviews cell representative color drift', () => {
   assert.ok(result.issues.some((issue) => issue.code === 'cell-color-drift'))
 })
 
+test('quality classification reviews cell representative p95 above the tuned boundary', () => {
+  const review = classifyMetrics({
+    cellColorErrorMax: 0,
+    cellColorErrorMean: 0,
+    cellColorErrorP95: 46,
+  })
+  const pass = classifyMetrics({
+    cellColorErrorMax: 0,
+    cellColorErrorMean: 0,
+    cellColorErrorP95: 44,
+  })
+
+  assert.equal(review.status, 'review')
+  assert.ok(review.issues.some((issue) => issue.code === 'cell-color-drift'))
+  assert.equal(pass.status, 'pass')
+})
+
 test('quality classification reviews rare representative color outliers hidden by p95', () => {
   const result = classifyMetrics({
     cellColorErrorMax: 241,
@@ -2529,6 +2546,25 @@ test('quality classification reviews regional preservation loss', () => {
   assert.equal(result.status, 'review')
   assert.ok(result.issues.some((issue) => issue.code === 'regional-preservation-loss'))
   assert.ok(!result.issues.some((issue) => issue.code === 'localized-preservation-loss'))
+})
+
+test('quality classification reviews preservation p95 above the tuned boundary', () => {
+  const review = classifyMetrics({
+    preservationMae: 0,
+    preservationP95: 71,
+    tilePreservationMaxMae: 0,
+    tilePreservationP95Mae: 0,
+  })
+  const pass = classifyMetrics({
+    preservationMae: 0,
+    preservationP95: 69,
+    tilePreservationMaxMae: 0,
+    tilePreservationP95Mae: 0,
+  })
+
+  assert.equal(review.status, 'review')
+  assert.ok(review.issues.some((issue) => issue.code === 'localized-preservation-loss'))
+  assert.equal(pass.status, 'pass')
 })
 
 test('quality classification reviews regional preservation p95 above the tuned boundary', () => {

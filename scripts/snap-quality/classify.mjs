@@ -1232,6 +1232,7 @@ export function objective(metrics) {
     (metrics.cellAlphaErrorP95 ?? 0) * 0.2 +
     metrics.cellColorErrorMean * 0.5 +
     metrics.cellColorErrorP95 * 0.2 +
+    Math.max(0, metrics.cellColorErrorP95 - QUALITY_RULES.maxCellColorErrorP95) * 0.4 +
     Math.max(0, (metrics.cellAlphaErrorMax ?? 0) - QUALITY_RULES.maxCellAlphaErrorMaxReview) * 0.1 +
     Math.max(0, (metrics.cellColorErrorMax ?? 0) - QUALITY_RULES.maxCellColorErrorMaxReview) * 0.1 +
     Math.max(
@@ -1377,6 +1378,7 @@ export function objective(metrics) {
     metrics.cellMae +
     metrics.preservationMae +
     metrics.preservationP95 * 0.25 +
+    Math.max(0, metrics.preservationP95 - QUALITY_RULES.maxPreservationP95) * 0.25 +
     Math.max(0, metrics.tilePreservationMaxMae - QUALITY_RULES.maxTilePreservationMae) * 0.5 +
     Math.max(0, metrics.tilePreservationP95Mae - QUALITY_RULES.maxTilePreservationP95) * 0.75 +
     metrics.alphaMae +
