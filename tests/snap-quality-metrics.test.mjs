@@ -403,6 +403,20 @@ test('tile luma p95 catches broad moderate brightness drift below max-tile luma'
   )
 })
 
+test('tile shadow coverage drift catches broad dark coverage changes', async () => {
+  const source = makeSolid(64, 64, 80)
+  const output = makeSolid(64, 64, 40)
+  const preserved = await preservationStats(source, source, { tileGrid: 8 })
+  const drifted = await preservationStats(source, output, { tileGrid: 8 })
+
+  assert.equal(preserved.tileShadowCoverageDriftP95, 0)
+  assert.equal(drifted.tileShadowCoverageTileCount, 64)
+  assert.ok(
+    drifted.tileShadowCoverageDriftP95 > QUALITY_RULES.maxTileShadowCoverageDriftP95,
+    `expected regional shadow coverage drift above threshold, got ${drifted.tileShadowCoverageDriftP95}`,
+  )
+})
+
 test('tile contrast catches localized contrast collapse hidden by global contrast', async () => {
   const source = makeChecker(16, 16, 1)
   const output = setRgbRect(copyImage(source), 0, 0, 8, 8, 128)
@@ -3488,6 +3502,21 @@ test('quality classification reviews regional luma p95 drift', () => {
 
   assert.equal(review.status, 'review')
   assert.ok(review.issues.some((issue) => issue.code === 'regional-luma-p95-drift'))
+  assert.equal(pass.status, 'pass')
+})
+
+test('quality classification reviews regional shadow coverage drift', () => {
+  const review = classifyMetrics({
+    tileShadowCoverageDriftP95: QUALITY_RULES.maxTileShadowCoverageDriftP95 + 0.01,
+    tileShadowCoverageTileCount: QUALITY_RULES.minTileShadowCoverageTileCount,
+  })
+  const pass = classifyMetrics({
+    tileShadowCoverageDriftP95: QUALITY_RULES.maxTileShadowCoverageDriftP95 - 0.01,
+    tileShadowCoverageTileCount: QUALITY_RULES.minTileShadowCoverageTileCount,
+  })
+
+  assert.equal(review.status, 'review')
+  assert.ok(review.issues.some((issue) => issue.code === 'regional-shadow-coverage-drift'))
   assert.equal(pass.status, 'pass')
 })
 

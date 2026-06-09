@@ -1253,6 +1253,18 @@ export function classifyMetrics(metrics) {
     )
   }
   if (
+    (metrics.tileShadowCoverageTileCount ?? 0) >= QUALITY_RULES.minTileShadowCoverageTileCount &&
+    (metrics.tileShadowCoverageDriftP95 ?? 0) > QUALITY_RULES.maxTileShadowCoverageDriftP95
+  ) {
+    issues.push(
+      issue(
+        'review',
+        'regional-shadow-coverage-drift',
+        `tile shadow coverage p95 ${formatNum(metrics.tileShadowCoverageDriftP95)}`,
+      ),
+    )
+  }
+  if (
     metrics.alphaMae > QUALITY_RULES.maxAlphaMae ||
     metrics.alphaP95 > QUALITY_RULES.maxAlphaP95
   ) {
@@ -1932,6 +1944,11 @@ export function objective(metrics) {
     Math.max(0, (metrics.tileLumaMeanDeltaMax ?? 0) - QUALITY_RULES.maxTileLumaMeanDelta) * 0.5 +
     Math.max(0, (metrics.tileLumaMeanDeltaP95 ?? 0) - QUALITY_RULES.maxTileLumaMeanDeltaP95) *
       0.35 +
+    Math.max(
+      0,
+      (metrics.tileShadowCoverageDriftP95 ?? 0) - QUALITY_RULES.maxTileShadowCoverageDriftP95,
+    ) *
+      25 +
     metrics.alphaMae +
     metrics.alphaP95 * 0.1 +
     Math.max(0, (metrics.alphaMax ?? 0) - QUALITY_RULES.maxAlphaMax) * 0.2 +
