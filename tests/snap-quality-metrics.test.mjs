@@ -507,6 +507,22 @@ test('colorful spurious ratio catches output-only colorful pixels', async () => 
   assert.equal(stats.colorfulSpuriousRatio, 1)
 })
 
+test('saturated coverage drift catches lost vivid color area', async () => {
+  const source = makeRgbSolid(64, 64, 96, 96, 96)
+  setColorRect(source, 0, 0, 32, 32, [255, 0, 0])
+  const output = makeRgbSolid(64, 64, 96, 96, 96)
+  const stats = await preservationStats(source, output)
+
+  assert.equal(stats.sourceSaturatedPixelCount, 1024)
+  assert.equal(stats.outputSaturatedPixelCount, 0)
+  assert.equal(stats.inputSaturatedCoverage, 0.25)
+  assert.equal(stats.outputSaturatedCoverage, 0)
+  assert.ok(
+    stats.saturatedCoverageDrift > QUALITY_RULES.maxSaturatedCoverageDrift,
+    `expected saturated coverage drift above threshold, got ${stats.saturatedCoverageDrift}`,
+  )
+})
+
 test('tile chroma ratio catches localized desaturation hidden by global chroma', async () => {
   const source = makeCellImage(
     [
@@ -3437,6 +3453,21 @@ test('quality classification reviews spurious color growth', () => {
 
   assert.equal(result.status, 'review')
   assert.ok(result.issues.some((issue) => issue.code === 'spurious-color-growth'))
+})
+
+test('quality classification reviews saturated coverage drift', () => {
+  const review = classifyMetrics({
+    saturatedCoverageDrift: QUALITY_RULES.maxSaturatedCoverageDrift + 0.01,
+    sourceSaturatedPixelCount: QUALITY_RULES.minSaturatedCoveragePixelCount,
+  })
+  const pass = classifyMetrics({
+    saturatedCoverageDrift: QUALITY_RULES.maxSaturatedCoverageDrift - 0.01,
+    sourceSaturatedPixelCount: QUALITY_RULES.minSaturatedCoveragePixelCount,
+  })
+
+  assert.equal(review.status, 'review')
+  assert.ok(review.issues.some((issue) => issue.code === 'saturated-coverage-drift'))
+  assert.equal(pass.status, 'pass')
 })
 
 test('quality classification reviews low-palette coverage drift', () => {

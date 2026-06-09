@@ -715,6 +715,8 @@ export async function preservationStats(input, result, options = {}) {
   const inputRgbTileHistogramCounts = new Uint32Array(tileCount)
   const outputRgbTileHistogramCounts = new Uint32Array(tileCount)
   const hueMinChroma = options.hueMinChroma ?? 16
+  const saturatedCoverageChromaThreshold =
+    options.saturatedCoverageChromaThreshold ?? QUALITY_RULES.saturatedCoverageChromaThreshold
   const tileContrastMinStdDev = options.tileContrastMinStdDev ?? 8
   const tileChromaMinMean = options.tileChromaMinMean ?? 8
   const tileLineEdgeMinMean = options.tileLineEdgeMinMean ?? 6
@@ -753,6 +755,8 @@ export async function preservationStats(input, result, options = {}) {
   let outputColorfulPixelCount = 0
   let retainedColorfulPixelCount = 0
   let spuriousColorfulPixelCount = 0
+  let sourceSaturatedPixelCount = 0
+  let outputSaturatedPixelCount = 0
   let inputEdgeMagnitudeSampleCount = 0
   let outputEdgeMagnitudeSampleCount = 0
 
@@ -805,6 +809,10 @@ export async function preservationStats(input, result, options = {}) {
     const outputChromaValue = chromaAt(resized, i)
     const inputColorful = input.data[i + 3] > 0 && inputChromaValue >= hueMinChroma
     const outputColorful = resized[i + 3] > 0 && outputChromaValue >= hueMinChroma
+    const inputSaturated =
+      input.data[i + 3] > 0 && inputChromaValue > saturatedCoverageChromaThreshold
+    const outputSaturated =
+      resized[i + 3] > 0 && outputChromaValue > saturatedCoverageChromaThreshold
     const inputLineEdge = localAxisGradient(input.data, input.width, x, y, i)
     const outputLineEdge = localAxisGradient(resized, input.width, x, y, i)
     if (x > 0 && y > 0 && x < input.width - 1 && y < input.height - 1) {
@@ -838,6 +846,8 @@ export async function preservationStats(input, result, options = {}) {
     if (outputColorful) outputColorfulPixelCount++
     if (inputColorful && outputColorful) retainedColorfulPixelCount++
     if (!inputColorful && outputColorful) spuriousColorfulPixelCount++
+    if (inputSaturated) sourceSaturatedPixelCount++
+    if (outputSaturated) outputSaturatedPixelCount++
     if (inputColorful && outputColorful) {
       const hueError = hueDistance(hueAt(input.data, i), hueAt(resized, i))
       hueErrors.push(hueError)
@@ -1051,6 +1061,16 @@ export async function preservationStats(input, result, options = {}) {
     outputColorfulPixelCount,
     retainedColorfulPixelCount,
     spuriousColorfulPixelCount,
+    sourceSaturatedPixelCount,
+    outputSaturatedPixelCount,
+    inputSaturatedCoverage:
+      inputRgbCoverageCount > 0 ? sourceSaturatedPixelCount / inputRgbCoverageCount : 0,
+    outputSaturatedCoverage:
+      outputRgbCoverageCount > 0 ? outputSaturatedPixelCount / outputRgbCoverageCount : 0,
+    saturatedCoverageDrift: Math.abs(
+      (inputRgbCoverageCount > 0 ? sourceSaturatedPixelCount / inputRgbCoverageCount : 0) -
+        (outputRgbCoverageCount > 0 ? outputSaturatedPixelCount / outputRgbCoverageCount : 0),
+    ),
     colorfulRetention:
       sourceColorfulPixelCount > 0 ? retainedColorfulPixelCount / sourceColorfulPixelCount : 1,
     colorfulSpuriousRatio:
