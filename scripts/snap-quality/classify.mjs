@@ -1193,6 +1193,18 @@ export function classifyMetrics(metrics) {
     )
   }
   if (
+    (metrics.tileLumaMeanDeltaTileCount ?? 0) >= QUALITY_RULES.minTileLumaMeanDeltaTileCount &&
+    (metrics.tileLumaMeanDeltaMax ?? 0) > QUALITY_RULES.maxTileLumaMeanDelta
+  ) {
+    issues.push(
+      issue(
+        'review',
+        'regional-luma-drift',
+        `max tile luma mean delta ${formatNum(metrics.tileLumaMeanDeltaMax)}`,
+      ),
+    )
+  }
+  if (
     metrics.alphaMae > QUALITY_RULES.maxAlphaMae ||
     metrics.alphaP95 > QUALITY_RULES.maxAlphaP95
   ) {
@@ -1818,6 +1830,7 @@ export function objective(metrics) {
     Math.max(0, metrics.preservationP95 - QUALITY_RULES.maxPreservationP95) * 0.25 +
     Math.max(0, metrics.tilePreservationMaxMae - QUALITY_RULES.maxTilePreservationMae) * 0.5 +
     Math.max(0, metrics.tilePreservationP95Mae - QUALITY_RULES.maxTilePreservationP95) * 0.75 +
+    Math.max(0, (metrics.tileLumaMeanDeltaMax ?? 0) - QUALITY_RULES.maxTileLumaMeanDelta) * 0.5 +
     metrics.alphaMae +
     metrics.alphaP95 * 0.1 +
     Math.max(0, (metrics.alphaMax ?? 0) - QUALITY_RULES.maxAlphaMax) * 0.2 +

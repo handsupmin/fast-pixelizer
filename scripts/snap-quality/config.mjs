@@ -91,6 +91,8 @@ export const QUALITY_RULES = {
   maxPreservationP95: 70,
   maxTilePreservationMae: 40,
   maxTilePreservationP95: 28,
+  maxTileLumaMeanDelta: 12,
+  minTileLumaMeanDeltaTileCount: 1,
   minChromaMeanForRatio: 8,
   minChromaRatio: 0.9,
   maxChromaRatio: 1.2,

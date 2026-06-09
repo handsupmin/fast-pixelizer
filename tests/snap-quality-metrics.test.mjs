@@ -352,6 +352,25 @@ test('tile preservation catches small localized loss below pixel p95', async () 
   assert.equal(stats.tileP95Mae, 0)
 })
 
+test('tile luma mean delta catches localized brightness drift hidden by preservation stats', async () => {
+  const source = makeSolid(64, 64, 32)
+  const output = setRgbRect(copyImage(source), 0, 0, 8, 8, 48)
+  const stats = await preservationStats(source, output, { tileGrid: 8 })
+
+  assert.ok(stats.mae < 1, `expected low global MAE, got ${stats.mae}`)
+  assert.equal(stats.p95, 0)
+  assert.ok(
+    stats.tileMaxMae < QUALITY_RULES.maxTilePreservationMae,
+    `expected tile MAE below review threshold, got ${stats.tileMaxMae}`,
+  )
+  assert.equal(stats.tileLumaMeanDeltaTileCount, 64)
+  assert.ok(
+    Math.abs(stats.tileLumaMeanDeltaMax - 16) < 1e-9,
+    `expected max tile luma mean delta near 16, got ${stats.tileLumaMeanDeltaMax}`,
+  )
+  assert.equal(stats.tileLumaMeanDeltaP95, 0)
+})
+
 test('tile contrast catches localized contrast collapse hidden by global contrast', async () => {
   const source = makeChecker(16, 16, 1)
   const output = setRgbRect(copyImage(source), 0, 0, 8, 8, 128)
@@ -3274,6 +3293,16 @@ test('quality classification reviews regional contrast collapse', () => {
 
   assert.equal(result.status, 'review')
   assert.ok(result.issues.some((issue) => issue.code === 'regional-contrast-collapse'))
+})
+
+test('quality classification reviews regional luma drift', () => {
+  const result = classifyMetrics({
+    tileLumaMeanDeltaMax: QUALITY_RULES.maxTileLumaMeanDelta + 0.01,
+    tileLumaMeanDeltaTileCount: QUALITY_RULES.minTileLumaMeanDeltaTileCount,
+  })
+
+  assert.equal(result.status, 'review')
+  assert.ok(result.issues.some((issue) => issue.code === 'regional-luma-drift'))
 })
 
 test('quality classification reviews regional line edge collapse', () => {

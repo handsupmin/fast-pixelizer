@@ -275,6 +275,30 @@ function tilePreservationValues(tileSums, tileCounts) {
   return values
 }
 
+function tileLumaMeanDeltaStats(inputSums, outputSums, counts) {
+  const values = []
+  let deltaMax = 0
+  let tileCount = 0
+
+  for (let tile = 0; tile < counts.length; tile++) {
+    const count = counts[tile]
+    if (count === 0) continue
+
+    const delta = Math.abs(outputSums[tile] / count - inputSums[tile] / count)
+    deltaMax = Math.max(deltaMax, delta)
+    values.push(delta)
+    tileCount++
+  }
+
+  values.sort((a, b) => a - b)
+
+  return {
+    tileLumaMeanDeltaMax: deltaMax,
+    tileLumaMeanDeltaP95: percentile(values, 0.95),
+    tileLumaMeanDeltaTileCount: tileCount,
+  }
+}
+
 function rgbCoverageStats(inputColors, inputCount, outputColors, outputCount) {
   if (inputCount === 0) {
     return {
@@ -562,6 +586,11 @@ export async function preservationStats(input, result, options = {}) {
   hueErrors.sort((a, b) => a - b)
   const tileValues = tilePreservationValues(tileSums, tileCounts)
   const alphaTileValues = tilePreservationValues(alphaTileSums, tileCounts)
+  const tileLumaMeanDelta = tileLumaMeanDeltaStats(
+    inputLumaTileSums,
+    outputLumaTileSums,
+    tileCounts,
+  )
   const tileContrast = tileContrastStats(
     inputLumaTileSums,
     inputLumaTileSumsSq,
@@ -664,6 +693,9 @@ export async function preservationStats(input, result, options = {}) {
     p95: percentile(errors, 0.95),
     tileMaxMae: tileValues.length > 0 ? tileValues[tileValues.length - 1] : 0,
     tileP95Mae: percentile(tileValues, 0.95),
+    tileLumaMeanDeltaMax: tileLumaMeanDelta.tileLumaMeanDeltaMax,
+    tileLumaMeanDeltaP95: tileLumaMeanDelta.tileLumaMeanDeltaP95,
+    tileLumaMeanDeltaTileCount: tileLumaMeanDelta.tileLumaMeanDeltaTileCount,
     alphaMae: alphaCount > 0 ? alphaSum / alphaCount : 0,
     alphaP95: percentile(alphaErrors, 0.95),
     alphaMax: alphaErrors.length > 0 ? alphaErrors[alphaErrors.length - 1] : 0,
