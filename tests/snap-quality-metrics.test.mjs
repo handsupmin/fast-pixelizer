@@ -386,6 +386,28 @@ test('mean RGB drift catches global color bias below preservation thresholds', a
   )
 })
 
+test('tile mean RGB drift catches regional color bias below global drift thresholds', async () => {
+  const source = makeRgbSolid(64, 64, 80, 80, 80)
+  const output = copyImage(source)
+  setColorRect(output, 0, 0, 8, 8, [140, 80, 80])
+  setColorRect(output, 8, 0, 16, 8, [140, 80, 80])
+  setColorRect(output, 16, 0, 24, 8, [80, 80, 140])
+  setColorRect(output, 24, 0, 32, 8, [80, 80, 140])
+  const stats = await preservationStats(source, output, { tileGrid: 8 })
+
+  assert.equal(stats.tileMeanRgbDriftTileCount, 64)
+  assert.equal(stats.tileMeanRgbDriftMax, 60)
+  assert.equal(stats.tileMeanRgbDriftP95, 60)
+  assert.ok(
+    stats.meanRgbDrift < QUALITY_RULES.maxMeanRgbDrift,
+    `expected global mean RGB drift below threshold, got ${stats.meanRgbDrift}`,
+  )
+  assert.ok(
+    stats.tileMeanRgbDriftP95 > QUALITY_RULES.maxTileMeanRgbDriftP95,
+    `expected tile mean RGB drift p95 above threshold, got ${stats.tileMeanRgbDriftP95}`,
+  )
+})
+
 test('tile luma mean delta catches localized brightness drift hidden by preservation stats', async () => {
   const source = makeSolid(64, 64, 32)
   const output = setRgbRect(copyImage(source), 0, 0, 8, 8, 48)
@@ -3453,6 +3475,21 @@ test('quality classification reviews mean RGB drift', () => {
 
   assert.equal(review.status, 'review')
   assert.ok(review.issues.some((issue) => issue.code === 'mean-rgb-drift'))
+  assert.equal(pass.status, 'pass')
+})
+
+test('quality classification reviews regional mean RGB drift', () => {
+  const review = classifyMetrics({
+    tileMeanRgbDriftP95: QUALITY_RULES.maxTileMeanRgbDriftP95 + 0.1,
+    tileMeanRgbDriftTileCount: QUALITY_RULES.minTileMeanRgbTileCount,
+  })
+  const pass = classifyMetrics({
+    tileMeanRgbDriftP95: QUALITY_RULES.maxTileMeanRgbDriftP95 - 0.1,
+    tileMeanRgbDriftTileCount: QUALITY_RULES.minTileMeanRgbTileCount,
+  })
+
+  assert.equal(review.status, 'review')
+  assert.ok(review.issues.some((issue) => issue.code === 'regional-mean-rgb-drift'))
   assert.equal(pass.status, 'pass')
 })
 

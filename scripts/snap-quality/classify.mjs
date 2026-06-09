@@ -1234,6 +1234,18 @@ export function classifyMetrics(metrics) {
     )
   }
   if (
+    (metrics.tileMeanRgbDriftTileCount ?? 0) >= QUALITY_RULES.minTileMeanRgbTileCount &&
+    (metrics.tileMeanRgbDriftP95 ?? 0) > QUALITY_RULES.maxTileMeanRgbDriftP95
+  ) {
+    issues.push(
+      issue(
+        'review',
+        'regional-mean-rgb-drift',
+        `tile mean RGB drift p95 ${formatNum(metrics.tileMeanRgbDriftP95)}`,
+      ),
+    )
+  }
+  if (
     (metrics.tileLumaMeanDeltaTileCount ?? 0) >= QUALITY_RULES.minTileLumaMeanDeltaTileCount &&
     (metrics.tileLumaMeanDeltaMax ?? 0) > QUALITY_RULES.maxTileLumaMeanDelta
   ) {
@@ -2037,6 +2049,7 @@ export function objective(metrics) {
     Math.max(0, metrics.tilePreservationMaxMae - QUALITY_RULES.maxTilePreservationMae) * 0.5 +
     Math.max(0, metrics.tilePreservationP95Mae - QUALITY_RULES.maxTilePreservationP95) * 0.75 +
     Math.max(0, (metrics.meanRgbDrift ?? 0) - QUALITY_RULES.maxMeanRgbDrift) * 3 +
+    Math.max(0, (metrics.tileMeanRgbDriftP95 ?? 0) - QUALITY_RULES.maxTileMeanRgbDriftP95) * 0.2 +
     Math.max(0, (metrics.tileLumaMeanDeltaMax ?? 0) - QUALITY_RULES.maxTileLumaMeanDelta) * 0.5 +
     Math.max(0, (metrics.tileLumaMeanDeltaP95 ?? 0) - QUALITY_RULES.maxTileLumaMeanDeltaP95) *
       0.35 +

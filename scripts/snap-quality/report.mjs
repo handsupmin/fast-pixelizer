@@ -43,6 +43,18 @@ export function summarize(results) {
     meanRgbChannelDriftMean: mean(results, 'meanRgbChannelDrift'),
     meanRgbDriftMean: mean(results, 'meanRgbDrift'),
     meanRgbDriftMax: results.reduce((max, item) => Math.max(max, item.meanRgbDrift ?? 0), 0),
+    tileMeanRgbDriftMax: results.reduce(
+      (max, item) => Math.max(max, item.tileMeanRgbDriftMax ?? 0),
+      0,
+    ),
+    tileMeanRgbDriftP95Max: results.reduce(
+      (max, item) => Math.max(max, item.tileMeanRgbDriftP95 ?? 0),
+      0,
+    ),
+    tileMeanRgbDriftTileCountTotal: results.reduce(
+      (sum, item) => sum + (item.tileMeanRgbDriftTileCount ?? 0),
+      0,
+    ),
     tileLumaMeanDeltaMax: results.reduce(
       (max, item) => Math.max(max, item.tileLumaMeanDeltaMax ?? 0),
       0,
@@ -615,6 +627,7 @@ function criteriaMarkdown() {
     `- Border preservation: review when the outer one-source-cell band has RGB MAE above ${QUALITY_RULES.maxBorderPreservationMae}.`,
     `- Regional preservation: review when any 8x8 canvas tile exceeds MAE ${QUALITY_RULES.maxTilePreservationMae} or tile p95 exceeds ${QUALITY_RULES.maxTilePreservationP95}.`,
     `- Mean RGB drift: review when the visible source/output union shifts by more than ${QUALITY_RULES.maxMeanRgbDrift} RGB units in mean-color distance.`,
+    `- Regional mean RGB drift: review when at least ${QUALITY_RULES.minTileMeanRgbTileCount} eligible 8x8 canvas tile with at least ${QUALITY_RULES.minTileMeanRgbSampleCount} visible source/output pixels has p95 mean-color distance above ${QUALITY_RULES.maxTileMeanRgbDriftP95}.`,
     `- Regional luma drift: review when any 8x8 canvas tile changes mean luma by more than ${QUALITY_RULES.maxTileLumaMeanDelta} or tile luma p95 exceeds ${QUALITY_RULES.maxTileLumaMeanDeltaP95}.`,
     `- Ink coverage: review when at least ${QUALITY_RULES.minInkCoveragePixelCount} source or output pixels fall below luma ${QUALITY_RULES.inkCoverageLumaThreshold} and visible ink coverage drifts by more than ${(QUALITY_RULES.maxInkCoverageDrift * 100).toFixed(1)} percentage points.`,
     `- Shadow coverage: review when at least ${QUALITY_RULES.minShadowCoveragePixelCount} source or output pixels fall below luma ${QUALITY_RULES.shadowCoverageLumaThreshold} and visible shadow coverage drifts by more than ${(QUALITY_RULES.maxShadowCoverageDrift * 100).toFixed(0)} percentage points.`,
@@ -795,6 +808,9 @@ export function toMarkdown(summary) {
     'meanRgbBDrift',
     'meanRgbChannelDrift',
     'meanRgbDrift',
+    'tileMeanRgbDriftMax',
+    'tileMeanRgbDriftP95',
+    'tileMeanRgbDriftTileCount',
     'tileLumaMeanDeltaMax',
     'tileLumaMeanDeltaP95',
     'tileLumaMeanDeltaTileCount',

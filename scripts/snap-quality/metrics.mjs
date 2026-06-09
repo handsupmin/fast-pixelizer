@@ -306,6 +306,35 @@ function tileLumaMeanDeltaStats(inputSums, outputSums, counts) {
   }
 }
 
+function tileMeanRgbDriftStats(inputSums, inputCounts, outputSums, outputCounts, minSampleCount) {
+  const values = []
+  let driftMax = 0
+
+  for (let tile = 0; tile < inputCounts.length; tile++) {
+    const inputCount = inputCounts[tile]
+    const outputCount = outputCounts[tile]
+    if (Math.max(inputCount, outputCount) < minSampleCount) continue
+
+    const inputR = inputCount > 0 ? inputSums[tile * 3] / inputCount : 0
+    const inputG = inputCount > 0 ? inputSums[tile * 3 + 1] / inputCount : 0
+    const inputB = inputCount > 0 ? inputSums[tile * 3 + 2] / inputCount : 0
+    const outputR = outputCount > 0 ? outputSums[tile * 3] / outputCount : 0
+    const outputG = outputCount > 0 ? outputSums[tile * 3 + 1] / outputCount : 0
+    const outputB = outputCount > 0 ? outputSums[tile * 3 + 2] / outputCount : 0
+    const drift = Math.hypot(inputR - outputR, inputG - outputG, inputB - outputB)
+    driftMax = Math.max(driftMax, drift)
+    values.push(drift)
+  }
+
+  values.sort((a, b) => a - b)
+
+  return {
+    tileMeanRgbDriftMax: driftMax,
+    tileMeanRgbDriftP95: percentile(values, 0.95),
+    tileMeanRgbDriftTileCount: values.length,
+  }
+}
+
 function tileCoverageDriftStats(inputHits, inputCounts, outputHits, outputCounts, minSampleCount) {
   const values = []
   let driftMax = 0
@@ -748,6 +777,8 @@ export async function preservationStats(input, result, options = {}) {
     options.tileSaturatedCoverageMinSampleCount ?? QUALITY_RULES.minTileSaturatedCoverageSampleCount
   const tileRgbHistogramMinSampleCount =
     options.tileRgbHistogramMinSampleCount ?? QUALITY_RULES.minTileRgbHistogramSampleCount
+  const tileMeanRgbMinSampleCount =
+    options.tileMeanRgbMinSampleCount ?? QUALITY_RULES.minTileMeanRgbSampleCount
   const tileEdgeMagnitudeHistogramMinSampleCount =
     options.tileEdgeMagnitudeHistogramMinSampleCount ??
     QUALITY_RULES.minTileEdgeMagnitudeHistogramSampleCount
@@ -760,6 +791,8 @@ export async function preservationStats(input, result, options = {}) {
   const outputRgbTileCoverage = createTileCoverage(tileCount)
   const inputRgbTileCoverageCounts = new Uint32Array(tileCount)
   const outputRgbTileCoverageCounts = new Uint32Array(tileCount)
+  const inputMeanRgbTileSums = new Float64Array(tileCount * 3)
+  const outputMeanRgbTileSums = new Float64Array(tileCount * 3)
   const tileHueErrors = Array.from({ length: tileCount }, () => [])
   const tileHueMinSampleCount = options.tileHueMinSampleCount ?? QUALITY_RULES.minTileHueSampleCount
   const hueErrors = []
@@ -815,6 +848,9 @@ export async function preservationStats(input, result, options = {}) {
       inputRgbCoverageCount++
       inputRgbTileCoverageCounts[tile]++
       inputRgbTileHistogramCounts[tile]++
+      inputMeanRgbTileSums[tile * 3] += input.data[i]
+      inputMeanRgbTileSums[tile * 3 + 1] += input.data[i + 1]
+      inputMeanRgbTileSums[tile * 3 + 2] += input.data[i + 2]
       inputShadowCoverageTileCounts[tile]++
       inputBrightCoverageTileCounts[tile]++
       inputColorfulCoverageTileCounts[tile]++
@@ -837,6 +873,9 @@ export async function preservationStats(input, result, options = {}) {
       outputRgbCoverageCount++
       outputRgbTileCoverageCounts[tile]++
       outputRgbTileHistogramCounts[tile]++
+      outputMeanRgbTileSums[tile * 3] += resized[i]
+      outputMeanRgbTileSums[tile * 3 + 1] += resized[i + 1]
+      outputMeanRgbTileSums[tile * 3 + 2] += resized[i + 2]
       outputShadowCoverageTileCounts[tile]++
       outputBrightCoverageTileCounts[tile]++
       outputColorfulCoverageTileCounts[tile]++
@@ -944,6 +983,13 @@ export async function preservationStats(input, result, options = {}) {
     inputLumaTileSums,
     outputLumaTileSums,
     tileCounts,
+  )
+  const tileMeanRgbDrift = tileMeanRgbDriftStats(
+    inputMeanRgbTileSums,
+    inputRgbTileCoverageCounts,
+    outputMeanRgbTileSums,
+    outputRgbTileCoverageCounts,
+    tileMeanRgbMinSampleCount,
   )
   const tileShadowCoverage = tileCoverageDriftStats(
     inputShadowCoverageTileHits,
@@ -1114,6 +1160,9 @@ export async function preservationStats(input, result, options = {}) {
     meanRgbBDrift,
     meanRgbChannelDrift: (meanRgbRDrift + meanRgbGDrift + meanRgbBDrift) / 3,
     meanRgbDrift: Math.hypot(meanRgbRDrift, meanRgbGDrift, meanRgbBDrift),
+    tileMeanRgbDriftMax: tileMeanRgbDrift.tileMeanRgbDriftMax,
+    tileMeanRgbDriftP95: tileMeanRgbDrift.tileMeanRgbDriftP95,
+    tileMeanRgbDriftTileCount: tileMeanRgbDrift.tileMeanRgbDriftTileCount,
     tileLumaMeanDeltaMax: tileLumaMeanDelta.tileLumaMeanDeltaMax,
     tileLumaMeanDeltaP95: tileLumaMeanDelta.tileLumaMeanDeltaP95,
     tileLumaMeanDeltaTileCount: tileLumaMeanDelta.tileLumaMeanDeltaTileCount,
