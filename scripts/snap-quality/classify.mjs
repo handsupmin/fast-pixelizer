@@ -798,6 +798,21 @@ export function classifyMetrics(metrics) {
     )
   }
   if (
+    (metrics.sourceCellTransitionCount ?? 0) >= QUALITY_RULES.minCellTransitionCount &&
+    ((metrics.cellTransitionErrorP99 ?? 0) > QUALITY_RULES.maxCellTransitionErrorP99 ||
+      (metrics.cellTransitionAxisErrorP99Max ?? 0) > QUALITY_RULES.maxCellTransitionErrorP99)
+  ) {
+    issues.push(
+      issue(
+        'review',
+        'localized-cell-transition-color-outlier',
+        `cell transition color error p99 ${formatNum(
+          metrics.cellTransitionErrorP99,
+        )}, axis p99 max ${formatNum(metrics.cellTransitionAxisErrorP99Max)}`,
+      ),
+    )
+  }
+  if (
     (metrics.sourceCellDiagonalTransitionCount ?? 0) >=
       QUALITY_RULES.minCellDiagonalTransitionCount &&
     (metrics.cellDiagonalTransitionRetention ?? 1) <
@@ -898,6 +913,24 @@ export function classifyMetrics(metrics) {
         `diagonal cell transition color error p95 ${formatNum(
           metrics.cellDiagonalTransitionErrorP95,
         )}, direction p95 max ${formatNum(metrics.cellDiagonalTransitionDirectionErrorP95Max)}`,
+      ),
+    )
+  }
+  if (
+    (metrics.sourceCellDiagonalTransitionCount ?? 0) >=
+      QUALITY_RULES.minCellDiagonalTransitionCount &&
+    ((metrics.cellDiagonalTransitionErrorP99 ?? 0) >
+      QUALITY_RULES.maxCellDiagonalTransitionErrorP99 ||
+      (metrics.cellDiagonalTransitionDirectionErrorP99Max ?? 0) >
+        QUALITY_RULES.maxCellDiagonalTransitionErrorP99)
+  ) {
+    issues.push(
+      issue(
+        'review',
+        'localized-cell-diagonal-transition-color-outlier',
+        `diagonal cell transition color error p99 ${formatNum(
+          metrics.cellDiagonalTransitionErrorP99,
+        )}, direction p99 max ${formatNum(metrics.cellDiagonalTransitionDirectionErrorP99Max)}`,
       ),
     )
   }
@@ -1554,6 +1587,12 @@ export function objective(metrics) {
       0.3 +
     Math.max(
       0,
+      Math.max(metrics.cellTransitionErrorP99 ?? 0, metrics.cellTransitionAxisErrorP99Max ?? 0) -
+        QUALITY_RULES.maxCellTransitionErrorP99,
+    ) *
+      0.15 +
+    Math.max(
+      0,
       QUALITY_RULES.minCellDiagonalTransitionRetention -
         (metrics.cellDiagonalTransitionRetention ?? 1),
     ) *
@@ -1590,6 +1629,14 @@ export function objective(metrics) {
       ) - QUALITY_RULES.maxCellDiagonalTransitionErrorP95,
     ) *
       0.3 +
+    Math.max(
+      0,
+      Math.max(
+        metrics.cellDiagonalTransitionErrorP99 ?? 0,
+        metrics.cellDiagonalTransitionDirectionErrorP99Max ?? 0,
+      ) - QUALITY_RULES.maxCellDiagonalTransitionErrorP99,
+    ) *
+      0.15 +
     Math.max(0, QUALITY_RULES.minSourceCellSize - metrics.sourceCellSize) * 500 +
     Math.max(0, metrics.shortAxisCells - QUALITY_RULES.maxShortAxisCells) * 10 +
     Math.max(0, metrics.sourceCellSize - QUALITY_RULES.maxSourceCellSizeReview) * 2 +

@@ -159,13 +159,19 @@ function toItem({ dataset, expected, input, metrics, name, original, resized, un
     cellTransitionSpuriousRatio: formatNum(metrics.cellTransitionSpuriousRatio),
     cellTransitionErrorMean: formatNum(metrics.cellTransitionErrorMean),
     cellTransitionErrorP95: formatNum(metrics.cellTransitionErrorP95),
+    cellTransitionErrorP99: formatNum(metrics.cellTransitionErrorP99),
     cellTransitionAxisErrorP95Max: formatNum(metrics.cellTransitionAxisErrorP95Max),
+    cellTransitionAxisErrorP99Max: formatNum(metrics.cellTransitionAxisErrorP99Max),
     cellDiagonalTransitionRetention: formatNum(metrics.cellDiagonalTransitionRetention),
     cellDiagonalTransitionSpuriousRatio: formatNum(metrics.cellDiagonalTransitionSpuriousRatio),
     cellDiagonalTransitionErrorMean: formatNum(metrics.cellDiagonalTransitionErrorMean),
     cellDiagonalTransitionErrorP95: formatNum(metrics.cellDiagonalTransitionErrorP95),
+    cellDiagonalTransitionErrorP99: formatNum(metrics.cellDiagonalTransitionErrorP99),
     cellDiagonalTransitionDirectionErrorP95Max: formatNum(
       metrics.cellDiagonalTransitionDirectionErrorP95Max,
+    ),
+    cellDiagonalTransitionDirectionErrorP99Max: formatNum(
+      metrics.cellDiagonalTransitionDirectionErrorP99Max,
     ),
     cellDiagonalTransitionDirectionRetentionMin: formatNum(
       metrics.cellDiagonalTransitionDirectionRetentionMin,
@@ -193,6 +199,8 @@ function toItem({ dataset, expected, input, metrics, name, original, resized, un
     cellTransitionYSpuriousRatio: formatNum(metrics.cellTransitionYSpuriousRatio),
     cellTransitionXErrorP95: formatNum(metrics.cellTransitionXErrorP95),
     cellTransitionYErrorP95: formatNum(metrics.cellTransitionYErrorP95),
+    cellTransitionXErrorP99: formatNum(metrics.cellTransitionXErrorP99),
+    cellTransitionYErrorP99: formatNum(metrics.cellTransitionYErrorP99),
     sourceCellTransitionCount: metrics.sourceCellTransitionCount,
     sourceCellTransitionXCount: metrics.sourceCellTransitionXCount,
     sourceCellTransitionYCount: metrics.sourceCellTransitionYCount,
@@ -509,13 +517,18 @@ async function buildMetrics(input, expected, snapshots, colorVariety) {
       cellTransitionSpuriousRatio: transitions.cellTransitionSpuriousRatio,
       cellTransitionErrorMean: transitions.cellTransitionErrorMean,
       cellTransitionErrorP95: transitions.cellTransitionErrorP95,
+      cellTransitionErrorP99: transitions.cellTransitionErrorP99,
       cellTransitionAxisErrorP95Max: transitions.cellTransitionAxisErrorP95Max,
+      cellTransitionAxisErrorP99Max: transitions.cellTransitionAxisErrorP99Max,
       cellDiagonalTransitionRetention: transitions.cellDiagonalTransitionRetention,
       cellDiagonalTransitionSpuriousRatio: transitions.cellDiagonalTransitionSpuriousRatio,
       cellDiagonalTransitionErrorMean: transitions.cellDiagonalTransitionErrorMean,
       cellDiagonalTransitionErrorP95: transitions.cellDiagonalTransitionErrorP95,
+      cellDiagonalTransitionErrorP99: transitions.cellDiagonalTransitionErrorP99,
       cellDiagonalTransitionDirectionErrorP95Max:
         transitions.cellDiagonalTransitionDirectionErrorP95Max,
+      cellDiagonalTransitionDirectionErrorP99Max:
+        transitions.cellDiagonalTransitionDirectionErrorP99Max,
       cellDiagonalTransitionDirectionRetentionMin:
         transitions.cellDiagonalTransitionDirectionRetentionMin,
       cellDiagonalTransitionDirectionSpuriousRatioMax:
@@ -535,6 +548,8 @@ async function buildMetrics(input, expected, snapshots, colorVariety) {
       cellTransitionYSpuriousRatio: transitions.cellTransitionYSpuriousRatio,
       cellTransitionXErrorP95: transitions.cellTransitionXErrorP95,
       cellTransitionYErrorP95: transitions.cellTransitionYErrorP95,
+      cellTransitionXErrorP99: transitions.cellTransitionXErrorP99,
+      cellTransitionYErrorP99: transitions.cellTransitionYErrorP99,
       sourceCellTransitionCount: transitions.sourceCellTransitionCount,
       sourceCellTransitionXCount: transitions.sourceCellTransitionXCount,
       sourceCellTransitionYCount: transitions.sourceCellTransitionYCount,
