@@ -3,7 +3,7 @@ import assert from 'node:assert/strict'
 import { alphaMaskStats } from '../scripts/snap-quality/alpha-mask.mjs'
 import { cellColorComponentMetrics } from '../scripts/snap-quality/cell-color-components.mjs'
 import { cellColorErrorMetrics } from '../scripts/snap-quality/cell-color-error.mjs'
-import { classifyMetrics } from '../scripts/snap-quality/classify.mjs'
+import { classifyMetrics, objective } from '../scripts/snap-quality/classify.mjs'
 import { cellColorDominanceMetrics } from '../scripts/snap-quality/cell-dominance.mjs'
 import { edgeOverlapStats } from '../scripts/snap-quality/edge-overlap.mjs'
 import {
@@ -3999,4 +3999,65 @@ test('quality classification reviews hue drift on colorful inputs', () => {
 
   assert.equal(result.status, 'review')
   assert.ok(result.issues.some((issue) => issue.code === 'hue-drift'))
+})
+
+test('detail preservation expectations ignore true-grid-only signals after matching the accepted grid', () => {
+  const metrics = {
+    aspectError: 0.2,
+    cols: 1387,
+    determinismGridGap: 0,
+    determinismVisualAlphaMae: 0,
+    determinismVisualAlphaP95: 0,
+    determinismVisualMae: 0,
+    determinismVisualP95: 0,
+    expectedGridGap: 0,
+    expectedMode: 'preserve-detail',
+    longAxisCells: 1387,
+    outputAlphaCellMae: 0,
+    outputCellIntegerError: 0,
+    outputCellMae: 0,
+    outputColorDominance: 0.5,
+    outputPaletteUtilization: 1,
+    outputRgbPaletteOverage: 0,
+    paletteDominanceDelta: 0,
+    paletteUtilizationGap: 0,
+    paletteUtilizationTarget: 64,
+    repeatGridGap: 1000,
+    repeatVisualAlphaMae: 0,
+    repeatVisualAlphaP95: 0,
+    repeatVisualMae: 40,
+    repeatVisualP95: 255,
+    rows: 778,
+    shortAxisCells: 778,
+    sourceCellSize: 1.8,
+    squareCellError: 0,
+    stabilityDepthGap: 1000,
+  }
+
+  const result = classifyMetrics(metrics)
+
+  assert.equal(result.status, 'pass')
+  assert.deepEqual(result.issues, [])
+  assert.equal(objective(metrics), 0)
+})
+
+test('detail preservation expectations still fail when the accepted grid is missed', () => {
+  const result = classifyMetrics({
+    expectedGridGap: 1,
+    expectedMode: 'preserve-detail',
+  })
+
+  assert.equal(result.status, 'fail')
+  assert.ok(result.issues.some((issue) => issue.code === 'ground-truth-grid-miss'))
+})
+
+test('detail preservation expectations still fail output integrity issues', () => {
+  const result = classifyMetrics({
+    expectedGridGap: 0,
+    expectedMode: 'preserve-detail',
+    outputCellMae: QUALITY_RULES.maxOutputCellMae + 1,
+  })
+
+  assert.equal(result.status, 'fail')
+  assert.ok(result.issues.some((issue) => issue.code === 'non-uniform-output-cells'))
 })

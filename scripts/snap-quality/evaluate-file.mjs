@@ -78,6 +78,7 @@ function toItem({ dataset, expected, input, metrics, name, original, resized, un
     outputExpansion: formatNum(metrics.outputExpansion),
     grid: `${metrics.cols}x${metrics.rows}`,
     expectedGrid: expected ? `${expected.cols}x${expected.rows}` : '',
+    expectedMode: metrics.expectedMode,
     longAxisCells: metrics.longAxisCells,
     detectedResolution: original.result.detectedResolution,
     sourceCellSize: formatNum(metrics.sourceCellSize),
@@ -533,6 +534,7 @@ async function buildMetrics(input, expected, snapshots, colorVariety) {
       determinismVisualP95: deterministicPreserve.p95,
       determinismVisualAlphaMae: deterministicPreserve.alphaMae,
       determinismVisualAlphaP95: deterministicPreserve.alphaP95,
+      expectedMode: expected ? (expected.mode ?? 'grid') : '',
       expectedGridGap: expected
         ? Math.abs(cols - expected.cols) + Math.abs(rows - expected.rows)
         : 0,

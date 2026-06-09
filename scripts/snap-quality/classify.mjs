@@ -15,6 +15,31 @@ function issue(severity, code, detail) {
   return { severity, code, detail }
 }
 
+function isDetailPreservationExpected(metrics) {
+  return metrics.expectedMode === 'preserve-detail'
+}
+
+const DETAIL_PRESERVATION_ISSUE_CODES = new Set([
+  'ground-truth-grid-miss',
+  'non-deterministic-grid',
+  'non-deterministic-visuals',
+  'non-deterministic-alpha',
+  'non-uniform-output-cells',
+  'non-uniform-output-alpha-cells',
+  'palette-budget-exceeded',
+  'palette-dominance-collapse',
+  'palette-underused',
+  'palette-utilization-gap',
+  'palette-collapse',
+  'non-square-output-cells',
+  'non-integer-output-cells',
+])
+
+function filterIssuesForExpectation(metrics, issues) {
+  if (!isDetailPreservationExpected(metrics)) return issues
+  return issues.filter((item) => DETAIL_PRESERVATION_ISSUE_CODES.has(item.code))
+}
+
 export function classifyMetrics(metrics) {
   const issues = []
   if (metrics.expectedGridGap > QUALITY_RULES.maxExpectedGridGap) {
@@ -1886,12 +1911,48 @@ export function classifyMetrics(metrics) {
     )
   }
 
-  if (issues.some((item) => item.severity === 'fail')) return { status: 'fail', issues }
-  if (issues.length > 0) return { status: 'review', issues }
-  return { status: 'pass', issues }
+  const applicableIssues = filterIssuesForExpectation(metrics, issues)
+
+  if (applicableIssues.some((item) => item.severity === 'fail')) {
+    return { status: 'fail', issues: applicableIssues }
+  }
+  if (applicableIssues.length > 0) return { status: 'review', issues: applicableIssues }
+  return { status: 'pass', issues: applicableIssues }
+}
+
+function detailPreservationObjective(metrics) {
+  return (
+    (metrics.expectedGridGap ?? 0) * 1000 +
+    (metrics.determinismGridGap ?? 0) * 100 +
+    (metrics.determinismVisualMae ?? 0) * 80 +
+    (metrics.determinismVisualP95 ?? 0) * 20 +
+    (metrics.determinismVisualAlphaMae ?? 0) * 80 +
+    (metrics.determinismVisualAlphaP95 ?? 0) * 20 +
+    (metrics.outputCellMae ?? 0) * 500 +
+    (metrics.outputAlphaCellMae ?? 0) * 500 +
+    (metrics.outputRgbPaletteOverage ?? 0) * 50 +
+    Math.max(0, (metrics.squareCellError ?? 0) - QUALITY_RULES.maxOutputSquareCellError) * 100 +
+    Math.max(0, (metrics.outputCellIntegerError ?? 0) - QUALITY_RULES.maxOutputCellIntegerError) *
+      100 +
+    Math.max(0, (metrics.outputColorDominance ?? 0) - QUALITY_RULES.maxOutputColorDominance) *
+      Math.max(0, (metrics.paletteDominanceDelta ?? 0) - QUALITY_RULES.maxPaletteDominanceDelta) *
+      80 +
+    Math.max(
+      0,
+      QUALITY_RULES.minOutputPaletteUtilization - (metrics.outputPaletteUtilization ?? 1),
+    ) *
+      Math.max(
+        0,
+        (metrics.paletteUtilizationTarget ?? 0) - QUALITY_RULES.minPaletteUtilizationTarget,
+      ) *
+      0.5 +
+    Math.max(0, (metrics.paletteUtilizationGap ?? 0) - QUALITY_RULES.maxPaletteUtilizationGap) * 0.5
+  )
 }
 
 export function objective(metrics) {
+  if (isDetailPreservationExpected(metrics)) return detailPreservationObjective(metrics)
+
   return (
     metrics.repeatGridGap * 100 +
     metrics.stabilityDepthGap * 100 +

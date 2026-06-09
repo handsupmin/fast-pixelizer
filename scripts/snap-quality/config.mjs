@@ -228,6 +228,11 @@ export const QUALITY_RULES = {
 }
 
 export const KNOWN_EXPECTATIONS = [
+  ['model-examples/gemini-nano-banana-2.png', { cols: 557, rows: 306, mode: 'preserve-detail' }],
+  ['model-examples/gpt-image-2.png', { cols: 350, rows: 264, mode: 'preserve-detail' }],
+  ['model-examples/midjourney.png', { cols: 744, rows: 430, mode: 'preserve-detail' }],
+  ['model-examples/nano-banana-2.png', { cols: 565, rows: 298, mode: 'preserve-detail' }],
+  ['model-examples/seedream-4.5.png', { cols: 1387, rows: 778, mode: 'preserve-detail' }],
   ['demo-examples/example-32-clean.png', { cols: 32, rows: 32 }],
   ['demo-examples/example-32-detail.png', { cols: 32, rows: 32 }],
   ['demo-examples/example-64-clean.png', { cols: 64, rows: 64 }],

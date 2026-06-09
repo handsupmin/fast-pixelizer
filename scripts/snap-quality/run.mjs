@@ -95,6 +95,7 @@ export async function runSnapQualityEval(argv) {
       file: item.file,
       grid: item.grid,
       expected: item.expectedGrid,
+      mode: item.expectedMode,
       repeat: item.repeatGridGap,
       truth: item.expectedGridGap,
       status: item.status,
