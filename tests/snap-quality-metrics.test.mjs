@@ -352,6 +352,23 @@ test('tile preservation catches small localized loss below pixel p95', async () 
   assert.equal(stats.tileP95Mae, 0)
 })
 
+test('border preservation catches edge-only drift below global preservation thresholds', async () => {
+  const source = makeSolid(64, 64, 0)
+  const output = copyImage(source)
+  setRgbRect(output, 0, 0, 64, 2, 255)
+  setRgbRect(output, 0, 62, 64, 64, 255)
+  setRgbRect(output, 0, 0, 2, 64, 255)
+  setRgbRect(output, 62, 0, 64, 64, 255)
+
+  const stats = await preservationStats(source, output, { borderBandPx: 2 })
+
+  assert.ok(
+    stats.mae < QUALITY_RULES.maxPreservationMae,
+    `expected global MAE below preservation threshold, got ${stats.mae}`,
+  )
+  assert.equal(stats.borderMae, 255)
+})
+
 test('tile luma mean delta catches localized brightness drift hidden by preservation stats', async () => {
   const source = makeSolid(64, 64, 32)
   const output = setRgbRect(copyImage(source), 0, 0, 8, 8, 48)
@@ -3159,6 +3176,15 @@ test('quality classification reviews preservation p95 above the tuned boundary',
   assert.equal(review.status, 'review')
   assert.ok(review.issues.some((issue) => issue.code === 'localized-preservation-loss'))
   assert.equal(pass.status, 'pass')
+})
+
+test('quality classification reviews border preservation drift', () => {
+  const result = classifyMetrics({
+    borderPreservationMae: QUALITY_RULES.maxBorderPreservationMae + 1,
+  })
+
+  assert.equal(result.status, 'review')
+  assert.ok(result.issues.some((issue) => issue.code === 'border-preservation-drift'))
 })
 
 test('quality classification reviews regional preservation p95 above the tuned boundary', () => {

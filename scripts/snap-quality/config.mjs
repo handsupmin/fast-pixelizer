@@ -89,6 +89,7 @@ export const QUALITY_RULES = {
   highCellStdDev: 30,
   maxPreservationMae: 38,
   maxPreservationP95: 70,
+  maxBorderPreservationMae: 30,
   maxTilePreservationMae: 40,
   maxTilePreservationP95: 28,
   maxTileLumaMeanDelta: 12,

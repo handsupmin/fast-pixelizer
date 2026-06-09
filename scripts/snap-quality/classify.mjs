@@ -1178,6 +1178,15 @@ export function classifyMetrics(metrics) {
       ),
     )
   }
+  if ((metrics.borderPreservationMae ?? 0) > QUALITY_RULES.maxBorderPreservationMae) {
+    issues.push(
+      issue(
+        'review',
+        'border-preservation-drift',
+        `border preservation MAE ${formatNum(metrics.borderPreservationMae)}`,
+      ),
+    )
+  }
   if (
     metrics.tilePreservationMaxMae > QUALITY_RULES.maxTilePreservationMae ||
     metrics.tilePreservationP95Mae > QUALITY_RULES.maxTilePreservationP95
@@ -1840,6 +1849,8 @@ export function objective(metrics) {
     metrics.preservationMae +
     metrics.preservationP95 * 0.25 +
     Math.max(0, metrics.preservationP95 - QUALITY_RULES.maxPreservationP95) * 0.25 +
+    Math.max(0, (metrics.borderPreservationMae ?? 0) - QUALITY_RULES.maxBorderPreservationMae) *
+      0.5 +
     Math.max(0, metrics.tilePreservationMaxMae - QUALITY_RULES.maxTilePreservationMae) * 0.5 +
     Math.max(0, metrics.tilePreservationP95Mae - QUALITY_RULES.maxTilePreservationP95) * 0.75 +
     Math.max(0, (metrics.tileLumaMeanDeltaMax ?? 0) - QUALITY_RULES.maxTileLumaMeanDelta) * 0.5 +

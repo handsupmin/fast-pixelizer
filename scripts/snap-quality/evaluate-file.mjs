@@ -227,6 +227,7 @@ function toItem({ dataset, expected, input, metrics, name, original, resized, un
     outputAlphaCellMae: formatNum(metrics.outputAlphaCellMae),
     preservationMae: formatNum(metrics.preservationMae),
     preservationP95: formatNum(metrics.preservationP95),
+    borderPreservationMae: formatNum(metrics.borderPreservationMae),
     tilePreservationMaxMae: formatNum(metrics.tilePreservationMaxMae),
     tilePreservationP95Mae: formatNum(metrics.tilePreservationP95Mae),
     tileLumaMeanDeltaMax: formatNum(metrics.tileLumaMeanDeltaMax),
@@ -378,6 +379,7 @@ async function buildMetrics(input, expected, snapshots, colorVariety) {
   const preserve = await preservationStats(input, original.result, {
     alphaMask: true,
     edgeOverlap: true,
+    borderBandPx: Math.min(input.width / cols, input.height / rows),
   })
   const repeatPreserve = await preservationStats(original.result, repeatOriginal)
   const deterministicPreserve = await preservationStats(original.result, deterministicOriginal)
@@ -619,6 +621,7 @@ async function buildMetrics(input, expected, snapshots, colorVariety) {
       outputAlphaCellMae: outputUniformity.alphaCellMae,
       preservationMae: preserve.mae,
       preservationP95: preserve.p95,
+      borderPreservationMae: preserve.borderMae,
       tilePreservationMaxMae: preserve.tileMaxMae,
       tilePreservationP95Mae: preserve.tileP95Mae,
       tileLumaMeanDeltaMax: preserve.tileLumaMeanDeltaMax,

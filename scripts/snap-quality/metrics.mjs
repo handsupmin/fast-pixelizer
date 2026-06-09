@@ -481,6 +481,10 @@ function localAxisGradient(data, width, x, y, index) {
   return count > 0 ? sum / count : 0
 }
 
+function isBorderPixel(x, y, width, height, band) {
+  return x < band || y < band || x >= width - band || y >= height - band
+}
+
 export async function preservationStats(input, result, options = {}) {
   const resized = await resizeToInput(result, input)
   const stride = Math.max(1, Math.floor((input.width * input.height) / MAX_METRIC_SAMPLES))
@@ -501,6 +505,7 @@ export async function preservationStats(input, result, options = {}) {
   const tileContrastMinStdDev = options.tileContrastMinStdDev ?? 8
   const tileChromaMinMean = options.tileChromaMinMean ?? 8
   const tileLineEdgeMinMean = options.tileLineEdgeMinMean ?? 6
+  const borderBandPx = Math.max(1, Math.round(options.borderBandPx ?? 1))
   const inputRgbCoverage = new Map()
   const outputRgbCoverage = new Map()
   const inputRgbTileCoverage = createTileCoverage(tileCount)
@@ -516,6 +521,8 @@ export async function preservationStats(input, result, options = {}) {
   let alphaSum = 0
   let count = 0
   let alphaCount = 0
+  let borderSum = 0
+  let borderCount = 0
   let inputRgbCoverageCount = 0
   let outputRgbCoverageCount = 0
   let sourceColorfulPixelCount = 0
@@ -550,6 +557,10 @@ export async function preservationStats(input, result, options = {}) {
       sum += channelError
       pixelError += channelError
       count++
+    }
+    if (isBorderPixel(x, y, input.width, input.height, borderBandPx)) {
+      borderSum += pixelError / 3
+      borderCount++
     }
     const alphaError = Math.abs(input.data[i + 3] - resized[i + 3])
     const inputLuma = lumaAt(input.data, i)
@@ -696,6 +707,7 @@ export async function preservationStats(input, result, options = {}) {
   return {
     mae: count > 0 ? sum / count : 0,
     p95: percentile(errors, 0.95),
+    borderMae: borderCount > 0 ? borderSum / borderCount : 0,
     tileMaxMae: tileValues.length > 0 ? tileValues[tileValues.length - 1] : 0,
     tileP95Mae: percentile(tileValues, 0.95),
     tileLumaMeanDeltaMax: tileLumaMeanDelta.tileLumaMeanDeltaMax,

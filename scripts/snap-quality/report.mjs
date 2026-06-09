@@ -29,6 +29,11 @@ export function summarize(results) {
     longAxisCellsMax: results.reduce((max, item) => Math.max(max, item.longAxisCells), 0),
     preservationMaeMean: mean(results, 'preservationMae'),
     preservationP95Mean: mean(results, 'preservationP95'),
+    borderPreservationMaeMean: mean(results, 'borderPreservationMae'),
+    borderPreservationMaeMax: results.reduce(
+      (max, item) => Math.max(max, item.borderPreservationMae ?? 0),
+      0,
+    ),
     tilePreservationMaxMaeMean: mean(results, 'tilePreservationMaxMae'),
     tilePreservationP95MaeMean: mean(results, 'tilePreservationP95Mae'),
     tileLumaMeanDeltaMax: results.reduce(
@@ -456,6 +461,7 @@ function criteriaMarkdown() {
     `- Directional diagonal cell transitions: review when either diagonal direction breaches retention, spurious, p95 color-error, p99 color-error, or rare max color-error limits.`,
     `- Source disorder: review when intra-cell source MAE exceeds ${QUALITY_RULES.highCellMae} or intra-cell source standard deviation exceeds ${QUALITY_RULES.highCellStdDev}.`,
     `- Preservation: review when average MAE exceeds ${QUALITY_RULES.maxPreservationMae} or p95 exceeds ${QUALITY_RULES.maxPreservationP95}.`,
+    `- Border preservation: review when the outer one-source-cell band has RGB MAE above ${QUALITY_RULES.maxBorderPreservationMae}.`,
     `- Regional preservation: review when any 8x8 canvas tile exceeds MAE ${QUALITY_RULES.maxTilePreservationMae} or tile p95 exceeds ${QUALITY_RULES.maxTilePreservationP95}.`,
     `- Regional luma drift: review when any 8x8 canvas tile changes mean luma by more than ${QUALITY_RULES.maxTileLumaMeanDelta}.`,
     `- Alpha preservation: review when alpha MAE exceeds ${QUALITY_RULES.maxAlphaMae} or p95 exceeds ${QUALITY_RULES.maxAlphaP95}.`,
@@ -618,6 +624,7 @@ export function toMarkdown(summary) {
     'outputAlphaCellMae',
     'preservationMae',
     'preservationP95',
+    'borderPreservationMae',
     'tilePreservationMaxMae',
     'tilePreservationP95Mae',
     'tileLumaMeanDeltaMax',
