@@ -158,6 +158,11 @@ export function summarize(results) {
       (max, item) => Math.max(max, item.dominantBucketCoverageDrift ?? 0),
       0,
     ),
+    edgeMagnitudeHistogramDriftMean: mean(results, 'edgeMagnitudeHistogramDrift'),
+    edgeMagnitudeHistogramDriftMax: results.reduce(
+      (max, item) => Math.max(max, item.edgeMagnitudeHistogramDrift ?? 0),
+      0,
+    ),
     hueErrorMean: mean(results, 'hueErrorMean'),
     hueErrorP95Mean: mean(results, 'hueErrorP95'),
     tileHueErrorMeanMax: results.reduce(
@@ -487,6 +492,7 @@ function criteriaMarkdown() {
     `- Regional hue: review when any 8x8 canvas tile with at least ${QUALITY_RULES.minTileHueSampleCount} colorful pixels has mean hue error > ${QUALITY_RULES.maxTileHueErrorMean} degrees.`,
     `- Line strength: review when resized snap edge strength falls outside ${QUALITY_RULES.minLineEdgeRatio}-${QUALITY_RULES.maxLineEdgeRatio}x the source edge strength.`,
     `- Regional line strength: review when any eligible 8x8 canvas tile keeps less than ${(QUALITY_RULES.minTileLineEdgeRatio * 100).toFixed(0)}% of source line-edge strength.`,
+    `- Edge magnitude distribution: review when weak/medium/strong edge histogram drift exceeds ${QUALITY_RULES.maxEdgeMagnitudeHistogramDrift}.`,
     `- Edge direction: review when at least ${QUALITY_RULES.minEdgeDirectionCount} strong source and output edges shift x/y/diagonal direction histogram by more than ${QUALITY_RULES.maxEdgeDirectionDrift}.`,
     `- Directed edge map: review when any eligible x/y/diagonal direction bin has same-direction tolerant edge overlap below ${QUALITY_RULES.minDirectedEdgeJaccard}, keeps less than ${(QUALITY_RULES.minDirectedEdgeRecall * 100).toFixed(0)}% of source same-direction edges nearby, or when an eligible output direction bin has more than ${(QUALITY_RULES.maxDirectedEdgeSpuriousRatio * 100).toFixed(0)}% output-only same-direction edges.`,
     `- Edge map overlap: review when fewer than ${(QUALITY_RULES.minEdgeRecall * 100).toFixed(0)}% of strong source edges survive nearby, when more than ${(QUALITY_RULES.maxEdgeSpuriousRatio * 100).toFixed(0)}% of strong output edges are not near source edges, or when tolerant edge overlap drops below ${QUALITY_RULES.minEdgeJaccard}.`,
@@ -709,6 +715,7 @@ export function toMarkdown(summary) {
     'tileLineEdgeRatioMin',
     'tileLineEdgeRatioMax',
     'tileLineEdgeTileCount',
+    'edgeMagnitudeHistogramDrift',
     'sourceDirectedEdgeBinCount',
     'outputDirectedEdgeBinCount',
     'directedEdgeJaccardMin',

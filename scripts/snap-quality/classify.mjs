@@ -1590,6 +1590,15 @@ export function classifyMetrics(metrics) {
       ),
     )
   }
+  if ((metrics.edgeMagnitudeHistogramDrift ?? 0) > QUALITY_RULES.maxEdgeMagnitudeHistogramDrift) {
+    issues.push(
+      issue(
+        'review',
+        'edge-magnitude-histogram-drift',
+        `edge magnitude histogram drift ${formatNum(metrics.edgeMagnitudeHistogramDrift)}`,
+      ),
+    )
+  }
   if (
     (metrics.sourceEdgeDirectionCount ?? 0) >= QUALITY_RULES.minEdgeDirectionCount &&
     (metrics.outputEdgeDirectionCount ?? 0) >= QUALITY_RULES.minEdgeDirectionCount &&
@@ -2109,6 +2118,11 @@ export function objective(metrics) {
     Math.max(0, (metrics.tileHueErrorMeanMax ?? 0) - QUALITY_RULES.maxTileHueErrorMean) * 0.2 +
     Math.abs(1 - metrics.lineEdgeRatio) * 8 +
     Math.max(0, QUALITY_RULES.minTileLineEdgeRatio - (metrics.tileLineEdgeRatioMin ?? 1)) * 25 +
+    Math.max(
+      0,
+      (metrics.edgeMagnitudeHistogramDrift ?? 0) - QUALITY_RULES.maxEdgeMagnitudeHistogramDrift,
+    ) *
+      35 +
     Math.max(0, (metrics.edgeDirectionDrift ?? 0) - QUALITY_RULES.maxEdgeDirectionDrift) * 40 +
     Math.max(0, QUALITY_RULES.minDirectedEdgeJaccard - (metrics.directedEdgeJaccardMin ?? 1)) * 25 +
     Math.max(0, QUALITY_RULES.minDirectedEdgeRecall - (metrics.directedEdgeRecallMin ?? 1)) * 30 +

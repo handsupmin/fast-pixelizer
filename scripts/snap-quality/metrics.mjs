@@ -3,6 +3,8 @@ import { alphaMaskStats } from './alpha-mask.mjs'
 import { edgeOverlapStats } from './edge-overlap.mjs'
 import { resizeToInput } from './image-io.mjs'
 
+const EDGE_MAGNITUDE_HISTOGRAM_BINS = [0, 8, 16, 24, 32, 48, 64, 96, 128, 192, Infinity]
+
 function grayAt(data, width, x, y) {
   const i = (y * width + x) * 4
   return data[i + 3] === 0 ? 0 : 0.299 * data[i] + 0.587 * data[i + 1] + 0.114 * data[i + 2]
@@ -513,6 +515,46 @@ function localAxisGradient(data, width, x, y, index) {
   return count > 0 ? sum / count : 0
 }
 
+function hasVisibleEdgeSupport(data, width, index) {
+  return (
+    data[index + 3] > 0 ||
+    data[index - 4 + 3] > 0 ||
+    data[index + 4 + 3] > 0 ||
+    data[index - width * 4 + 3] > 0 ||
+    data[index + width * 4 + 3] > 0
+  )
+}
+
+function localEdgeMagnitude(data, width, index) {
+  const dx = lumaAt(data, index + 4) - lumaAt(data, index - 4)
+  const dy = lumaAt(data, index + width * 4) - lumaAt(data, index - width * 4)
+  return Math.sqrt(dx * dx + dy * dy) / 2
+}
+
+function addEdgeMagnitudeBin(histogram, magnitude) {
+  for (let bin = 0; bin < EDGE_MAGNITUDE_HISTOGRAM_BINS.length - 1; bin++) {
+    if (
+      magnitude >= EDGE_MAGNITUDE_HISTOGRAM_BINS[bin] &&
+      magnitude < EDGE_MAGNITUDE_HISTOGRAM_BINS[bin + 1]
+    ) {
+      histogram[bin]++
+      return
+    }
+  }
+}
+
+function edgeMagnitudeHistogramDrift(inputHistogram, inputCount, outputHistogram, outputCount) {
+  if (inputCount === 0 && outputCount === 0) return 0
+
+  let drift = 0
+  for (let bin = 0; bin < inputHistogram.length; bin++) {
+    const source = inputCount > 0 ? inputHistogram[bin] / inputCount : 0
+    const output = outputCount > 0 ? outputHistogram[bin] / outputCount : 0
+    drift += Math.abs(source - output)
+  }
+  return drift / 2
+}
+
 function isBorderPixel(x, y, width, height, band) {
   return x < band || y < band || x >= width - band || y >= height - band
 }
@@ -532,6 +574,8 @@ export async function preservationStats(input, result, options = {}) {
   const outputChromaTileSums = new Float64Array(tileCount)
   const inputLineEdgeTileSums = new Float64Array(tileCount)
   const outputLineEdgeTileSums = new Float64Array(tileCount)
+  const inputEdgeMagnitudeHistogram = new Uint32Array(EDGE_MAGNITUDE_HISTOGRAM_BINS.length - 1)
+  const outputEdgeMagnitudeHistogram = new Uint32Array(EDGE_MAGNITUDE_HISTOGRAM_BINS.length - 1)
   const tileCounts = new Uint32Array(tileCount)
   const hueMinChroma = options.hueMinChroma ?? 16
   const tileContrastMinStdDev = options.tileContrastMinStdDev ?? 8
@@ -563,6 +607,8 @@ export async function preservationStats(input, result, options = {}) {
   let outputColorfulPixelCount = 0
   let retainedColorfulPixelCount = 0
   let spuriousColorfulPixelCount = 0
+  let inputEdgeMagnitudeSampleCount = 0
+  let outputEdgeMagnitudeSampleCount = 0
 
   for (let pixel = 0; pixel < input.width * input.height; pixel += stride) {
     const x = pixel % input.width
@@ -607,6 +653,22 @@ export async function preservationStats(input, result, options = {}) {
     const outputColorful = resized[i + 3] > 0 && outputChromaValue >= hueMinChroma
     const inputLineEdge = localAxisGradient(input.data, input.width, x, y, i)
     const outputLineEdge = localAxisGradient(resized, input.width, x, y, i)
+    if (x > 0 && y > 0 && x < input.width - 1 && y < input.height - 1) {
+      if (hasVisibleEdgeSupport(input.data, input.width, i)) {
+        addEdgeMagnitudeBin(
+          inputEdgeMagnitudeHistogram,
+          localEdgeMagnitude(input.data, input.width, i),
+        )
+        inputEdgeMagnitudeSampleCount++
+      }
+      if (hasVisibleEdgeSupport(resized, input.width, i)) {
+        addEdgeMagnitudeBin(
+          outputEdgeMagnitudeHistogram,
+          localEdgeMagnitude(resized, input.width, i),
+        )
+        outputEdgeMagnitudeSampleCount++
+      }
+    }
     tileSums[tile] += pixelError / 3
     alphaTileSums[tile] += alphaError
     inputLumaTileSums[tile] += inputLuma
@@ -832,6 +894,12 @@ export async function preservationStats(input, result, options = {}) {
     tileLineEdgeRatioMin: tileLineEdge.tileLineEdgeRatioMin,
     tileLineEdgeRatioMax: tileLineEdge.tileLineEdgeRatioMax,
     tileLineEdgeTileCount: tileLineEdge.tileLineEdgeTileCount,
+    edgeMagnitudeHistogramDrift: edgeMagnitudeHistogramDrift(
+      inputEdgeMagnitudeHistogram,
+      inputEdgeMagnitudeSampleCount,
+      outputEdgeMagnitudeHistogram,
+      outputEdgeMagnitudeSampleCount,
+    ),
     directedEdgeJaccardMin: edgeOverlap.directedEdgeJaccardMin,
     directedEdgeRecallMin: edgeOverlap.directedEdgeRecallMin,
     directedEdgeSpuriousMax: edgeOverlap.directedEdgeSpuriousMax,

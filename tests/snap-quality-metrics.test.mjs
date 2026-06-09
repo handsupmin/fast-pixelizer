@@ -420,6 +420,18 @@ test('tile line edge ratio catches localized edge collapse', async () => {
   )
 })
 
+test('edge magnitude histogram drift catches changed edge strength distribution', async () => {
+  const source = makeChecker(64, 64, 4)
+  const preserved = await preservationStats(source, source)
+  const flattened = await preservationStats(source, makeSolid(64, 64, 127))
+
+  assert.equal(preserved.edgeMagnitudeHistogramDrift, 0)
+  assert.ok(
+    flattened.edgeMagnitudeHistogramDrift > QUALITY_RULES.maxEdgeMagnitudeHistogramDrift,
+    `expected high edge magnitude histogram drift, got ${flattened.edgeMagnitudeHistogramDrift}`,
+  )
+})
+
 test('cell uniformity tracks alpha variation separately from RGB variation', () => {
   const image = makeSolid(16, 16, 96)
   setAlphaRect(image, 0, 0, 4, 8, 0)
@@ -3395,6 +3407,19 @@ test('quality classification reviews regional line edge collapse', () => {
 
   assert.equal(result.status, 'review')
   assert.ok(result.issues.some((issue) => issue.code === 'regional-line-edge-collapse'))
+})
+
+test('quality classification reviews edge magnitude histogram drift', () => {
+  const review = classifyMetrics({
+    edgeMagnitudeHistogramDrift: QUALITY_RULES.maxEdgeMagnitudeHistogramDrift + 0.01,
+  })
+  const pass = classifyMetrics({
+    edgeMagnitudeHistogramDrift: QUALITY_RULES.maxEdgeMagnitudeHistogramDrift - 0.01,
+  })
+
+  assert.equal(review.status, 'review')
+  assert.ok(review.issues.some((issue) => issue.code === 'edge-magnitude-histogram-drift'))
+  assert.equal(pass.status, 'pass')
 })
 
 test('quality classification reviews regional hue drift', () => {
