@@ -1579,6 +1579,18 @@ export function classifyMetrics(metrics) {
     )
   }
   if (
+    (metrics.tileBrightCoverageTileCount ?? 0) >= QUALITY_RULES.minTileBrightCoverageTileCount &&
+    (metrics.tileBrightCoverageDriftP95 ?? 0) > QUALITY_RULES.maxTileBrightCoverageDriftP95
+  ) {
+    issues.push(
+      issue(
+        'review',
+        'regional-bright-coverage-drift',
+        `tile bright coverage p95 ${formatNum(metrics.tileBrightCoverageDriftP95)}`,
+      ),
+    )
+  }
+  if (
     Math.max(metrics.sourceSaturatedPixelCount ?? 0, metrics.outputSaturatedPixelCount ?? 0) >=
       QUALITY_RULES.minSaturatedCoveragePixelCount &&
     (metrics.saturatedCoverageDrift ?? 0) > QUALITY_RULES.maxSaturatedCoverageDrift
@@ -2212,6 +2224,11 @@ export function objective(metrics) {
     Math.max(0, (metrics.colorfulSpuriousRatio ?? 0) - QUALITY_RULES.maxColorfulSpuriousRatio) *
       40 +
     Math.max(0, (metrics.brightCoverageDrift ?? 0) - QUALITY_RULES.maxBrightCoverageDrift) * 50 +
+    Math.max(
+      0,
+      (metrics.tileBrightCoverageDriftP95 ?? 0) - QUALITY_RULES.maxTileBrightCoverageDriftP95,
+    ) *
+      50 +
     Math.max(0, (metrics.saturatedCoverageDrift ?? 0) - QUALITY_RULES.maxSaturatedCoverageDrift) *
       50 +
     Math.max(0, QUALITY_RULES.minChromaRatio - metrics.chromaRatio) * 40 +

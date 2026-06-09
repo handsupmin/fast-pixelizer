@@ -523,6 +523,20 @@ test('bright coverage drift catches lost bright area', async () => {
   )
 })
 
+test('regional bright coverage drift catches local highlight loss', async () => {
+  const source = makeRgbSolid(64, 64, 64, 64, 64)
+  setColorRect(source, 0, 0, 16, 16, [240, 240, 240])
+  const output = makeRgbSolid(64, 64, 64, 64, 64)
+  const stats = await preservationStats(source, output)
+
+  assert.equal(stats.tileBrightCoverageTileCount, 64)
+  assert.equal(stats.tileBrightCoverageDriftMax, 1)
+  assert.ok(
+    stats.tileBrightCoverageDriftP95 > QUALITY_RULES.maxTileBrightCoverageDriftP95,
+    `expected regional bright coverage drift above threshold, got ${stats.tileBrightCoverageDriftP95}`,
+  )
+})
+
 test('saturated coverage drift catches lost vivid color area', async () => {
   const source = makeRgbSolid(64, 64, 96, 96, 96)
   setColorRect(source, 0, 0, 32, 32, [255, 0, 0])
@@ -3483,6 +3497,21 @@ test('quality classification reviews bright coverage drift', () => {
 
   assert.equal(review.status, 'review')
   assert.ok(review.issues.some((issue) => issue.code === 'bright-coverage-drift'))
+  assert.equal(pass.status, 'pass')
+})
+
+test('quality classification reviews regional bright coverage drift', () => {
+  const review = classifyMetrics({
+    tileBrightCoverageDriftP95: QUALITY_RULES.maxTileBrightCoverageDriftP95 + 0.01,
+    tileBrightCoverageTileCount: QUALITY_RULES.minTileBrightCoverageTileCount,
+  })
+  const pass = classifyMetrics({
+    tileBrightCoverageDriftP95: QUALITY_RULES.maxTileBrightCoverageDriftP95 - 0.01,
+    tileBrightCoverageTileCount: QUALITY_RULES.minTileBrightCoverageTileCount,
+  })
+
+  assert.equal(review.status, 'review')
+  assert.ok(review.issues.some((issue) => issue.code === 'regional-bright-coverage-drift'))
   assert.equal(pass.status, 'pass')
 })
 

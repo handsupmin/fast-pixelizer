@@ -687,6 +687,10 @@ export async function preservationStats(input, result, options = {}) {
   const inputShadowCoverageTileCounts = new Uint32Array(tileCount)
   const outputShadowCoverageTileHits = new Uint32Array(tileCount)
   const outputShadowCoverageTileCounts = new Uint32Array(tileCount)
+  const inputBrightCoverageTileHits = new Uint32Array(tileCount)
+  const inputBrightCoverageTileCounts = new Uint32Array(tileCount)
+  const outputBrightCoverageTileHits = new Uint32Array(tileCount)
+  const outputBrightCoverageTileCounts = new Uint32Array(tileCount)
   const inputChromaTileSums = new Float64Array(tileCount)
   const outputChromaTileSums = new Float64Array(tileCount)
   const inputLineEdgeTileSums = new Float64Array(tileCount)
@@ -726,6 +730,8 @@ export async function preservationStats(input, result, options = {}) {
     options.brightCoverageLumaThreshold ?? QUALITY_RULES.brightCoverageLumaThreshold
   const tileShadowCoverageMinSampleCount =
     options.tileShadowCoverageMinSampleCount ?? QUALITY_RULES.minTileShadowCoverageSampleCount
+  const tileBrightCoverageMinSampleCount =
+    options.tileBrightCoverageMinSampleCount ?? QUALITY_RULES.minTileBrightCoverageSampleCount
   const tileRgbHistogramMinSampleCount =
     options.tileRgbHistogramMinSampleCount ?? QUALITY_RULES.minTileRgbHistogramSampleCount
   const tileEdgeMagnitudeHistogramMinSampleCount =
@@ -783,7 +789,9 @@ export async function preservationStats(input, result, options = {}) {
       inputRgbTileCoverageCounts[tile]++
       inputRgbTileHistogramCounts[tile]++
       inputShadowCoverageTileCounts[tile]++
+      inputBrightCoverageTileCounts[tile]++
       if (inputLuma < shadowCoverageLumaThreshold) inputShadowCoverageTileHits[tile]++
+      if (inputLuma > brightCoverageLumaThreshold) inputBrightCoverageTileHits[tile]++
     }
     if (resized[i + 3] > 0) {
       const key = rgbKey(resized, i)
@@ -795,7 +803,9 @@ export async function preservationStats(input, result, options = {}) {
       outputRgbTileCoverageCounts[tile]++
       outputRgbTileHistogramCounts[tile]++
       outputShadowCoverageTileCounts[tile]++
+      outputBrightCoverageTileCounts[tile]++
       if (outputLuma < shadowCoverageLumaThreshold) outputShadowCoverageTileHits[tile]++
+      if (outputLuma > brightCoverageLumaThreshold) outputBrightCoverageTileHits[tile]++
     }
     let pixelError = 0
     for (let ch = 0; ch < 3; ch++) {
@@ -883,6 +893,13 @@ export async function preservationStats(input, result, options = {}) {
     outputShadowCoverageTileHits,
     outputShadowCoverageTileCounts,
     tileShadowCoverageMinSampleCount,
+  )
+  const tileBrightCoverage = tileCoverageDriftStats(
+    inputBrightCoverageTileHits,
+    inputBrightCoverageTileCounts,
+    outputBrightCoverageTileHits,
+    outputBrightCoverageTileCounts,
+    tileBrightCoverageMinSampleCount,
   )
   const tileContrast = tileContrastStats(
     inputLumaTileSums,
@@ -1013,6 +1030,9 @@ export async function preservationStats(input, result, options = {}) {
     tileShadowCoverageDriftMax: tileShadowCoverage.tileCoverageDriftMax,
     tileShadowCoverageDriftP95: tileShadowCoverage.tileCoverageDriftP95,
     tileShadowCoverageTileCount: tileShadowCoverage.tileCoverageTileCount,
+    tileBrightCoverageDriftMax: tileBrightCoverage.tileCoverageDriftMax,
+    tileBrightCoverageDriftP95: tileBrightCoverage.tileCoverageDriftP95,
+    tileBrightCoverageTileCount: tileBrightCoverage.tileCoverageTileCount,
     alphaMae: alphaCount > 0 ? alphaSum / alphaCount : 0,
     alphaP95: percentile(alphaErrors, 0.95),
     alphaMax: alphaErrors.length > 0 ? alphaErrors[alphaErrors.length - 1] : 0,

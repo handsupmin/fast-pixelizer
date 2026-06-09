@@ -164,6 +164,18 @@ export function summarize(results) {
       (max, item) => Math.max(max, item.brightCoverageDrift ?? 0),
       0,
     ),
+    tileBrightCoverageDriftMax: results.reduce(
+      (max, item) => Math.max(max, item.tileBrightCoverageDriftMax ?? 0),
+      0,
+    ),
+    tileBrightCoverageDriftP95Max: results.reduce(
+      (max, item) => Math.max(max, item.tileBrightCoverageDriftP95 ?? 0),
+      0,
+    ),
+    tileBrightCoverageTileCountTotal: results.reduce(
+      (sum, item) => sum + (item.tileBrightCoverageTileCount ?? 0),
+      0,
+    ),
     sourceSaturatedPixelCountTotal: results.reduce(
       (sum, item) => sum + (item.sourceSaturatedPixelCount ?? 0),
       0,
@@ -556,6 +568,7 @@ function criteriaMarkdown() {
     `- Chroma: review when colorful inputs with mean chroma at least ${QUALITY_RULES.minChromaMeanForRatio} fall outside chroma ratio ${QUALITY_RULES.minChromaRatio}-${QUALITY_RULES.maxChromaRatio}.`,
     `- Spurious color growth: review when at least ${QUALITY_RULES.minColorfulSpuriousPixelCount} output colorful pixels exist and more than ${(QUALITY_RULES.maxColorfulSpuriousRatio * 100).toFixed(0)}% of them were not colorful in the source.`,
     `- Bright coverage: review when at least ${QUALITY_RULES.minBrightCoveragePixelCount} source or output pixels exceed luma ${QUALITY_RULES.brightCoverageLumaThreshold} and visible bright coverage drifts by more than ${(QUALITY_RULES.maxBrightCoverageDrift * 100).toFixed(0)} percentage points.`,
+    `- Regional bright coverage: review when eligible 8x8 canvas tile p95 changes coverage of pixels above luma ${QUALITY_RULES.brightCoverageLumaThreshold} by more than ${(QUALITY_RULES.maxTileBrightCoverageDriftP95 * 100).toFixed(0)} percentage points.`,
     `- Saturated color coverage: review when at least ${QUALITY_RULES.minSaturatedCoveragePixelCount} source or output pixels exceed chroma ${QUALITY_RULES.saturatedCoverageChromaThreshold} and visible saturated coverage drifts by more than ${(QUALITY_RULES.maxSaturatedCoverageDrift * 100).toFixed(0)} percentage points.`,
     `- Regional chroma: review when any eligible 8x8 canvas tile falls outside chroma ratio ${QUALITY_RULES.minTileChromaRatio}-${QUALITY_RULES.maxTileChromaRatio}.`,
     `- Hue: review when at least ${QUALITY_RULES.minHueSampleCount} colorful pixels have hue error mean > ${QUALITY_RULES.maxHueErrorMean} degrees or p95 > ${QUALITY_RULES.maxHueErrorP95} degrees.`,
@@ -769,6 +782,9 @@ export function toMarkdown(summary) {
     'inputBrightCoverage',
     'outputBrightCoverage',
     'brightCoverageDrift',
+    'tileBrightCoverageDriftMax',
+    'tileBrightCoverageDriftP95',
+    'tileBrightCoverageTileCount',
     'sourceSaturatedPixelCount',
     'outputSaturatedPixelCount',
     'inputSaturatedCoverage',
