@@ -50,6 +50,7 @@ function gridCellFeatures(grid) {
 
 function createTransitionStats() {
   return {
+    errors: [],
     outputCount: 0,
     outputWeight: 0,
     pairs: 0,
@@ -62,7 +63,9 @@ function createTransitionStats() {
 }
 
 function accumulateTransition(stats, sourceDelta, outputDelta, minTransitionDelta) {
-  stats.transitionErrorSum += Math.abs(sourceDelta - outputDelta)
+  const error = Math.abs(sourceDelta - outputDelta)
+  stats.errors.push(error)
+  stats.transitionErrorSum += error
   stats.pairs++
 
   if (sourceDelta >= minTransitionDelta) {
@@ -78,9 +81,16 @@ function accumulateTransition(stats, sourceDelta, outputDelta, minTransitionDelt
   }
 }
 
+function percentile(values, quantile) {
+  if (values.length === 0) return 0
+  const sorted = [...values].sort((a, b) => a - b)
+  return sorted[Math.min(sorted.length - 1, Math.floor(sorted.length * quantile))]
+}
+
 function finishTransitionStats(stats) {
   return {
     errorMean: stats.pairs > 0 ? stats.transitionErrorSum / stats.pairs : 0,
+    errorP95: percentile(stats.errors, 0.95),
     outputCount: stats.outputCount,
     retention: stats.sourceWeight > 0 ? stats.retainedWeight / stats.sourceWeight : 1,
     sourceCount: stats.sourceCount,
@@ -144,22 +154,30 @@ export function cellTransitionMetrics(input, grid, options = {}) {
       downRight.spuriousRatio,
       downLeft.spuriousRatio,
     ),
+    cellDiagonalTransitionDirectionErrorP95Max: Math.max(downRight.errorP95, downLeft.errorP95),
     cellDiagonalTransitionDownLeftRetention: downLeft.retention,
     cellDiagonalTransitionDownLeftSpuriousRatio: downLeft.spuriousRatio,
+    cellDiagonalTransitionDownLeftErrorP95: downLeft.errorP95,
     cellDiagonalTransitionDownRightRetention: downRight.retention,
     cellDiagonalTransitionDownRightSpuriousRatio: downRight.spuriousRatio,
+    cellDiagonalTransitionDownRightErrorP95: downRight.errorP95,
     cellDiagonalTransitionErrorMean: diagonal.errorMean,
+    cellDiagonalTransitionErrorP95: diagonal.errorP95,
     cellDiagonalTransitionRetention: diagonal.retention,
     cellDiagonalTransitionSpuriousRatio: diagonal.spuriousRatio,
+    cellTransitionAxisErrorP95Max: Math.max(x.errorP95, y.errorP95),
     cellTransitionAxisRetentionMin: Math.min(x.retention, y.retention),
     cellTransitionAxisSpuriousRatioMax: Math.max(x.spuriousRatio, y.spuriousRatio),
     cellTransitionErrorMean: all.errorMean,
+    cellTransitionErrorP95: all.errorP95,
     cellTransitionRetention: all.retention,
     cellTransitionSpuriousRatio: all.spuriousRatio,
     cellTransitionXErrorMean: x.errorMean,
+    cellTransitionXErrorP95: x.errorP95,
     cellTransitionXRetention: x.retention,
     cellTransitionXSpuriousRatio: x.spuriousRatio,
     cellTransitionYErrorMean: y.errorMean,
+    cellTransitionYErrorP95: y.errorP95,
     cellTransitionYRetention: y.retention,
     cellTransitionYSpuriousRatio: y.spuriousRatio,
     outputCellDiagonalTransitionCount: diagonal.outputCount,

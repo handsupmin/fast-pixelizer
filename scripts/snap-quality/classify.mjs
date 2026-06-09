@@ -774,6 +774,21 @@ export function classifyMetrics(metrics) {
     )
   }
   if (
+    (metrics.sourceCellTransitionCount ?? 0) >= QUALITY_RULES.minCellTransitionCount &&
+    ((metrics.cellTransitionErrorP95 ?? 0) > QUALITY_RULES.maxCellTransitionErrorP95 ||
+      (metrics.cellTransitionAxisErrorP95Max ?? 0) > QUALITY_RULES.maxCellTransitionErrorP95)
+  ) {
+    issues.push(
+      issue(
+        'review',
+        'cell-transition-color-outlier',
+        `cell transition color error p95 ${formatNum(
+          metrics.cellTransitionErrorP95,
+        )}, axis p95 max ${formatNum(metrics.cellTransitionAxisErrorP95Max)}`,
+      ),
+    )
+  }
+  if (
     (metrics.sourceCellDiagonalTransitionCount ?? 0) >=
       QUALITY_RULES.minCellDiagonalTransitionCount &&
     (metrics.cellDiagonalTransitionRetention ?? 1) <
@@ -856,6 +871,24 @@ export function classifyMetrics(metrics) {
         `diagonal cell transition color error ${formatNum(
           metrics.cellDiagonalTransitionErrorMean,
         )}`,
+      ),
+    )
+  }
+  if (
+    (metrics.sourceCellDiagonalTransitionCount ?? 0) >=
+      QUALITY_RULES.minCellDiagonalTransitionCount &&
+    ((metrics.cellDiagonalTransitionErrorP95 ?? 0) >
+      QUALITY_RULES.maxCellDiagonalTransitionErrorP95 ||
+      (metrics.cellDiagonalTransitionDirectionErrorP95Max ?? 0) >
+        QUALITY_RULES.maxCellDiagonalTransitionErrorP95)
+  ) {
+    issues.push(
+      issue(
+        'review',
+        'cell-diagonal-transition-color-outlier',
+        `diagonal cell transition color error p95 ${formatNum(
+          metrics.cellDiagonalTransitionErrorP95,
+        )}, direction p95 max ${formatNum(metrics.cellDiagonalTransitionDirectionErrorP95Max)}`,
       ),
     )
   }
@@ -1505,6 +1538,12 @@ export function objective(metrics) {
     Math.max(0, metrics.cellTransitionErrorMean - QUALITY_RULES.maxCellTransitionErrorMean) * 1 +
     Math.max(
       0,
+      Math.max(metrics.cellTransitionErrorP95 ?? 0, metrics.cellTransitionAxisErrorP95Max ?? 0) -
+        QUALITY_RULES.maxCellTransitionErrorP95,
+    ) *
+      0.3 +
+    Math.max(
+      0,
       QUALITY_RULES.minCellDiagonalTransitionRetention -
         (metrics.cellDiagonalTransitionRetention ?? 1),
     ) *
@@ -1533,6 +1572,14 @@ export function objective(metrics) {
         QUALITY_RULES.maxCellDiagonalTransitionErrorMean,
     ) *
       1 +
+    Math.max(
+      0,
+      Math.max(
+        metrics.cellDiagonalTransitionErrorP95 ?? 0,
+        metrics.cellDiagonalTransitionDirectionErrorP95Max ?? 0,
+      ) - QUALITY_RULES.maxCellDiagonalTransitionErrorP95,
+    ) *
+      0.3 +
     Math.max(0, QUALITY_RULES.minSourceCellSize - metrics.sourceCellSize) * 500 +
     Math.max(0, metrics.shortAxisCells - QUALITY_RULES.maxShortAxisCells) * 10 +
     Math.max(0, metrics.sourceCellSize - QUALITY_RULES.maxSourceCellSizeReview) * 2 +

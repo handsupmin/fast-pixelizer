@@ -1062,9 +1062,12 @@ test('cell transitions distinguish retained, removed, and spurious boundaries', 
   assert.equal(retained.cellTransitionRetention, 1)
   assert.equal(retained.cellTransitionSpuriousRatio, 0)
   assert.equal(retained.cellTransitionErrorMean, 0)
+  assert.equal(retained.cellTransitionErrorP95, 0)
   assert.equal(retained.cellTransitionAxisRetentionMin, 1)
   assert.equal(retained.cellTransitionAxisSpuriousRatioMax, 0)
+  assert.equal(retained.cellTransitionAxisErrorP95Max, 0)
   assert.ok(removed.cellTransitionRetention < 0.01)
+  assert.ok(removed.cellTransitionErrorP95 > 0)
   assert.equal(removed.outputCellTransitionCount, 0)
   assert.equal(spurious.sourceCellTransitionCount, 0)
   assert.equal(spurious.cellTransitionSpuriousRatio, 1)
@@ -1085,8 +1088,11 @@ test('cell diagonal transitions distinguish retained, removed, and spurious diag
   assert.equal(retained.outputCellDiagonalTransitionCount, 50)
   assert.equal(retained.cellDiagonalTransitionRetention, 1)
   assert.equal(retained.cellDiagonalTransitionSpuriousRatio, 0)
+  assert.equal(retained.cellDiagonalTransitionErrorP95, 0)
   assert.equal(retained.cellDiagonalTransitionDirectionRetentionMin, 1)
+  assert.equal(retained.cellDiagonalTransitionDirectionErrorP95Max, 0)
   assert.ok(removed.cellDiagonalTransitionRetention < 0.01)
+  assert.ok(removed.cellDiagonalTransitionErrorP95 > 0)
   assert.equal(removed.outputCellDiagonalTransitionCount, 0)
   assert.equal(spurious.sourceCellDiagonalTransitionCount, 0)
   assert.equal(spurious.cellDiagonalTransitionSpuriousRatio, 1)
@@ -2221,6 +2227,25 @@ test('quality classification reviews lost cell transitions', () => {
   assert.ok(result.issues.some((issue) => issue.code === 'cell-transition-loss'))
 })
 
+test('quality classification reviews orthogonal cell transition color outliers hidden by mean', () => {
+  const review = classifyMetrics({
+    cellTransitionAxisErrorP95Max: 0,
+    cellTransitionErrorMean: 0,
+    cellTransitionErrorP95: 37,
+    sourceCellTransitionCount: 64,
+  })
+  const pass = classifyMetrics({
+    cellTransitionAxisErrorP95Max: 0,
+    cellTransitionErrorMean: 0,
+    cellTransitionErrorP95: 35,
+    sourceCellTransitionCount: 64,
+  })
+
+  assert.equal(review.status, 'review')
+  assert.ok(review.issues.some((issue) => issue.code === 'cell-transition-color-outlier'))
+  assert.equal(pass.status, 'pass')
+})
+
 test('quality classification reviews spurious cell transitions', () => {
   const result = classifyMetrics({
     alphaMae: 0,
@@ -2428,6 +2453,25 @@ test('quality classification reviews lost diagonal cell transitions', () => {
 
   assert.equal(result.status, 'review')
   assert.ok(result.issues.some((issue) => issue.code === 'cell-diagonal-transition-loss'))
+})
+
+test('quality classification reviews diagonal cell transition color outliers hidden by mean', () => {
+  const review = classifyMetrics({
+    cellDiagonalTransitionDirectionErrorP95Max: 0,
+    cellDiagonalTransitionErrorMean: 0,
+    cellDiagonalTransitionErrorP95: 37,
+    sourceCellDiagonalTransitionCount: 64,
+  })
+  const pass = classifyMetrics({
+    cellDiagonalTransitionDirectionErrorP95Max: 0,
+    cellDiagonalTransitionErrorMean: 0,
+    cellDiagonalTransitionErrorP95: 35,
+    sourceCellDiagonalTransitionCount: 64,
+  })
+
+  assert.equal(review.status, 'review')
+  assert.ok(review.issues.some((issue) => issue.code === 'cell-diagonal-transition-color-outlier'))
+  assert.equal(pass.status, 'pass')
 })
 
 test('quality classification reviews spurious diagonal cell transitions', () => {
