@@ -71,12 +71,17 @@ function tileIndex(x, y, width, height) {
 function regionalEdgeStats(sourceTiles, outputTiles, matchedTiles, outputOnlyTiles) {
   let sourceTileCount = 0
   let outputTileCount = 0
+  let jaccardMin = 1
   let recallMin = 1
   let spuriousMax = 0
 
   for (let tile = 0; tile < sourceTiles.length; tile++) {
     if (sourceTiles[tile] >= EDGE_TILE_MIN_EDGES) {
       sourceTileCount++
+      jaccardMin = Math.min(
+        jaccardMin,
+        matchedTiles[tile] / (sourceTiles[tile] + outputOnlyTiles[tile]),
+      )
       recallMin = Math.min(recallMin, matchedTiles[tile] / sourceTiles[tile])
     }
     if (outputTiles[tile] >= EDGE_TILE_MIN_EDGES) {
@@ -86,6 +91,7 @@ function regionalEdgeStats(sourceTiles, outputTiles, matchedTiles, outputOnlyTil
   }
 
   return {
+    edgeTileJaccardMin: sourceTileCount > 0 ? jaccardMin : 1,
     edgeTileRecallMin: sourceTileCount > 0 ? recallMin : 1,
     edgeTileSpuriousMax: outputTileCount > 0 ? spuriousMax : 0,
     outputEdgeTileCount: outputTileCount,
@@ -99,10 +105,11 @@ export function edgeOverlapStats(input, resized) {
     return {
       edgeDirectionDrift: 0,
       edgeJaccard: 1,
+      edgeTileJaccardMin: 1,
       edgeRecall: 1,
       edgeSpuriousRatio: 0,
-      edgeTileRecallMin: 1,
       edgeTileSpuriousMax: 0,
+      edgeTileRecallMin: 1,
       outputEdgeDirectionCount: 0,
       outputEdgeTileCount: 0,
       sourceEdgeDirectionCount: 0,
@@ -182,6 +189,7 @@ export function edgeOverlapStats(input, resized) {
     edgeSpuriousRatio: outputEdgesTotal > 0 ? outputOnlyEdges / outputEdgesTotal : 0,
     edgeJaccard:
       sourceEdges + outputOnlyEdges > 0 ? matchedEdges / (sourceEdges + outputOnlyEdges) : 1,
+    edgeTileJaccardMin: regional.edgeTileJaccardMin,
     edgeTileRecallMin: regional.edgeTileRecallMin,
     edgeTileSpuriousMax: regional.edgeTileSpuriousMax,
     outputEdgeDirectionCount: outputEdgesTotal,

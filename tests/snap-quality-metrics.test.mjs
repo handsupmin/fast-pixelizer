@@ -298,9 +298,14 @@ test('edge overlap tracks localized tile edge loss and growth', () => {
   const growth = edgeOverlapStats(solid, localGrowth.data)
 
   assert.equal(preserved.edgeTileRecallMin, 1)
+  assert.equal(preserved.edgeTileJaccardMin, 1)
   assert.ok(
     loss.edgeTileRecallMin < 0.5,
     `expected regional edge loss, got ${loss.edgeTileRecallMin}`,
+  )
+  assert.ok(
+    loss.edgeTileJaccardMin < 0.5,
+    `expected regional edge overlap loss, got ${loss.edgeTileJaccardMin}`,
   )
   assert.ok(
     growth.edgeTileSpuriousMax > 0.9,
@@ -1727,6 +1732,31 @@ test('quality classification reviews regional edge recall below the tuned bounda
 
   assert.equal(review.status, 'review')
   assert.ok(review.issues.some((issue) => issue.code === 'regional-edge-loss'))
+  assert.equal(pass.status, 'pass')
+})
+
+test('quality classification reviews regional edge overlap below the tuned boundary', () => {
+  const review = classifyMetrics({
+    edgeJaccard: 1,
+    edgeRecall: 1,
+    edgeSpuriousRatio: 0,
+    edgeTileJaccardMin: 0.349,
+    edgeTileRecallMin: 1,
+    edgeTileSpuriousMax: 0,
+    sourceEdgeTileCount: 1,
+  })
+  const pass = classifyMetrics({
+    edgeJaccard: 1,
+    edgeRecall: 1,
+    edgeSpuriousRatio: 0,
+    edgeTileJaccardMin: 0.351,
+    edgeTileRecallMin: 1,
+    edgeTileSpuriousMax: 0,
+    sourceEdgeTileCount: 1,
+  })
+
+  assert.equal(review.status, 'review')
+  assert.ok(review.issues.some((issue) => issue.code === 'regional-edge-map-drift'))
   assert.equal(pass.status, 'pass')
 })
 

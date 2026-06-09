@@ -1277,6 +1277,18 @@ export function classifyMetrics(metrics) {
   }
   if (
     (metrics.sourceEdgeTileCount ?? 0) >= QUALITY_RULES.minEdgeTileCount &&
+    (metrics.edgeTileJaccardMin ?? 1) < QUALITY_RULES.minEdgeTileJaccard
+  ) {
+    issues.push(
+      issue(
+        'review',
+        'regional-edge-map-drift',
+        `min tile edge overlap ${formatNum(metrics.edgeTileJaccardMin)}`,
+      ),
+    )
+  }
+  if (
+    (metrics.sourceEdgeTileCount ?? 0) >= QUALITY_RULES.minEdgeTileCount &&
     (metrics.edgeTileRecallMin ?? 1) < QUALITY_RULES.minEdgeTileRecall
   ) {
     issues.push(
@@ -1672,6 +1684,7 @@ export function objective(metrics) {
     Math.max(0, QUALITY_RULES.minEdgeRecall - metrics.edgeRecall) * 60 +
     Math.max(0, metrics.edgeSpuriousRatio - QUALITY_RULES.maxEdgeSpuriousRatio) * 40 +
     Math.max(0, QUALITY_RULES.minEdgeJaccard - metrics.edgeJaccard) * 40 +
+    Math.max(0, QUALITY_RULES.minEdgeTileJaccard - (metrics.edgeTileJaccardMin ?? 1)) * 25 +
     Math.max(0, QUALITY_RULES.minEdgeTileRecall - (metrics.edgeTileRecallMin ?? 1)) * 30 +
     Math.max(0, (metrics.edgeTileSpuriousMax ?? 0) - QUALITY_RULES.maxEdgeTileSpuriousRatio) * 20
   )
