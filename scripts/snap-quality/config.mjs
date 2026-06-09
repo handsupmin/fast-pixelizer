@@ -92,6 +92,7 @@ export const QUALITY_RULES = {
   maxBorderPreservationMae: 30,
   maxTilePreservationMae: 40,
   maxTilePreservationP95: 28,
+  maxMeanRgbDrift: 3,
   maxTileLumaMeanDelta: 12,
   maxTileLumaMeanDeltaP95: 8,
   minTileLumaMeanDeltaTileCount: 1,

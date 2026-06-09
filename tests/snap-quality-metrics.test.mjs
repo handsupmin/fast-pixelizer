@@ -369,6 +369,23 @@ test('border preservation catches edge-only drift below global preservation thre
   assert.equal(stats.borderMae, 255)
 })
 
+test('mean RGB drift catches global color bias below preservation thresholds', async () => {
+  const source = makeRgbSolid(64, 64, 80, 80, 80)
+  const output = makeRgbSolid(64, 64, 86, 80, 74)
+  const stats = await preservationStats(source, output)
+
+  assert.equal(stats.meanRgbSampleCount, 4096)
+  assert.equal(stats.meanRgbRDrift, 6)
+  assert.equal(stats.meanRgbGDrift, 0)
+  assert.equal(stats.meanRgbBDrift, 6)
+  assert.equal(stats.meanRgbChannelDrift, 4)
+  assert.ok(stats.mae < QUALITY_RULES.maxPreservationMae)
+  assert.ok(
+    stats.meanRgbDrift > QUALITY_RULES.maxMeanRgbDrift,
+    `expected mean RGB drift above threshold, got ${stats.meanRgbDrift}`,
+  )
+})
+
 test('tile luma mean delta catches localized brightness drift hidden by preservation stats', async () => {
   const source = makeSolid(64, 64, 32)
   const output = setRgbRect(copyImage(source), 0, 0, 8, 8, 48)
@@ -3423,6 +3440,19 @@ test('quality classification reviews regional preservation p95 above the tuned b
 
   assert.equal(review.status, 'review')
   assert.ok(review.issues.some((issue) => issue.code === 'regional-preservation-loss'))
+  assert.equal(pass.status, 'pass')
+})
+
+test('quality classification reviews mean RGB drift', () => {
+  const review = classifyMetrics({
+    meanRgbDrift: QUALITY_RULES.maxMeanRgbDrift + 0.1,
+  })
+  const pass = classifyMetrics({
+    meanRgbDrift: QUALITY_RULES.maxMeanRgbDrift - 0.1,
+  })
+
+  assert.equal(review.status, 'review')
+  assert.ok(review.issues.some((issue) => issue.code === 'mean-rgb-drift'))
   assert.equal(pass.status, 'pass')
 })
 

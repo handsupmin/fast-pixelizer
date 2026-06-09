@@ -773,6 +773,13 @@ export async function preservationStats(input, result, options = {}) {
   let borderCount = 0
   let inputRgbCoverageCount = 0
   let outputRgbCoverageCount = 0
+  let meanRgbSampleCount = 0
+  let inputMeanRgbR = 0
+  let inputMeanRgbG = 0
+  let inputMeanRgbB = 0
+  let outputMeanRgbR = 0
+  let outputMeanRgbG = 0
+  let outputMeanRgbB = 0
   let sourceColorfulPixelCount = 0
   let outputColorfulPixelCount = 0
   let retainedColorfulPixelCount = 0
@@ -853,6 +860,15 @@ export async function preservationStats(input, result, options = {}) {
     if (isBorderPixel(x, y, input.width, input.height, borderBandPx)) {
       borderSum += pixelError / 3
       borderCount++
+    }
+    if (input.data[i + 3] > 0 || resized[i + 3] > 0) {
+      meanRgbSampleCount++
+      inputMeanRgbR += input.data[i]
+      inputMeanRgbG += input.data[i + 1]
+      inputMeanRgbB += input.data[i + 2]
+      outputMeanRgbR += resized[i]
+      outputMeanRgbG += resized[i + 1]
+      outputMeanRgbB += resized[i + 2]
     }
     const alphaError = Math.abs(input.data[i + 3] - resized[i + 3])
     const inputColorful = input.data[i + 3] > 0 && inputChromaValue >= hueMinChroma
@@ -1073,6 +1089,18 @@ export async function preservationStats(input, result, options = {}) {
         outputAlphaSmallComponentCount: 0,
         sourceAlphaEdgeTileCount: 0,
       }
+  const meanRgbRDrift =
+    meanRgbSampleCount > 0
+      ? Math.abs(inputMeanRgbR / meanRgbSampleCount - outputMeanRgbR / meanRgbSampleCount)
+      : 0
+  const meanRgbGDrift =
+    meanRgbSampleCount > 0
+      ? Math.abs(inputMeanRgbG / meanRgbSampleCount - outputMeanRgbG / meanRgbSampleCount)
+      : 0
+  const meanRgbBDrift =
+    meanRgbSampleCount > 0
+      ? Math.abs(inputMeanRgbB / meanRgbSampleCount - outputMeanRgbB / meanRgbSampleCount)
+      : 0
 
   return {
     mae: count > 0 ? sum / count : 0,
@@ -1080,6 +1108,12 @@ export async function preservationStats(input, result, options = {}) {
     borderMae: borderCount > 0 ? borderSum / borderCount : 0,
     tileMaxMae: tileValues.length > 0 ? tileValues[tileValues.length - 1] : 0,
     tileP95Mae: percentile(tileValues, 0.95),
+    meanRgbSampleCount,
+    meanRgbRDrift,
+    meanRgbGDrift,
+    meanRgbBDrift,
+    meanRgbChannelDrift: (meanRgbRDrift + meanRgbGDrift + meanRgbBDrift) / 3,
+    meanRgbDrift: Math.hypot(meanRgbRDrift, meanRgbGDrift, meanRgbBDrift),
     tileLumaMeanDeltaMax: tileLumaMeanDelta.tileLumaMeanDeltaMax,
     tileLumaMeanDeltaP95: tileLumaMeanDelta.tileLumaMeanDeltaP95,
     tileLumaMeanDeltaTileCount: tileLumaMeanDelta.tileLumaMeanDeltaTileCount,

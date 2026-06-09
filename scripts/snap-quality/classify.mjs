@@ -1228,6 +1228,11 @@ export function classifyMetrics(metrics) {
       ),
     )
   }
+  if ((metrics.meanRgbDrift ?? 0) > QUALITY_RULES.maxMeanRgbDrift) {
+    issues.push(
+      issue('review', 'mean-rgb-drift', `mean RGB drift ${formatNum(metrics.meanRgbDrift)}`),
+    )
+  }
   if (
     (metrics.tileLumaMeanDeltaTileCount ?? 0) >= QUALITY_RULES.minTileLumaMeanDeltaTileCount &&
     (metrics.tileLumaMeanDeltaMax ?? 0) > QUALITY_RULES.maxTileLumaMeanDelta
@@ -2031,6 +2036,7 @@ export function objective(metrics) {
       0.5 +
     Math.max(0, metrics.tilePreservationMaxMae - QUALITY_RULES.maxTilePreservationMae) * 0.5 +
     Math.max(0, metrics.tilePreservationP95Mae - QUALITY_RULES.maxTilePreservationP95) * 0.75 +
+    Math.max(0, (metrics.meanRgbDrift ?? 0) - QUALITY_RULES.maxMeanRgbDrift) * 3 +
     Math.max(0, (metrics.tileLumaMeanDeltaMax ?? 0) - QUALITY_RULES.maxTileLumaMeanDelta) * 0.5 +
     Math.max(0, (metrics.tileLumaMeanDeltaP95 ?? 0) - QUALITY_RULES.maxTileLumaMeanDeltaP95) *
       0.35 +
