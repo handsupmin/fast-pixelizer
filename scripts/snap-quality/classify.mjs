@@ -162,6 +162,18 @@ export function classifyMetrics(metrics) {
       ),
     )
   }
+  if (
+    metrics.paletteUtilizationTarget >= QUALITY_RULES.minPaletteUtilizationTarget &&
+    (metrics.paletteUtilizationGap ?? 0) > QUALITY_RULES.maxPaletteUtilizationGap
+  ) {
+    issues.push(
+      issue(
+        'review',
+        'palette-utilization-gap',
+        `palette gap ${metrics.paletteUtilizationGap}/${metrics.paletteUtilizationTarget}`,
+      ),
+    )
+  }
   if (metrics.lowPaletteRetention < QUALITY_RULES.minLowPaletteRetention) {
     issues.push(
       issue(
@@ -1529,6 +1541,8 @@ export function objective(metrics) {
       80 +
     Math.max(0, QUALITY_RULES.minOutputPaletteUtilization - metrics.outputPaletteUtilization) *
       Math.max(0, metrics.paletteUtilizationTarget - QUALITY_RULES.minPaletteUtilizationTarget) *
+      0.5 +
+    Math.max(0, (metrics.paletteUtilizationGap ?? 0) - QUALITY_RULES.maxPaletteUtilizationGap) *
       0.5 +
     Math.max(0, QUALITY_RULES.minLowPaletteRetention - metrics.lowPaletteRetention) * 50 +
     Math.max(

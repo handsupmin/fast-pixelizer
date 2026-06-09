@@ -2212,6 +2212,26 @@ test('quality classification reviews underused palette on rich inputs', () => {
   assert.ok(result.issues.some((issue) => issue.code === 'palette-underused'))
 })
 
+test('quality classification reviews large palette gaps hidden by utilization ratio', () => {
+  const review = classifyMetrics({
+    outputPaletteColorCount: 48,
+    outputPaletteUtilization: 0.75,
+    paletteUtilizationGap: 16,
+    paletteUtilizationTarget: 64,
+  })
+  const pass = classifyMetrics({
+    outputPaletteColorCount: 56,
+    outputPaletteUtilization: 0.875,
+    paletteUtilizationGap: 8,
+    paletteUtilizationTarget: 64,
+  })
+
+  assert.equal(review.status, 'review')
+  assert.ok(review.issues.some((issue) => issue.code === 'palette-utilization-gap'))
+  assert.ok(!review.issues.some((issue) => issue.code === 'palette-underused'))
+  assert.equal(pass.status, 'pass')
+})
+
 test('quality classification reviews lost cell transitions', () => {
   const result = classifyMetrics({
     alphaMae: 0,

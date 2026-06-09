@@ -132,6 +132,7 @@ export const QUALITY_RULES = {
   maxPaletteDominanceDelta: 0.2,
   minPaletteUtilizationTarget: 16,
   minOutputPaletteUtilization: 0.5,
+  maxPaletteUtilizationGap: 8,
   minLowPaletteRetention: 0.95,
   maxLowPaletteGrowth: 1,
   maxLowPaletteCoverageDrift: 0.03,

@@ -274,7 +274,7 @@ function criteriaMarkdown() {
     `- Output purity: fail when snapped output RGB cells are not single-color, alpha cells are not single-alpha, or cells are not square.`,
     `- Palette budget: fail when snapped RGB colors exceed colorVariety plus transparency allowance by more than ${QUALITY_RULES.maxOutputRgbPaletteOverage}.`,
     `- Palette dominance: review when one output color covers more than ${(QUALITY_RULES.maxOutputColorDominance * 100).toFixed(0)}% of visible cells and exceeds source bucket dominance by more than ${(QUALITY_RULES.maxPaletteDominanceDelta * 100).toFixed(0)} points.`,
-    `- Palette utilization: review when a source with at least ${QUALITY_RULES.minPaletteUtilizationTarget} bucketed colors uses less than ${(QUALITY_RULES.minOutputPaletteUtilization * 100).toFixed(0)}% of the available snapped palette.`,
+    `- Palette utilization: review when a source with at least ${QUALITY_RULES.minPaletteUtilizationTarget} bucketed colors uses less than ${(QUALITY_RULES.minOutputPaletteUtilization * 100).toFixed(0)}% of the available snapped palette or leaves more than ${QUALITY_RULES.maxPaletteUtilizationGap} target colors unused.`,
     `- Low-palette retention: review when limited-palette inputs keep less than ${(QUALITY_RULES.minLowPaletteRetention * 100).toFixed(0)}% of their RGB colors.`,
     `- Low-palette growth: review when limited-palette inputs produce more than ${QUALITY_RULES.maxLowPaletteGrowth}x as many visible RGB colors.`,
     `- Low-palette coverage: review when limited-palette inputs move visible RGB coverage by more than ${(QUALITY_RULES.maxLowPaletteCoverageDrift * 100).toFixed(0)}% or retain less than ${(QUALITY_RULES.minLowPaletteCoverageRetention * 100).toFixed(0)}% of source RGB coverage.`,
