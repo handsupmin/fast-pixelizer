@@ -150,6 +150,16 @@ function detectImage(input) {
   }
 }
 
+function uniqueRgbColorCount(image) {
+  const colors = new Set()
+  for (let i = 0; i < image.width * image.height; i++) {
+    const idx = i * 4
+    if (image.data[idx + 3] === 0) continue
+    colors.add((image.data[idx] << 16) | (image.data[idx + 1] << 8) | image.data[idx + 2])
+  }
+  return colors.size
+}
+
 async function repeatGap(file) {
   const input = await loadImage(file)
   const resized = snap(input, { colorVariety: 64, output: 'resized' })
@@ -213,6 +223,26 @@ test(
     }
   },
 )
+
+test(
+  'model-generated pseudo pixel art can use an adaptive detail palette',
+  { skip: !fs.existsSync(MODEL_EXAMPLE_DIR) },
+  async () => {
+    const input = await loadImage(path.join(MODEL_EXAMPLE_DIR, 'seedream-4.5.png'))
+    const result = snap(input, { colorVariety: 64, output: 'resized' })
+    const colorCount = uniqueRgbColorCount(result)
+
+    assert.ok(colorCount > 64, `expected adaptive detail palette, got ${colorCount} colors`)
+    assert.ok(colorCount <= 256, `expected detail palette to stay capped, got ${colorCount} colors`)
+  },
+)
+
+test('hand-authored snap examples keep the requested palette budget', async () => {
+  const input = await loadImage('examples/example-snap-before.png')
+  const result = snap(input, { colorVariety: 64, output: 'resized' })
+
+  assert.ok(uniqueRgbColorCount(result) <= 64)
+})
 
 test('hand-authored snap examples still recover their source grid', async () => {
   const after = await detect('examples/example-snap-after.png', { colorVariety: 64 })

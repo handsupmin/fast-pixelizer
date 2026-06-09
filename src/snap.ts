@@ -1,5 +1,5 @@
 import type { ImageLike } from './index'
-import { resampleCells } from './snap-cells'
+import { resampleCells, resampleMeanCells } from './snap-cells'
 import {
   FALLBACK_SEGMENTS,
   MIN_CELLS,
@@ -16,6 +16,11 @@ import {
 import { kmeansQuantize } from './snap-quantize'
 import { detectExactTransitionGrid } from './snap-transitions'
 import { detectUniformCellGrid } from './snap-uniform'
+
+const DETAIL_PRESERVATION_LONG_AXIS = 300
+const DETAIL_PRESERVATION_MAX_SOURCE_CELL_SIZE = 5
+const DETAIL_PRESERVATION_COLOR_FLOOR = 256
+const DETAIL_PRESERVATION_MAX_ITER = 12
 
 export interface SnapOptions {
   /**
@@ -120,6 +125,22 @@ function shouldPreferUniformGrid(
   return uniformGrid.confidence >= 0.95 && uniformShortAxis >= transitionShortAxis * 2
 }
 
+function shouldPreserveGeneratedDetail(
+  hasStrongGrid: boolean,
+  width: number,
+  height: number,
+  cols: number,
+  rows: number,
+) {
+  if (hasStrongGrid) return false
+  const longAxisCells = Math.max(cols, rows)
+  const sourceCellSize = Math.min(width / cols, height / rows)
+  return (
+    longAxisCells >= DETAIL_PRESERVATION_LONG_AXIS &&
+    sourceCellSize <= DETAIL_PRESERVATION_MAX_SOURCE_CELL_SIZE
+  )
+}
+
 /**
  * Detects the pixel grid in an existing pixel-art image and re-snaps it
  * to a clean, uniform grid. Fixes anti-aliasing artifacts, sub-pixel
@@ -198,7 +219,21 @@ export function snap(input: ImageLike, options?: SnapOptions): SnapResult {
   const rowCuts = buildUniformCuts(height, numRows)
 
   const detectedResolution = Math.round((numCols + numRows) / 2)
-  const cells = resampleCells(quantData, width, colCuts, rowCuts)
+  const preserveGeneratedDetail = shouldPreserveGeneratedDetail(
+    hasStrongGrid,
+    width,
+    height,
+    numCols,
+    numRows,
+  )
+  const cells = preserveGeneratedDetail
+    ? kmeansQuantize(
+        resampleMeanCells(data, width, colCuts, rowCuts),
+        numCols * numRows,
+        Math.max(colorVariety, DETAIL_PRESERVATION_COLOR_FLOOR),
+        DETAIL_PRESERVATION_MAX_ITER,
+      )
+    : resampleCells(quantData, width, colCuts, rowCuts)
   const cellSize = Math.max(1, Math.floor(Math.min(width / numCols, height / numRows)))
   const uniformColCuts = buildUniformCuts(cellSize * numCols, numCols)
   const uniformRowCuts = buildUniformCuts(cellSize * numRows, numRows)
