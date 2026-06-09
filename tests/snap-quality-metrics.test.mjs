@@ -2531,6 +2531,21 @@ test('quality classification reviews regional preservation loss', () => {
   assert.ok(!result.issues.some((issue) => issue.code === 'localized-preservation-loss'))
 })
 
+test('quality classification reviews regional preservation p95 above the tuned boundary', () => {
+  const review = classifyMetrics({
+    tilePreservationMaxMae: 0,
+    tilePreservationP95Mae: 29,
+  })
+  const pass = classifyMetrics({
+    tilePreservationMaxMae: 0,
+    tilePreservationP95Mae: 27,
+  })
+
+  assert.equal(review.status, 'review')
+  assert.ok(review.issues.some((issue) => issue.code === 'regional-preservation-loss'))
+  assert.equal(pass.status, 'pass')
+})
+
 test('quality classification reviews chroma drift on colorful inputs', () => {
   const result = classifyMetrics({
     alphaMae: 0,
