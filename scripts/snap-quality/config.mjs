@@ -132,6 +132,7 @@ export const QUALITY_RULES = {
   maxLowPaletteTileCoverageDrift: 0.95,
   minLowPaletteTileCoverageRetention: 0.05,
   minOutputCoverage: 0.9,
+  minOutputAreaCoverage: 0.85,
   maxOutputExpansion: 1.05,
   minContrastRatio: 0.45,
   maxContrastRatio: 1.8,

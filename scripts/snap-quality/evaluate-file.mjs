@@ -49,6 +49,10 @@ function outputCoverage(input, result) {
   return Math.min(result.width / input.width, result.height / input.height)
 }
 
+function outputAreaCoverage(input, result) {
+  return (result.width * result.height) / (input.width * input.height)
+}
+
 function outputExpansion(input, result) {
   return Math.max(result.width / input.width, result.height / input.height)
 }
@@ -70,6 +74,7 @@ function toItem({ dataset, expected, input, metrics, name, original, resized, un
     input: `${input.width}x${input.height}`,
     output: `${original.result.width}x${original.result.height}`,
     outputCoverage: formatNum(metrics.outputCoverage),
+    outputAreaCoverage: formatNum(metrics.outputAreaCoverage),
     outputExpansion: formatNum(metrics.outputExpansion),
     grid: `${metrics.cols}x${metrics.rows}`,
     expectedGrid: expected ? `${expected.cols}x${expected.rows}` : '',
@@ -602,6 +607,7 @@ async function buildMetrics(input, expected, snapshots, colorVariety) {
       squareCellError: Math.abs(original.result.width / cols / (original.result.height / rows) - 1),
       outputCellIntegerError: outputCellIntegerError(original.result, cols, rows),
       outputCoverage: outputCoverage(input, original.result),
+      outputAreaCoverage: outputAreaCoverage(input, original.result),
       outputExpansion: outputExpansion(input, original.result),
       outputRgbPaletteOverage: Math.max(0, outputRgbColorCount - (colorVariety + 1)),
       inputColorDominance: paletteDominance.inputColorDominance,

@@ -1811,6 +1811,18 @@ test('quality classification reviews original-size output expansion', () => {
   assert.ok(!result.issues.some((issue) => issue.code === 'output-shrink'))
 })
 
+test('quality classification reviews original-size output area shrink', () => {
+  const result = classifyMetrics({
+    outputAreaCoverage: 0.84,
+    outputCoverage: 0.92,
+    outputExpansion: 1,
+  })
+
+  assert.equal(result.status, 'review')
+  assert.ok(result.issues.some((issue) => issue.code === 'output-area-shrink'))
+  assert.ok(!result.issues.some((issue) => issue.code === 'output-shrink'))
+})
+
 test('quality classification reviews non-integer original-size output cells', () => {
   const result = classifyMetrics({
     outputCellIntegerError: 0.25,
