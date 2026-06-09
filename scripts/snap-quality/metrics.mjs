@@ -455,6 +455,9 @@ export async function preservationStats(input, result, options = {}) {
         alphaEdgeJaccard: 1,
         alphaEdgeRecall: 1,
         alphaEdgeSpuriousRatio: 0,
+        alphaEdgeTileJaccardMin: 1,
+        alphaEdgeTileRecallMin: 1,
+        alphaEdgeTileSpuriousMax: 0,
         alphaMaskIou: 1,
         alphaBBoxDriftPx: 0,
         alphaBBoxDriftRatio: 0,
@@ -467,9 +470,11 @@ export async function preservationStats(input, result, options = {}) {
         alphaSmallComponentCountDrift: 0,
         outputAlphaComponentCount: 0,
         outputAlphaEdgeCount: 0,
+        outputAlphaEdgeTileCount: 0,
         outputAlphaHoleCount: 0,
         outputAlphaSemitransparentPixelCount: 0,
         outputAlphaSmallComponentCount: 0,
+        sourceAlphaEdgeTileCount: 0,
       }
 
   return {
@@ -510,6 +515,11 @@ export async function preservationStats(input, result, options = {}) {
     alphaEdgeRecall: alphaMask.alphaEdgeRecall,
     alphaEdgeSpuriousRatio: alphaMask.alphaEdgeSpuriousRatio,
     alphaEdgeJaccard: alphaMask.alphaEdgeJaccard,
+    alphaEdgeTileJaccardMin: alphaMask.alphaEdgeTileJaccardMin,
+    alphaEdgeTileRecallMin: alphaMask.alphaEdgeTileRecallMin,
+    alphaEdgeTileSpuriousMax: alphaMask.alphaEdgeTileSpuriousMax,
+    outputAlphaEdgeTileCount: alphaMask.outputAlphaEdgeTileCount,
+    sourceAlphaEdgeTileCount: alphaMask.sourceAlphaEdgeTileCount,
     inputChromaMean: inputChroma.mean,
     outputChromaMean: outputChroma.mean,
     chromaRatio: inputChroma.mean > 0 ? outputChroma.mean / inputChroma.mean : 1,

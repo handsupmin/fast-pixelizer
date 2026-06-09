@@ -435,6 +435,36 @@ test('alpha edge stats detect lost transparent cutouts with high mask IoU', () =
   )
 })
 
+test('alpha edge stats track localized tile edge loss and growth', () => {
+  const source = makeTransparentBox(64, 64, 8, 8, 56, 56)
+  const localLoss = clearAlphaRect(copyImage(source), 8, 8, 16, 16)
+  const transparent = {
+    data: new Uint8ClampedArray(64 * 64 * 4),
+    height: 64,
+    width: 64,
+  }
+  const localGrowth = makeTransparentBox(64, 64, 4, 4, 14, 14)
+
+  const preserved = alphaMaskStats(source, source.data)
+  const loss = alphaMaskStats(source, localLoss.data)
+  const growth = alphaMaskStats(transparent, localGrowth.data)
+
+  assert.equal(preserved.alphaEdgeTileRecallMin, 1)
+  assert.equal(preserved.alphaEdgeTileJaccardMin, 1)
+  assert.ok(
+    loss.alphaEdgeTileRecallMin < 0.7,
+    `expected regional alpha edge loss, got ${loss.alphaEdgeTileRecallMin}`,
+  )
+  assert.ok(
+    loss.alphaEdgeTileJaccardMin < 0.7,
+    `expected regional alpha edge overlap loss, got ${loss.alphaEdgeTileJaccardMin}`,
+  )
+  assert.ok(
+    growth.alphaEdgeTileSpuriousMax > 0.9,
+    `expected regional spurious alpha edge growth, got ${growth.alphaEdgeTileSpuriousMax}`,
+  )
+})
+
 test('alpha component stats detect lost detached details with high mask IoU', () => {
   const source = makeTransparentBox(64, 64, 16, 16, 48, 48)
   const detached = makeTransparentBox(64, 64, 4, 4, 6, 6)
@@ -1864,6 +1894,69 @@ test('quality classification reviews spurious alpha edge growth', () => {
 
   assert.equal(result.status, 'review')
   assert.ok(result.issues.some((issue) => issue.code === 'spurious-alpha-edge-growth'))
+})
+
+test('quality classification reviews regional alpha edge drift', () => {
+  const review = classifyMetrics({
+    alphaEdgeCount: 128,
+    alphaEdgeJaccard: 1,
+    alphaEdgeRecall: 1,
+    alphaEdgeSpuriousRatio: 0,
+    alphaEdgeTileJaccardMin: 0.349,
+    alphaEdgeTileRecallMin: 1,
+    alphaEdgeTileSpuriousMax: 0,
+    outputAlphaEdgeCount: 128,
+    outputAlphaEdgeTileCount: 4,
+    sourceAlphaEdgeTileCount: 4,
+  })
+  const pass = classifyMetrics({
+    alphaEdgeCount: 128,
+    alphaEdgeJaccard: 1,
+    alphaEdgeRecall: 1,
+    alphaEdgeSpuriousRatio: 0,
+    alphaEdgeTileJaccardMin: 0.351,
+    alphaEdgeTileRecallMin: 1,
+    alphaEdgeTileSpuriousMax: 0,
+    outputAlphaEdgeCount: 128,
+    outputAlphaEdgeTileCount: 4,
+    sourceAlphaEdgeTileCount: 4,
+  })
+
+  assert.equal(review.status, 'review')
+  assert.ok(review.issues.some((issue) => issue.code === 'regional-alpha-edge-map-drift'))
+  assert.equal(pass.status, 'pass')
+})
+
+test('quality classification reviews regional alpha edge loss and growth', () => {
+  const loss = classifyMetrics({
+    alphaEdgeCount: 128,
+    alphaEdgeJaccard: 1,
+    alphaEdgeRecall: 1,
+    alphaEdgeSpuriousRatio: 0,
+    alphaEdgeTileJaccardMin: 1,
+    alphaEdgeTileRecallMin: 0.69,
+    alphaEdgeTileSpuriousMax: 0,
+    outputAlphaEdgeCount: 128,
+    outputAlphaEdgeTileCount: 4,
+    sourceAlphaEdgeTileCount: 4,
+  })
+  const growth = classifyMetrics({
+    alphaEdgeCount: 128,
+    alphaEdgeJaccard: 1,
+    alphaEdgeRecall: 1,
+    alphaEdgeSpuriousRatio: 0,
+    alphaEdgeTileJaccardMin: 1,
+    alphaEdgeTileRecallMin: 1,
+    alphaEdgeTileSpuriousMax: 0.51,
+    outputAlphaEdgeCount: 128,
+    outputAlphaEdgeTileCount: 4,
+    sourceAlphaEdgeTileCount: 4,
+  })
+
+  assert.equal(loss.status, 'review')
+  assert.ok(loss.issues.some((issue) => issue.code === 'regional-alpha-edge-loss'))
+  assert.equal(growth.status, 'review')
+  assert.ok(growth.issues.some((issue) => issue.code === 'regional-spurious-alpha-edge-growth'))
 })
 
 test('quality classification reviews alpha component count drift', () => {

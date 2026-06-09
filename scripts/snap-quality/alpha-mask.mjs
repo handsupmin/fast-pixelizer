@@ -3,6 +3,8 @@ const SEMITRANSPARENT_ALPHA_MIN = 16
 const SEMITRANSPARENT_ALPHA_MAX = 239
 const ALPHA_EDGE_THRESHOLD = 16
 const EDGE_TOLERANCE_PX = 1
+const ALPHA_EDGE_TILE_GRID = 4
+const ALPHA_EDGE_TILE_MIN_EDGES = 8
 const SMALL_COMPONENT_AREA_RATIO = 0.01
 
 function emptyBounds(width, height) {
@@ -81,6 +83,43 @@ function hasNearbyEdge(map, width, height, x, y) {
   return false
 }
 
+function alphaEdgeTileIndex(x, y, width, height) {
+  const col = Math.min(ALPHA_EDGE_TILE_GRID - 1, Math.floor((x * ALPHA_EDGE_TILE_GRID) / width))
+  const row = Math.min(ALPHA_EDGE_TILE_GRID - 1, Math.floor((y * ALPHA_EDGE_TILE_GRID) / height))
+  return row * ALPHA_EDGE_TILE_GRID + col
+}
+
+function regionalAlphaEdgeStats(sourceTiles, outputTiles, matchedTiles, outputOnlyTiles) {
+  let sourceTileCount = 0
+  let outputTileCount = 0
+  let jaccardMin = 1
+  let recallMin = 1
+  let spuriousMax = 0
+
+  for (let tile = 0; tile < sourceTiles.length; tile++) {
+    if (sourceTiles[tile] >= ALPHA_EDGE_TILE_MIN_EDGES) {
+      sourceTileCount++
+      jaccardMin = Math.min(
+        jaccardMin,
+        matchedTiles[tile] / (sourceTiles[tile] + outputOnlyTiles[tile]),
+      )
+      recallMin = Math.min(recallMin, matchedTiles[tile] / sourceTiles[tile])
+    }
+    if (outputTiles[tile] >= ALPHA_EDGE_TILE_MIN_EDGES) {
+      outputTileCount++
+      spuriousMax = Math.max(spuriousMax, outputOnlyTiles[tile] / outputTiles[tile])
+    }
+  }
+
+  return {
+    alphaEdgeTileJaccardMin: sourceTileCount > 0 ? jaccardMin : 1,
+    alphaEdgeTileRecallMin: sourceTileCount > 0 ? recallMin : 1,
+    alphaEdgeTileSpuriousMax: outputTileCount > 0 ? spuriousMax : 0,
+    outputAlphaEdgeTileCount: outputTileCount,
+    sourceAlphaEdgeTileCount: sourceTileCount,
+  }
+}
+
 function alphaEdgeStats(input, resized) {
   const { width, height } = input
   if (width < 3 || height < 3) {
@@ -89,31 +128,54 @@ function alphaEdgeStats(input, resized) {
       alphaEdgeJaccard: 1,
       alphaEdgeRecall: 1,
       alphaEdgeSpuriousRatio: 0,
+      alphaEdgeTileJaccardMin: 1,
+      alphaEdgeTileRecallMin: 1,
+      alphaEdgeTileSpuriousMax: 0,
       outputAlphaEdgeCount: 0,
+      outputAlphaEdgeTileCount: 0,
+      sourceAlphaEdgeTileCount: 0,
     }
   }
 
   const source = alphaEdgeMap(input.data, width, height)
   const output = alphaEdgeMap(resized, width, height)
+  const tileCount = ALPHA_EDGE_TILE_GRID * ALPHA_EDGE_TILE_GRID
+  const sourceTiles = new Uint32Array(tileCount)
+  const outputTiles = new Uint32Array(tileCount)
+  const matchedTiles = new Uint32Array(tileCount)
+  const outputOnlyTiles = new Uint32Array(tileCount)
   let matched = 0
   let outputOnly = 0
 
   for (let y = 1; y < height - 1; y++) {
     for (let x = 1; x < width - 1; x++) {
       const index = y * width + x
-      if (source.map[index] === 1 && hasNearbyEdge(output.map, width, height, x, y)) matched++
+      const tile = alphaEdgeTileIndex(x, y, width, height)
+      if (source.map[index] === 1) sourceTiles[tile]++
+      if (output.map[index] === 1) outputTiles[tile]++
+      if (source.map[index] === 1 && hasNearbyEdge(output.map, width, height, x, y)) {
+        matched++
+        matchedTiles[tile]++
+      }
       if (output.map[index] === 1 && !hasNearbyEdge(source.map, width, height, x, y)) {
         outputOnly++
+        outputOnlyTiles[tile]++
       }
     }
   }
 
+  const regional = regionalAlphaEdgeStats(sourceTiles, outputTiles, matchedTiles, outputOnlyTiles)
   return {
     alphaEdgeCount: source.count,
     alphaEdgeJaccard: source.count + outputOnly > 0 ? matched / (source.count + outputOnly) : 1,
     alphaEdgeRecall: source.count > 0 ? matched / source.count : 1,
     alphaEdgeSpuriousRatio: output.count > 0 ? outputOnly / output.count : 0,
+    alphaEdgeTileJaccardMin: regional.alphaEdgeTileJaccardMin,
+    alphaEdgeTileRecallMin: regional.alphaEdgeTileRecallMin,
+    alphaEdgeTileSpuriousMax: regional.alphaEdgeTileSpuriousMax,
     outputAlphaEdgeCount: output.count,
+    outputAlphaEdgeTileCount: regional.outputAlphaEdgeTileCount,
+    sourceAlphaEdgeTileCount: regional.sourceAlphaEdgeTileCount,
   }
 }
 

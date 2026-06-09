@@ -1318,6 +1318,42 @@ export function classifyMetrics(metrics) {
     )
   }
   if (
+    (metrics.sourceAlphaEdgeTileCount ?? 0) >= QUALITY_RULES.minAlphaEdgeTileCount &&
+    (metrics.alphaEdgeTileJaccardMin ?? 1) < QUALITY_RULES.minAlphaEdgeTileJaccard
+  ) {
+    issues.push(
+      issue(
+        'review',
+        'regional-alpha-edge-map-drift',
+        `min tile alpha edge overlap ${formatNum(metrics.alphaEdgeTileJaccardMin)}`,
+      ),
+    )
+  }
+  if (
+    (metrics.sourceAlphaEdgeTileCount ?? 0) >= QUALITY_RULES.minAlphaEdgeTileCount &&
+    (metrics.alphaEdgeTileRecallMin ?? 1) < QUALITY_RULES.minAlphaEdgeTileRecall
+  ) {
+    issues.push(
+      issue(
+        'review',
+        'regional-alpha-edge-loss',
+        `min tile alpha edge recall ${formatNum(metrics.alphaEdgeTileRecallMin)}`,
+      ),
+    )
+  }
+  if (
+    (metrics.outputAlphaEdgeTileCount ?? 0) >= QUALITY_RULES.minAlphaEdgeTileCount &&
+    (metrics.alphaEdgeTileSpuriousMax ?? 0) > QUALITY_RULES.maxAlphaEdgeTileSpuriousRatio
+  ) {
+    issues.push(
+      issue(
+        'review',
+        'regional-spurious-alpha-edge-growth',
+        `max tile alpha edge spurious ratio ${formatNum(metrics.alphaEdgeTileSpuriousMax)}`,
+      ),
+    )
+  }
+  if (
     metrics.contrastRatio < QUALITY_RULES.minContrastRatio ||
     metrics.contrastRatio > QUALITY_RULES.maxContrastRatio
   ) {
@@ -1659,6 +1695,14 @@ export function objective(metrics) {
     Math.max(0, (metrics.alphaEdgeSpuriousRatio ?? 0) - QUALITY_RULES.maxAlphaEdgeSpuriousRatio) *
       50 +
     Math.max(0, QUALITY_RULES.minAlphaEdgeJaccard - (metrics.alphaEdgeJaccard ?? 1)) * 60 +
+    Math.max(0, QUALITY_RULES.minAlphaEdgeTileJaccard - (metrics.alphaEdgeTileJaccardMin ?? 1)) *
+      25 +
+    Math.max(0, QUALITY_RULES.minAlphaEdgeTileRecall - (metrics.alphaEdgeTileRecallMin ?? 1)) * 30 +
+    Math.max(
+      0,
+      (metrics.alphaEdgeTileSpuriousMax ?? 0) - QUALITY_RULES.maxAlphaEdgeTileSpuriousRatio,
+    ) *
+      20 +
     metrics.outputCellMae * 500 +
     (metrics.outputAlphaCellMae ?? 0) * 500 +
     metrics.outputRgbPaletteOverage * 50 +
