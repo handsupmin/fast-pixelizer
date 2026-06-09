@@ -160,18 +160,24 @@ function toItem({ dataset, expected, input, metrics, name, original, resized, un
     cellTransitionErrorMean: formatNum(metrics.cellTransitionErrorMean),
     cellTransitionErrorP95: formatNum(metrics.cellTransitionErrorP95),
     cellTransitionErrorP99: formatNum(metrics.cellTransitionErrorP99),
+    cellTransitionErrorMax: formatNum(metrics.cellTransitionErrorMax),
     cellTransitionAxisErrorP95Max: formatNum(metrics.cellTransitionAxisErrorP95Max),
     cellTransitionAxisErrorP99Max: formatNum(metrics.cellTransitionAxisErrorP99Max),
+    cellTransitionAxisErrorMaxMax: formatNum(metrics.cellTransitionAxisErrorMaxMax),
     cellDiagonalTransitionRetention: formatNum(metrics.cellDiagonalTransitionRetention),
     cellDiagonalTransitionSpuriousRatio: formatNum(metrics.cellDiagonalTransitionSpuriousRatio),
     cellDiagonalTransitionErrorMean: formatNum(metrics.cellDiagonalTransitionErrorMean),
     cellDiagonalTransitionErrorP95: formatNum(metrics.cellDiagonalTransitionErrorP95),
     cellDiagonalTransitionErrorP99: formatNum(metrics.cellDiagonalTransitionErrorP99),
+    cellDiagonalTransitionErrorMax: formatNum(metrics.cellDiagonalTransitionErrorMax),
     cellDiagonalTransitionDirectionErrorP95Max: formatNum(
       metrics.cellDiagonalTransitionDirectionErrorP95Max,
     ),
     cellDiagonalTransitionDirectionErrorP99Max: formatNum(
       metrics.cellDiagonalTransitionDirectionErrorP99Max,
+    ),
+    cellDiagonalTransitionDirectionErrorMaxMax: formatNum(
+      metrics.cellDiagonalTransitionDirectionErrorMaxMax,
     ),
     cellDiagonalTransitionDirectionRetentionMin: formatNum(
       metrics.cellDiagonalTransitionDirectionRetentionMin,
@@ -201,6 +207,8 @@ function toItem({ dataset, expected, input, metrics, name, original, resized, un
     cellTransitionYErrorP95: formatNum(metrics.cellTransitionYErrorP95),
     cellTransitionXErrorP99: formatNum(metrics.cellTransitionXErrorP99),
     cellTransitionYErrorP99: formatNum(metrics.cellTransitionYErrorP99),
+    cellTransitionXErrorMax: formatNum(metrics.cellTransitionXErrorMax),
+    cellTransitionYErrorMax: formatNum(metrics.cellTransitionYErrorMax),
     sourceCellTransitionCount: metrics.sourceCellTransitionCount,
     sourceCellTransitionXCount: metrics.sourceCellTransitionXCount,
     sourceCellTransitionYCount: metrics.sourceCellTransitionYCount,
@@ -529,17 +537,22 @@ async function buildMetrics(input, expected, snapshots, colorVariety) {
       cellTransitionErrorMean: transitions.cellTransitionErrorMean,
       cellTransitionErrorP95: transitions.cellTransitionErrorP95,
       cellTransitionErrorP99: transitions.cellTransitionErrorP99,
+      cellTransitionErrorMax: transitions.cellTransitionErrorMax,
       cellTransitionAxisErrorP95Max: transitions.cellTransitionAxisErrorP95Max,
       cellTransitionAxisErrorP99Max: transitions.cellTransitionAxisErrorP99Max,
+      cellTransitionAxisErrorMaxMax: transitions.cellTransitionAxisErrorMaxMax,
       cellDiagonalTransitionRetention: transitions.cellDiagonalTransitionRetention,
       cellDiagonalTransitionSpuriousRatio: transitions.cellDiagonalTransitionSpuriousRatio,
       cellDiagonalTransitionErrorMean: transitions.cellDiagonalTransitionErrorMean,
       cellDiagonalTransitionErrorP95: transitions.cellDiagonalTransitionErrorP95,
       cellDiagonalTransitionErrorP99: transitions.cellDiagonalTransitionErrorP99,
+      cellDiagonalTransitionErrorMax: transitions.cellDiagonalTransitionErrorMax,
       cellDiagonalTransitionDirectionErrorP95Max:
         transitions.cellDiagonalTransitionDirectionErrorP95Max,
       cellDiagonalTransitionDirectionErrorP99Max:
         transitions.cellDiagonalTransitionDirectionErrorP99Max,
+      cellDiagonalTransitionDirectionErrorMaxMax:
+        transitions.cellDiagonalTransitionDirectionErrorMaxMax,
       cellDiagonalTransitionDirectionRetentionMin:
         transitions.cellDiagonalTransitionDirectionRetentionMin,
       cellDiagonalTransitionDirectionSpuriousRatioMax:
@@ -561,6 +574,8 @@ async function buildMetrics(input, expected, snapshots, colorVariety) {
       cellTransitionYErrorP95: transitions.cellTransitionYErrorP95,
       cellTransitionXErrorP99: transitions.cellTransitionXErrorP99,
       cellTransitionYErrorP99: transitions.cellTransitionYErrorP99,
+      cellTransitionXErrorMax: transitions.cellTransitionXErrorMax,
+      cellTransitionYErrorMax: transitions.cellTransitionYErrorMax,
       sourceCellTransitionCount: transitions.sourceCellTransitionCount,
       sourceCellTransitionXCount: transitions.sourceCellTransitionXCount,
       sourceCellTransitionYCount: transitions.sourceCellTransitionYCount,

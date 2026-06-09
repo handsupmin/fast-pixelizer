@@ -846,6 +846,18 @@ export function classifyMetrics(metrics) {
     )
   }
   if (
+    (metrics.sourceCellTransitionCount ?? 0) >= QUALITY_RULES.minCellTransitionCount &&
+    (metrics.cellTransitionErrorMax ?? 0) > QUALITY_RULES.maxCellTransitionErrorMaxReview
+  ) {
+    issues.push(
+      issue(
+        'review',
+        'rare-cell-transition-color-outlier',
+        `cell transition color error max ${formatNum(metrics.cellTransitionErrorMax)}`,
+      ),
+    )
+  }
+  if (
     ((metrics.sourceCellTransitionXCount ?? 0) >= QUALITY_RULES.minCellTransitionCount &&
       (metrics.cellTransitionXErrorP99 ?? 0) > QUALITY_RULES.maxCellTransitionErrorP99) ||
     ((metrics.sourceCellTransitionYCount ?? 0) >= QUALITY_RULES.minCellTransitionCount &&
@@ -873,6 +885,34 @@ export function classifyMetrics(metrics) {
     )
   }
   if (
+    ((metrics.sourceCellTransitionXCount ?? 0) >= QUALITY_RULES.minCellTransitionCount &&
+      (metrics.cellTransitionXErrorMax ?? 0) > QUALITY_RULES.maxCellTransitionErrorMaxReview) ||
+    ((metrics.sourceCellTransitionYCount ?? 0) >= QUALITY_RULES.minCellTransitionCount &&
+      (metrics.cellTransitionYErrorMax ?? 0) > QUALITY_RULES.maxCellTransitionErrorMaxReview) ||
+    (Math.max(metrics.sourceCellTransitionXCount ?? 0, metrics.sourceCellTransitionYCount ?? 0) >=
+      QUALITY_RULES.minCellTransitionCount &&
+      (metrics.cellTransitionAxisErrorMaxMax ?? 0) >
+        QUALITY_RULES.maxCellTransitionErrorMaxReview) ||
+    ((metrics.sourceCellTransitionXCount ?? 0) === 0 &&
+      (metrics.sourceCellTransitionYCount ?? 0) === 0 &&
+      (metrics.sourceCellTransitionCount ?? 0) >= QUALITY_RULES.minCellTransitionCount &&
+      (metrics.cellTransitionAxisErrorMaxMax ?? 0) > QUALITY_RULES.maxCellTransitionErrorMaxReview)
+  ) {
+    issues.push(
+      issue(
+        'review',
+        'rare-axis-cell-transition-color-outlier',
+        `axis cell transition color max ${formatNum(
+          Math.max(
+            metrics.cellTransitionAxisErrorMaxMax ?? 0,
+            metrics.cellTransitionXErrorMax ?? 0,
+            metrics.cellTransitionYErrorMax ?? 0,
+          ),
+        )}`,
+      ),
+    )
+  }
+  if (
     (metrics.sourceCellDiagonalTransitionCount ?? 0) >=
       QUALITY_RULES.minCellDiagonalTransitionCount &&
     (metrics.cellDiagonalTransitionRetention ?? 1) <
@@ -883,6 +923,22 @@ export function classifyMetrics(metrics) {
         'review',
         'cell-diagonal-transition-loss',
         `diagonal cell transition retention ${formatNum(metrics.cellDiagonalTransitionRetention)}`,
+      ),
+    )
+  }
+  if (
+    (metrics.sourceCellDiagonalTransitionCount ?? 0) >=
+      QUALITY_RULES.minCellDiagonalTransitionCount &&
+    (metrics.cellDiagonalTransitionErrorMax ?? 0) >
+      QUALITY_RULES.maxCellDiagonalTransitionErrorMaxReview
+  ) {
+    issues.push(
+      issue(
+        'review',
+        'rare-cell-diagonal-transition-color-outlier',
+        `diagonal cell transition color error max ${formatNum(
+          metrics.cellDiagonalTransitionErrorMax,
+        )}`,
       ),
     )
   }
@@ -902,6 +958,42 @@ export function classifyMetrics(metrics) {
         'directional-cell-diagonal-transition-loss',
         `min diagonal cell transition retention ${formatNum(
           metrics.cellDiagonalTransitionDirectionRetentionMin,
+        )}`,
+      ),
+    )
+  }
+  if (
+    ((metrics.sourceCellDiagonalTransitionDownRightCount ?? 0) >=
+      QUALITY_RULES.minCellDiagonalTransitionCount &&
+      (metrics.cellDiagonalTransitionDownRightErrorMax ?? 0) >
+        QUALITY_RULES.maxCellDiagonalTransitionErrorMaxReview) ||
+    ((metrics.sourceCellDiagonalTransitionDownLeftCount ?? 0) >=
+      QUALITY_RULES.minCellDiagonalTransitionCount &&
+      (metrics.cellDiagonalTransitionDownLeftErrorMax ?? 0) >
+        QUALITY_RULES.maxCellDiagonalTransitionErrorMaxReview) ||
+    (Math.max(
+      metrics.sourceCellDiagonalTransitionDownRightCount ?? 0,
+      metrics.sourceCellDiagonalTransitionDownLeftCount ?? 0,
+    ) >= QUALITY_RULES.minCellDiagonalTransitionCount &&
+      (metrics.cellDiagonalTransitionDirectionErrorMaxMax ?? 0) >
+        QUALITY_RULES.maxCellDiagonalTransitionErrorMaxReview) ||
+    ((metrics.sourceCellDiagonalTransitionDownRightCount ?? 0) === 0 &&
+      (metrics.sourceCellDiagonalTransitionDownLeftCount ?? 0) === 0 &&
+      (metrics.sourceCellDiagonalTransitionCount ?? 0) >=
+        QUALITY_RULES.minCellDiagonalTransitionCount &&
+      (metrics.cellDiagonalTransitionDirectionErrorMaxMax ?? 0) >
+        QUALITY_RULES.maxCellDiagonalTransitionErrorMaxReview)
+  ) {
+    issues.push(
+      issue(
+        'review',
+        'rare-directional-cell-diagonal-transition-color-outlier',
+        `directional diagonal cell transition color max ${formatNum(
+          Math.max(
+            metrics.cellDiagonalTransitionDirectionErrorMaxMax ?? 0,
+            metrics.cellDiagonalTransitionDownRightErrorMax ?? 0,
+            metrics.cellDiagonalTransitionDownLeftErrorMax ?? 0,
+          ),
         )}`,
       ),
     )
@@ -1819,6 +1911,12 @@ export function objective(metrics) {
       0.15 +
     Math.max(
       0,
+      Math.max(metrics.cellTransitionErrorMax ?? 0, metrics.cellTransitionAxisErrorMaxMax ?? 0) -
+        QUALITY_RULES.maxCellTransitionErrorMaxReview,
+    ) *
+      0.08 +
+    Math.max(
+      0,
       QUALITY_RULES.minCellDiagonalTransitionRetention -
         (metrics.cellDiagonalTransitionRetention ?? 1),
     ) *
@@ -1863,6 +1961,14 @@ export function objective(metrics) {
       ) - QUALITY_RULES.maxCellDiagonalTransitionErrorP99,
     ) *
       0.15 +
+    Math.max(
+      0,
+      Math.max(
+        metrics.cellDiagonalTransitionErrorMax ?? 0,
+        metrics.cellDiagonalTransitionDirectionErrorMaxMax ?? 0,
+      ) - QUALITY_RULES.maxCellDiagonalTransitionErrorMaxReview,
+    ) *
+      0.08 +
     Math.max(0, QUALITY_RULES.minSourceCellSize - metrics.sourceCellSize) * 500 +
     Math.max(0, metrics.shortAxisCells - QUALITY_RULES.maxShortAxisCells) * 10 +
     Math.max(0, metrics.sourceCellSize - QUALITY_RULES.maxSourceCellSizeReview) * 2 +

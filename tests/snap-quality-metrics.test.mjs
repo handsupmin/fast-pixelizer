@@ -14,6 +14,7 @@ import {
 import { cellTransitionMetrics } from '../scripts/snap-quality/cell-transition.mjs'
 import { paletteDominanceMetrics } from '../scripts/snap-quality/palette-dominance.mjs'
 import { paletteUtilizationMetrics } from '../scripts/snap-quality/palette-utilization.mjs'
+import { QUALITY_RULES } from '../scripts/snap-quality/config.mjs'
 
 function makeVerticalStripes(width, height, stripeWidth) {
   const data = new Uint8ClampedArray(width * height * 4)
@@ -1138,13 +1139,16 @@ test('cell transitions distinguish retained, removed, and spurious boundaries', 
   assert.equal(retained.cellTransitionErrorMean, 0)
   assert.equal(retained.cellTransitionErrorP95, 0)
   assert.equal(retained.cellTransitionErrorP99, 0)
+  assert.equal(retained.cellTransitionErrorMax, 0)
   assert.equal(retained.cellTransitionAxisRetentionMin, 1)
   assert.equal(retained.cellTransitionAxisSpuriousRatioMax, 0)
   assert.equal(retained.cellTransitionAxisErrorP95Max, 0)
   assert.equal(retained.cellTransitionAxisErrorP99Max, 0)
+  assert.equal(retained.cellTransitionAxisErrorMaxMax, 0)
   assert.ok(removed.cellTransitionRetention < 0.01)
   assert.ok(removed.cellTransitionErrorP95 > 0)
   assert.ok(removed.cellTransitionErrorP99 > 0)
+  assert.ok(removed.cellTransitionErrorMax > 0)
   assert.equal(removed.outputCellTransitionCount, 0)
   assert.equal(spurious.sourceCellTransitionCount, 0)
   assert.equal(spurious.cellTransitionSpuriousRatio, 1)
@@ -1167,12 +1171,15 @@ test('cell diagonal transitions distinguish retained, removed, and spurious diag
   assert.equal(retained.cellDiagonalTransitionSpuriousRatio, 0)
   assert.equal(retained.cellDiagonalTransitionErrorP95, 0)
   assert.equal(retained.cellDiagonalTransitionErrorP99, 0)
+  assert.equal(retained.cellDiagonalTransitionErrorMax, 0)
   assert.equal(retained.cellDiagonalTransitionDirectionRetentionMin, 1)
   assert.equal(retained.cellDiagonalTransitionDirectionErrorP95Max, 0)
   assert.equal(retained.cellDiagonalTransitionDirectionErrorP99Max, 0)
+  assert.equal(retained.cellDiagonalTransitionDirectionErrorMaxMax, 0)
   assert.ok(removed.cellDiagonalTransitionRetention < 0.01)
   assert.ok(removed.cellDiagonalTransitionErrorP95 > 0)
   assert.ok(removed.cellDiagonalTransitionErrorP99 > 0)
+  assert.ok(removed.cellDiagonalTransitionErrorMax > 0)
   assert.equal(removed.outputCellDiagonalTransitionCount, 0)
   assert.equal(spurious.sourceCellDiagonalTransitionCount, 0)
   assert.equal(spurious.cellDiagonalTransitionSpuriousRatio, 1)
@@ -2542,6 +2549,63 @@ test('quality classification reviews orthogonal cell transition p99 outliers hid
   assert.equal(pass.status, 'pass')
 })
 
+test('quality classification reviews rare orthogonal cell transition max outliers hidden by p99', () => {
+  const threshold = QUALITY_RULES.maxCellTransitionErrorMaxReview
+  const review = classifyMetrics({
+    cellTransitionAxisErrorMaxMax: 0,
+    cellTransitionErrorMax: threshold + 1,
+    cellTransitionErrorMean: 0,
+    cellTransitionErrorP95: 0,
+    cellTransitionErrorP99: 0,
+    sourceCellTransitionCount: 64,
+  })
+  const pass = classifyMetrics({
+    cellTransitionAxisErrorMaxMax: 0,
+    cellTransitionErrorMax: Math.max(0, threshold - 1),
+    cellTransitionErrorMean: 0,
+    cellTransitionErrorP95: 0,
+    cellTransitionErrorP99: 0,
+    sourceCellTransitionCount: 64,
+  })
+
+  assert.equal(review.status, 'review')
+  assert.ok(review.issues.some((issue) => issue.code === 'rare-cell-transition-color-outlier'))
+  assert.equal(pass.status, 'pass')
+})
+
+test('quality classification reviews rare one-axis cell transition max outliers', () => {
+  const threshold = QUALITY_RULES.maxCellTransitionErrorMaxReview
+  const review = classifyMetrics({
+    cellTransitionAxisErrorMaxMax: threshold + 1,
+    cellTransitionErrorMax: 0,
+    cellTransitionErrorMean: 0,
+    cellTransitionErrorP95: 0,
+    cellTransitionErrorP99: 0,
+    cellTransitionXErrorMax: threshold + 1,
+    cellTransitionYErrorMax: 0,
+    sourceCellTransitionCount: 64,
+    sourceCellTransitionXCount: 32,
+    sourceCellTransitionYCount: 32,
+  })
+  const pass = classifyMetrics({
+    cellTransitionAxisErrorMaxMax: Math.max(0, threshold - 1),
+    cellTransitionErrorMax: 0,
+    cellTransitionErrorMean: 0,
+    cellTransitionErrorP95: 0,
+    cellTransitionErrorP99: 0,
+    cellTransitionXErrorMax: Math.max(0, threshold - 1),
+    cellTransitionYErrorMax: 0,
+    sourceCellTransitionCount: 64,
+    sourceCellTransitionXCount: 32,
+    sourceCellTransitionYCount: 32,
+  })
+
+  assert.equal(review.status, 'review')
+  assert.ok(review.issues.some((issue) => issue.code === 'rare-axis-cell-transition-color-outlier'))
+  assert.ok(!review.issues.some((issue) => issue.code === 'rare-cell-transition-color-outlier'))
+  assert.equal(pass.status, 'pass')
+})
+
 test('quality classification reviews spurious cell transitions', () => {
   const result = classifyMetrics({
     alphaMae: 0,
@@ -2791,6 +2855,71 @@ test('quality classification reviews diagonal cell transition p99 outliers hidde
     review.issues.some(
       (issue) => issue.code === 'localized-cell-diagonal-transition-color-outlier',
     ),
+  )
+  assert.equal(pass.status, 'pass')
+})
+
+test('quality classification reviews rare diagonal cell transition max outliers hidden by p99', () => {
+  const threshold = QUALITY_RULES.maxCellDiagonalTransitionErrorMaxReview
+  const review = classifyMetrics({
+    cellDiagonalTransitionDirectionErrorMaxMax: 0,
+    cellDiagonalTransitionErrorMax: threshold + 1,
+    cellDiagonalTransitionErrorMean: 0,
+    cellDiagonalTransitionErrorP95: 0,
+    cellDiagonalTransitionErrorP99: 0,
+    sourceCellDiagonalTransitionCount: 64,
+  })
+  const pass = classifyMetrics({
+    cellDiagonalTransitionDirectionErrorMaxMax: 0,
+    cellDiagonalTransitionErrorMax: Math.max(0, threshold - 1),
+    cellDiagonalTransitionErrorMean: 0,
+    cellDiagonalTransitionErrorP95: 0,
+    cellDiagonalTransitionErrorP99: 0,
+    sourceCellDiagonalTransitionCount: 64,
+  })
+
+  assert.equal(review.status, 'review')
+  assert.ok(
+    review.issues.some((issue) => issue.code === 'rare-cell-diagonal-transition-color-outlier'),
+  )
+  assert.equal(pass.status, 'pass')
+})
+
+test('quality classification reviews rare one-direction diagonal transition max outliers', () => {
+  const threshold = QUALITY_RULES.maxCellDiagonalTransitionErrorMaxReview
+  const review = classifyMetrics({
+    cellDiagonalTransitionDirectionErrorMaxMax: threshold + 1,
+    cellDiagonalTransitionDownLeftErrorMax: 0,
+    cellDiagonalTransitionDownRightErrorMax: threshold + 1,
+    cellDiagonalTransitionErrorMax: 0,
+    cellDiagonalTransitionErrorMean: 0,
+    cellDiagonalTransitionErrorP95: 0,
+    cellDiagonalTransitionErrorP99: 0,
+    sourceCellDiagonalTransitionCount: 64,
+    sourceCellDiagonalTransitionDownLeftCount: 32,
+    sourceCellDiagonalTransitionDownRightCount: 32,
+  })
+  const pass = classifyMetrics({
+    cellDiagonalTransitionDirectionErrorMaxMax: Math.max(0, threshold - 1),
+    cellDiagonalTransitionDownLeftErrorMax: 0,
+    cellDiagonalTransitionDownRightErrorMax: Math.max(0, threshold - 1),
+    cellDiagonalTransitionErrorMax: 0,
+    cellDiagonalTransitionErrorMean: 0,
+    cellDiagonalTransitionErrorP95: 0,
+    cellDiagonalTransitionErrorP99: 0,
+    sourceCellDiagonalTransitionCount: 64,
+    sourceCellDiagonalTransitionDownLeftCount: 32,
+    sourceCellDiagonalTransitionDownRightCount: 32,
+  })
+
+  assert.equal(review.status, 'review')
+  assert.ok(
+    review.issues.some(
+      (issue) => issue.code === 'rare-directional-cell-diagonal-transition-color-outlier',
+    ),
+  )
+  assert.ok(
+    !review.issues.some((issue) => issue.code === 'rare-cell-diagonal-transition-color-outlier'),
   )
   assert.equal(pass.status, 'pass')
 })
