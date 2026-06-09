@@ -507,6 +507,22 @@ test('colorful spurious ratio catches output-only colorful pixels', async () => 
   assert.equal(stats.colorfulSpuriousRatio, 1)
 })
 
+test('bright coverage drift catches lost bright area', async () => {
+  const source = makeRgbSolid(64, 64, 64, 64, 64)
+  setColorRect(source, 0, 0, 32, 32, [240, 240, 240])
+  const output = makeRgbSolid(64, 64, 64, 64, 64)
+  const stats = await preservationStats(source, output)
+
+  assert.equal(stats.sourceBrightPixelCount, 1024)
+  assert.equal(stats.outputBrightPixelCount, 0)
+  assert.equal(stats.inputBrightCoverage, 0.25)
+  assert.equal(stats.outputBrightCoverage, 0)
+  assert.ok(
+    stats.brightCoverageDrift > QUALITY_RULES.maxBrightCoverageDrift,
+    `expected bright coverage drift above threshold, got ${stats.brightCoverageDrift}`,
+  )
+})
+
 test('saturated coverage drift catches lost vivid color area', async () => {
   const source = makeRgbSolid(64, 64, 96, 96, 96)
   setColorRect(source, 0, 0, 32, 32, [255, 0, 0])
@@ -3453,6 +3469,21 @@ test('quality classification reviews spurious color growth', () => {
 
   assert.equal(result.status, 'review')
   assert.ok(result.issues.some((issue) => issue.code === 'spurious-color-growth'))
+})
+
+test('quality classification reviews bright coverage drift', () => {
+  const review = classifyMetrics({
+    brightCoverageDrift: QUALITY_RULES.maxBrightCoverageDrift + 0.01,
+    sourceBrightPixelCount: QUALITY_RULES.minBrightCoveragePixelCount,
+  })
+  const pass = classifyMetrics({
+    brightCoverageDrift: QUALITY_RULES.maxBrightCoverageDrift - 0.01,
+    sourceBrightPixelCount: QUALITY_RULES.minBrightCoveragePixelCount,
+  })
+
+  assert.equal(review.status, 'review')
+  assert.ok(review.issues.some((issue) => issue.code === 'bright-coverage-drift'))
+  assert.equal(pass.status, 'pass')
 })
 
 test('quality classification reviews saturated coverage drift', () => {

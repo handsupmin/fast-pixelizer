@@ -722,6 +722,8 @@ export async function preservationStats(input, result, options = {}) {
   const tileLineEdgeMinMean = options.tileLineEdgeMinMean ?? 6
   const shadowCoverageLumaThreshold =
     options.shadowCoverageLumaThreshold ?? QUALITY_RULES.shadowCoverageLumaThreshold
+  const brightCoverageLumaThreshold =
+    options.brightCoverageLumaThreshold ?? QUALITY_RULES.brightCoverageLumaThreshold
   const tileShadowCoverageMinSampleCount =
     options.tileShadowCoverageMinSampleCount ?? QUALITY_RULES.minTileShadowCoverageSampleCount
   const tileRgbHistogramMinSampleCount =
@@ -755,6 +757,8 @@ export async function preservationStats(input, result, options = {}) {
   let outputColorfulPixelCount = 0
   let retainedColorfulPixelCount = 0
   let spuriousColorfulPixelCount = 0
+  let sourceBrightPixelCount = 0
+  let outputBrightPixelCount = 0
   let sourceSaturatedPixelCount = 0
   let outputSaturatedPixelCount = 0
   let inputEdgeMagnitudeSampleCount = 0
@@ -809,6 +813,8 @@ export async function preservationStats(input, result, options = {}) {
     const outputChromaValue = chromaAt(resized, i)
     const inputColorful = input.data[i + 3] > 0 && inputChromaValue >= hueMinChroma
     const outputColorful = resized[i + 3] > 0 && outputChromaValue >= hueMinChroma
+    const inputBright = input.data[i + 3] > 0 && inputLuma > brightCoverageLumaThreshold
+    const outputBright = resized[i + 3] > 0 && outputLuma > brightCoverageLumaThreshold
     const inputSaturated =
       input.data[i + 3] > 0 && inputChromaValue > saturatedCoverageChromaThreshold
     const outputSaturated =
@@ -846,6 +852,8 @@ export async function preservationStats(input, result, options = {}) {
     if (outputColorful) outputColorfulPixelCount++
     if (inputColorful && outputColorful) retainedColorfulPixelCount++
     if (!inputColorful && outputColorful) spuriousColorfulPixelCount++
+    if (inputBright) sourceBrightPixelCount++
+    if (outputBright) outputBrightPixelCount++
     if (inputSaturated) sourceSaturatedPixelCount++
     if (outputSaturated) outputSaturatedPixelCount++
     if (inputColorful && outputColorful) {
@@ -1061,6 +1069,16 @@ export async function preservationStats(input, result, options = {}) {
     outputColorfulPixelCount,
     retainedColorfulPixelCount,
     spuriousColorfulPixelCount,
+    sourceBrightPixelCount,
+    outputBrightPixelCount,
+    inputBrightCoverage:
+      inputRgbCoverageCount > 0 ? sourceBrightPixelCount / inputRgbCoverageCount : 0,
+    outputBrightCoverage:
+      outputRgbCoverageCount > 0 ? outputBrightPixelCount / outputRgbCoverageCount : 0,
+    brightCoverageDrift: Math.abs(
+      (inputRgbCoverageCount > 0 ? sourceBrightPixelCount / inputRgbCoverageCount : 0) -
+        (outputRgbCoverageCount > 0 ? outputBrightPixelCount / outputRgbCoverageCount : 0),
+    ),
     sourceSaturatedPixelCount,
     outputSaturatedPixelCount,
     inputSaturatedCoverage:
