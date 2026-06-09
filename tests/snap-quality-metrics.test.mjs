@@ -282,6 +282,28 @@ test('edge overlap tracks strong edge direction drift', () => {
   )
 })
 
+test('edge overlap tracks direction-preserving edge loss and growth', () => {
+  const vertical = makeVerticalStripes(64, 64, 4)
+  const horizontal = makeHorizontalStripes(64, 64, 4)
+  const preserved = edgeOverlapStats(vertical, vertical.data)
+  const changedDirection = edgeOverlapStats(vertical, horizontal.data)
+
+  assert.equal(preserved.directedEdgeRecallMin, 1)
+  assert.equal(preserved.directedEdgeJaccardMin, 1)
+  assert.ok(
+    changedDirection.directedEdgeRecallMin < 0.2,
+    `expected directed edge recall loss, got ${changedDirection.directedEdgeRecallMin}`,
+  )
+  assert.ok(
+    changedDirection.directedEdgeJaccardMin < 0.2,
+    `expected directed edge overlap loss, got ${changedDirection.directedEdgeJaccardMin}`,
+  )
+  assert.ok(
+    changedDirection.directedEdgeSpuriousMax > 0.8,
+    `expected directed spurious edge growth, got ${changedDirection.directedEdgeSpuriousMax}`,
+  )
+})
+
 test('edge overlap tracks localized tile edge loss and growth', () => {
   const source = makeVerticalStripes(64, 64, 4)
   const localLoss = setRgbRect(copyImage(source), 0, 0, 16, 16, 0)
@@ -1812,6 +1834,72 @@ test('quality classification reviews regional edge loss and growth', () => {
   assert.ok(loss.issues.some((issue) => issue.code === 'regional-edge-loss'))
   assert.equal(growth.status, 'review')
   assert.ok(growth.issues.some((issue) => issue.code === 'regional-spurious-edge-growth'))
+})
+
+test('quality classification reviews directed edge drift', () => {
+  const review = classifyMetrics({
+    directedEdgeJaccardMin: 0.159,
+    directedEdgeRecallMin: 1,
+    directedEdgeSpuriousMax: 0,
+    edgeJaccard: 1,
+    edgeRecall: 1,
+    edgeSpuriousRatio: 0,
+    outputDirectedEdgeBinCount: 1,
+    sourceDirectedEdgeBinCount: 1,
+  })
+  const pass = classifyMetrics({
+    directedEdgeJaccardMin: 0.161,
+    directedEdgeRecallMin: 1,
+    directedEdgeSpuriousMax: 0,
+    edgeJaccard: 1,
+    edgeRecall: 1,
+    edgeSpuriousRatio: 0,
+    outputDirectedEdgeBinCount: 1,
+    sourceDirectedEdgeBinCount: 1,
+  })
+
+  assert.equal(review.status, 'review')
+  assert.ok(review.issues.some((issue) => issue.code === 'directed-edge-map-drift'))
+  assert.equal(pass.status, 'pass')
+})
+
+test('quality classification reviews directed edge loss and growth', () => {
+  const loss = classifyMetrics({
+    directedEdgeJaccardMin: 1,
+    directedEdgeRecallMin: 0.24,
+    directedEdgeSpuriousMax: 0,
+    edgeJaccard: 1,
+    edgeRecall: 1,
+    edgeSpuriousRatio: 0,
+    outputDirectedEdgeBinCount: 1,
+    sourceDirectedEdgeBinCount: 1,
+  })
+  const growth = classifyMetrics({
+    directedEdgeJaccardMin: 1,
+    directedEdgeRecallMin: 1,
+    directedEdgeSpuriousMax: 0.81,
+    edgeJaccard: 1,
+    edgeRecall: 1,
+    edgeSpuriousRatio: 0,
+    outputDirectedEdgeBinCount: 1,
+    sourceDirectedEdgeBinCount: 1,
+  })
+  const pass = classifyMetrics({
+    directedEdgeJaccardMin: 1,
+    directedEdgeRecallMin: 0.26,
+    directedEdgeSpuriousMax: 0.79,
+    edgeJaccard: 1,
+    edgeRecall: 1,
+    edgeSpuriousRatio: 0,
+    outputDirectedEdgeBinCount: 1,
+    sourceDirectedEdgeBinCount: 1,
+  })
+
+  assert.equal(loss.status, 'review')
+  assert.ok(loss.issues.some((issue) => issue.code === 'directed-edge-loss'))
+  assert.equal(growth.status, 'review')
+  assert.ok(growth.issues.some((issue) => issue.code === 'directed-spurious-edge-growth'))
+  assert.equal(pass.status, 'pass')
 })
 
 test('quality classification reviews alpha silhouette drift', () => {

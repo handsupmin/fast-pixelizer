@@ -239,6 +239,26 @@ export function summarize(results) {
     edgeSpuriousRatioMean: mean(results, 'edgeSpuriousRatio'),
     edgeJaccardMean: mean(results, 'edgeJaccard'),
     edgeDirectionDriftMean: mean(results, 'edgeDirectionDrift'),
+    directedEdgeRecallMin: results.reduce(
+      (min, item) => Math.min(min, item.directedEdgeRecallMin),
+      results.length > 0 ? 1 : 0,
+    ),
+    directedEdgeJaccardMin: results.reduce(
+      (min, item) => Math.min(min, item.directedEdgeJaccardMin),
+      results.length > 0 ? 1 : 0,
+    ),
+    directedEdgeSpuriousMax: results.reduce(
+      (max, item) => Math.max(max, item.directedEdgeSpuriousMax),
+      0,
+    ),
+    sourceDirectedEdgeBinCountTotal: results.reduce(
+      (sum, item) => sum + item.sourceDirectedEdgeBinCount,
+      0,
+    ),
+    outputDirectedEdgeBinCountTotal: results.reduce(
+      (sum, item) => sum + item.outputDirectedEdgeBinCount,
+      0,
+    ),
     sourceEdgeDirectionCountTotal: results.reduce(
       (sum, item) => sum + item.sourceEdgeDirectionCount,
       0,
@@ -360,6 +380,7 @@ function criteriaMarkdown() {
     `- Hue: review when at least ${QUALITY_RULES.minHueSampleCount} colorful pixels have hue error mean > ${QUALITY_RULES.maxHueErrorMean} degrees or p95 > ${QUALITY_RULES.maxHueErrorP95} degrees.`,
     `- Line strength: review when resized snap edge strength falls outside ${QUALITY_RULES.minLineEdgeRatio}-${QUALITY_RULES.maxLineEdgeRatio}x the source edge strength.`,
     `- Edge direction: review when at least ${QUALITY_RULES.minEdgeDirectionCount} strong source and output edges shift x/y/diagonal direction histogram by more than ${QUALITY_RULES.maxEdgeDirectionDrift}.`,
+    `- Directed edge map: review when any eligible x/y/diagonal direction bin has same-direction tolerant edge overlap below ${QUALITY_RULES.minDirectedEdgeJaccard}, keeps less than ${(QUALITY_RULES.minDirectedEdgeRecall * 100).toFixed(0)}% of source same-direction edges nearby, or when an eligible output direction bin has more than ${(QUALITY_RULES.maxDirectedEdgeSpuriousRatio * 100).toFixed(0)}% output-only same-direction edges.`,
     `- Edge map overlap: review when fewer than ${(QUALITY_RULES.minEdgeRecall * 100).toFixed(0)}% of strong source edges survive nearby, when more than ${(QUALITY_RULES.maxEdgeSpuriousRatio * 100).toFixed(0)}% of strong output edges are not near source edges, or when tolerant edge overlap drops below ${QUALITY_RULES.minEdgeJaccard}.`,
     `- Regional edge map: review when any eligible 4x4 canvas tile has tolerant edge overlap below ${QUALITY_RULES.minEdgeTileJaccard}, keeps less than ${(QUALITY_RULES.minEdgeTileRecall * 100).toFixed(0)}% of strong source edges nearby, or when an eligible output tile has more than ${(QUALITY_RULES.maxEdgeTileSpuriousRatio * 100).toFixed(0)}% output-only strong edges.`,
     '',
@@ -549,6 +570,11 @@ export function toMarkdown(summary) {
     'hueSampleCount',
     'contrastRatio',
     'lineEdgeRatio',
+    'sourceDirectedEdgeBinCount',
+    'outputDirectedEdgeBinCount',
+    'directedEdgeJaccardMin',
+    'directedEdgeRecallMin',
+    'directedEdgeSpuriousMax',
     'sourceEdgeDirectionCount',
     'outputEdgeDirectionCount',
     'edgeDirectionDrift',

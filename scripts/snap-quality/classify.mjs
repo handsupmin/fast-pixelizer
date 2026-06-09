@@ -1410,6 +1410,42 @@ export function classifyMetrics(metrics) {
       ),
     )
   }
+  if (
+    (metrics.sourceDirectedEdgeBinCount ?? 0) >= QUALITY_RULES.minDirectedEdgeBinCount &&
+    (metrics.directedEdgeJaccardMin ?? 1) < QUALITY_RULES.minDirectedEdgeJaccard
+  ) {
+    issues.push(
+      issue(
+        'review',
+        'directed-edge-map-drift',
+        `min directed edge overlap ${formatNum(metrics.directedEdgeJaccardMin)}`,
+      ),
+    )
+  }
+  if (
+    (metrics.sourceDirectedEdgeBinCount ?? 0) >= QUALITY_RULES.minDirectedEdgeBinCount &&
+    (metrics.directedEdgeRecallMin ?? 1) < QUALITY_RULES.minDirectedEdgeRecall
+  ) {
+    issues.push(
+      issue(
+        'review',
+        'directed-edge-loss',
+        `min directed edge recall ${formatNum(metrics.directedEdgeRecallMin)}`,
+      ),
+    )
+  }
+  if (
+    (metrics.outputDirectedEdgeBinCount ?? 0) >= QUALITY_RULES.minDirectedEdgeBinCount &&
+    (metrics.directedEdgeSpuriousMax ?? 0) > QUALITY_RULES.maxDirectedEdgeSpuriousRatio
+  ) {
+    issues.push(
+      issue(
+        'review',
+        'directed-spurious-edge-growth',
+        `max directed edge spurious ratio ${formatNum(metrics.directedEdgeSpuriousMax)}`,
+      ),
+    )
+  }
   if (metrics.edgeRecall < QUALITY_RULES.minEdgeRecall) {
     issues.push(issue('review', 'edge-recall-loss', `edge recall ${formatNum(metrics.edgeRecall)}`))
   }
@@ -1839,6 +1875,13 @@ export function objective(metrics) {
     Math.max(0, metrics.hueErrorP95 - QUALITY_RULES.maxHueErrorP95) * 0.2 +
     Math.abs(1 - metrics.lineEdgeRatio) * 8 +
     Math.max(0, (metrics.edgeDirectionDrift ?? 0) - QUALITY_RULES.maxEdgeDirectionDrift) * 40 +
+    Math.max(0, QUALITY_RULES.minDirectedEdgeJaccard - (metrics.directedEdgeJaccardMin ?? 1)) * 25 +
+    Math.max(0, QUALITY_RULES.minDirectedEdgeRecall - (metrics.directedEdgeRecallMin ?? 1)) * 30 +
+    Math.max(
+      0,
+      (metrics.directedEdgeSpuriousMax ?? 0) - QUALITY_RULES.maxDirectedEdgeSpuriousRatio,
+    ) *
+      20 +
     Math.max(0, QUALITY_RULES.minEdgeRecall - metrics.edgeRecall) * 60 +
     Math.max(0, metrics.edgeSpuriousRatio - QUALITY_RULES.maxEdgeSpuriousRatio) * 40 +
     Math.max(0, QUALITY_RULES.minEdgeJaccard - metrics.edgeJaccard) * 40 +

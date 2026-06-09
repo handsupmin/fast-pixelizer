@@ -427,6 +427,9 @@ export async function preservationStats(input, result, options = {}) {
   const edgeOverlap = options.edgeOverlap
     ? edgeOverlapStats(input, resized)
     : {
+        directedEdgeJaccardMin: 1,
+        directedEdgeRecallMin: 1,
+        directedEdgeSpuriousMax: 0,
         edgeDirectionDrift: 0,
         edgeRecall: 1,
         edgeSpuriousRatio: 0,
@@ -434,8 +437,10 @@ export async function preservationStats(input, result, options = {}) {
         edgeTileJaccardMin: 1,
         edgeTileRecallMin: 1,
         edgeTileSpuriousMax: 0,
+        outputDirectedEdgeBinCount: 0,
         outputEdgeDirectionCount: 0,
         outputEdgeTileCount: 0,
+        sourceDirectedEdgeBinCount: 0,
         sourceEdgeDirectionCount: 0,
         sourceEdgeTileCount: 0,
       }
@@ -536,6 +541,9 @@ export async function preservationStats(input, result, options = {}) {
     hueSampleCount: hueErrors.length,
     contrastRatio: inputLuma.stdDev > 0 ? outputLuma.stdDev / inputLuma.stdDev : 1,
     lineEdgeRatio: inputEdge > 0 ? outputEdge / inputEdge : 1,
+    directedEdgeJaccardMin: edgeOverlap.directedEdgeJaccardMin,
+    directedEdgeRecallMin: edgeOverlap.directedEdgeRecallMin,
+    directedEdgeSpuriousMax: edgeOverlap.directedEdgeSpuriousMax,
     edgeDirectionDrift: edgeOverlap.edgeDirectionDrift,
     edgeRecall: edgeOverlap.edgeRecall,
     edgeSpuriousRatio: edgeOverlap.edgeSpuriousRatio,
@@ -543,8 +551,10 @@ export async function preservationStats(input, result, options = {}) {
     edgeTileJaccardMin: edgeOverlap.edgeTileJaccardMin,
     edgeTileRecallMin: edgeOverlap.edgeTileRecallMin,
     edgeTileSpuriousMax: edgeOverlap.edgeTileSpuriousMax,
+    outputDirectedEdgeBinCount: edgeOverlap.outputDirectedEdgeBinCount,
     outputEdgeDirectionCount: edgeOverlap.outputEdgeDirectionCount,
     outputEdgeTileCount: edgeOverlap.outputEdgeTileCount,
+    sourceDirectedEdgeBinCount: edgeOverlap.sourceDirectedEdgeBinCount,
     sourceEdgeDirectionCount: edgeOverlap.sourceEdgeDirectionCount,
     sourceEdgeTileCount: edgeOverlap.sourceEdgeTileCount,
   }
