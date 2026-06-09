@@ -392,6 +392,49 @@ function tileChromaStats(inputSums, outputSums, counts, minInputMean) {
   }
 }
 
+function tileLineEdgeStats(inputSums, outputSums, counts, minInputMean) {
+  let ratioMin = 1
+  let ratioMax = 1
+  let tileCount = 0
+
+  for (let tile = 0; tile < counts.length; tile++) {
+    const count = counts[tile]
+    if (count === 0) continue
+
+    const inputMean = inputSums[tile] / count
+    if (inputMean < minInputMean) continue
+
+    const outputMean = outputSums[tile] / count
+    const ratio = outputMean / inputMean
+    ratioMin = Math.min(ratioMin, ratio)
+    ratioMax = Math.max(ratioMax, ratio)
+    tileCount++
+  }
+
+  return {
+    tileLineEdgeRatioMin: tileCount > 0 ? ratioMin : 1,
+    tileLineEdgeRatioMax: tileCount > 0 ? ratioMax : 1,
+    tileLineEdgeTileCount: tileCount,
+  }
+}
+
+function localAxisGradient(data, width, x, y, index) {
+  let sum = 0
+  let count = 0
+  const center = lumaAt(data, index)
+
+  if (x > 0) {
+    sum += Math.abs(center - lumaAt(data, index - 4))
+    count++
+  }
+  if (y > 0) {
+    sum += Math.abs(center - lumaAt(data, index - width * 4))
+    count++
+  }
+
+  return count > 0 ? sum / count : 0
+}
+
 export async function preservationStats(input, result, options = {}) {
   const resized = await resizeToInput(result, input)
   const stride = Math.max(1, Math.floor((input.width * input.height) / MAX_METRIC_SAMPLES))
@@ -405,10 +448,13 @@ export async function preservationStats(input, result, options = {}) {
   const outputLumaTileSumsSq = new Float64Array(tileCount)
   const inputChromaTileSums = new Float64Array(tileCount)
   const outputChromaTileSums = new Float64Array(tileCount)
+  const inputLineEdgeTileSums = new Float64Array(tileCount)
+  const outputLineEdgeTileSums = new Float64Array(tileCount)
   const tileCounts = new Uint32Array(tileCount)
   const hueMinChroma = options.hueMinChroma ?? 16
   const tileContrastMinStdDev = options.tileContrastMinStdDev ?? 8
   const tileChromaMinMean = options.tileChromaMinMean ?? 8
+  const tileLineEdgeMinMean = options.tileLineEdgeMinMean ?? 6
   const inputRgbCoverage = new Map()
   const outputRgbCoverage = new Map()
   const inputRgbTileCoverage = createTileCoverage(tileCount)
@@ -458,6 +504,8 @@ export async function preservationStats(input, result, options = {}) {
     const outputLuma = lumaAt(resized, i)
     const inputChromaValue = chromaAt(input.data, i)
     const outputChromaValue = chromaAt(resized, i)
+    const inputLineEdge = localAxisGradient(input.data, input.width, x, y, i)
+    const outputLineEdge = localAxisGradient(resized, input.width, x, y, i)
     tileSums[tile] += pixelError / 3
     alphaTileSums[tile] += alphaError
     inputLumaTileSums[tile] += inputLuma
@@ -466,6 +514,8 @@ export async function preservationStats(input, result, options = {}) {
     outputLumaTileSumsSq[tile] += outputLuma * outputLuma
     inputChromaTileSums[tile] += inputChromaValue
     outputChromaTileSums[tile] += outputChromaValue
+    inputLineEdgeTileSums[tile] += inputLineEdge
+    outputLineEdgeTileSums[tile] += outputLineEdge
     tileCounts[tile]++
     if (
       input.data[i + 3] > 0 &&
@@ -499,6 +549,12 @@ export async function preservationStats(input, result, options = {}) {
     outputChromaTileSums,
     tileCounts,
     tileChromaMinMean,
+  )
+  const tileLineEdge = tileLineEdgeStats(
+    inputLineEdgeTileSums,
+    outputLineEdgeTileSums,
+    tileCounts,
+    tileLineEdgeMinMean,
   )
   const inputLuma = lumaStats(input.data, input.width, input.height)
   const outputLuma = lumaStats(resized, input.width, input.height)
@@ -641,6 +697,9 @@ export async function preservationStats(input, result, options = {}) {
     tileChromaRatioMax: tileChroma.tileChromaRatioMax,
     tileChromaTileCount: tileChroma.tileChromaTileCount,
     lineEdgeRatio: inputEdge > 0 ? outputEdge / inputEdge : 1,
+    tileLineEdgeRatioMin: tileLineEdge.tileLineEdgeRatioMin,
+    tileLineEdgeRatioMax: tileLineEdge.tileLineEdgeRatioMax,
+    tileLineEdgeTileCount: tileLineEdge.tileLineEdgeTileCount,
     directedEdgeJaccardMin: edgeOverlap.directedEdgeJaccardMin,
     directedEdgeRecallMin: edgeOverlap.directedEdgeRecallMin,
     directedEdgeSpuriousMax: edgeOverlap.directedEdgeSpuriousMax,

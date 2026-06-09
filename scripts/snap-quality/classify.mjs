@@ -1519,6 +1519,18 @@ export function classifyMetrics(metrics) {
     )
   }
   if (
+    (metrics.tileLineEdgeTileCount ?? 0) >= QUALITY_RULES.minTileLineEdgeTileCount &&
+    (metrics.tileLineEdgeRatioMin ?? 1) < QUALITY_RULES.minTileLineEdgeRatio
+  ) {
+    issues.push(
+      issue(
+        'review',
+        'regional-line-edge-collapse',
+        `min tile line edge ratio ${formatNum(metrics.tileLineEdgeRatioMin)}`,
+      ),
+    )
+  }
+  if (
     (metrics.sourceEdgeDirectionCount ?? 0) >= QUALITY_RULES.minEdgeDirectionCount &&
     (metrics.outputEdgeDirectionCount ?? 0) >= QUALITY_RULES.minEdgeDirectionCount &&
     (metrics.edgeDirectionDrift ?? 0) > QUALITY_RULES.maxEdgeDirectionDrift
@@ -2020,6 +2032,7 @@ export function objective(metrics) {
     Math.max(0, metrics.hueErrorMean - QUALITY_RULES.maxHueErrorMean) * 0.5 +
     Math.max(0, metrics.hueErrorP95 - QUALITY_RULES.maxHueErrorP95) * 0.2 +
     Math.abs(1 - metrics.lineEdgeRatio) * 8 +
+    Math.max(0, QUALITY_RULES.minTileLineEdgeRatio - (metrics.tileLineEdgeRatioMin ?? 1)) * 25 +
     Math.max(0, (metrics.edgeDirectionDrift ?? 0) - QUALITY_RULES.maxEdgeDirectionDrift) * 40 +
     Math.max(0, QUALITY_RULES.minDirectedEdgeJaccard - (metrics.directedEdgeJaccardMin ?? 1)) * 25 +
     Math.max(0, QUALITY_RULES.minDirectedEdgeRecall - (metrics.directedEdgeRecallMin ?? 1)) * 30 +

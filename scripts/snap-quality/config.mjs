@@ -158,6 +158,8 @@ export const QUALITY_RULES = {
   minTileChromaTileCount: 1,
   minLineEdgeRatio: 0.55,
   maxLineEdgeRatio: 2.4,
+  minTileLineEdgeRatio: 0.3,
+  minTileLineEdgeTileCount: 1,
   minEdgeDirectionCount: 64,
   maxEdgeDirectionDrift: 0.7,
   minDirectedEdgeBinCount: 1,

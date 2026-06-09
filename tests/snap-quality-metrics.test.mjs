@@ -368,6 +368,22 @@ test('tile contrast catches localized contrast collapse hidden by global contras
   )
 })
 
+test('tile line edge ratio catches localized edge collapse', async () => {
+  const source = makeChecker(32, 32, 1)
+  const output = setRgbRect(copyImage(source), 0, 0, 16, 16, 128)
+  const stats = await preservationStats(source, output, { tileGrid: 2 })
+
+  assert.equal(stats.tileLineEdgeTileCount, 4)
+  assert.ok(
+    stats.tileLineEdgeRatioMin < 0.3,
+    `expected collapsed tile line edge ratio below 0.3, got ${stats.tileLineEdgeRatioMin}`,
+  )
+  assert.ok(
+    stats.tileLineEdgeRatioMax > 0.99 && stats.tileLineEdgeRatioMax < 1.01,
+    `expected preserved tile line edge ratio near 1, got ${stats.tileLineEdgeRatioMax}`,
+  )
+})
+
 test('cell uniformity tracks alpha variation separately from RGB variation', () => {
   const image = makeSolid(16, 16, 96)
   setAlphaRect(image, 0, 0, 4, 8, 0)
@@ -3242,6 +3258,16 @@ test('quality classification reviews regional contrast collapse', () => {
 
   assert.equal(result.status, 'review')
   assert.ok(result.issues.some((issue) => issue.code === 'regional-contrast-collapse'))
+})
+
+test('quality classification reviews regional line edge collapse', () => {
+  const result = classifyMetrics({
+    tileLineEdgeRatioMin: QUALITY_RULES.minTileLineEdgeRatio - 0.01,
+    tileLineEdgeTileCount: QUALITY_RULES.minTileLineEdgeTileCount,
+  })
+
+  assert.equal(result.status, 'review')
+  assert.ok(result.issues.some((issue) => issue.code === 'regional-line-edge-collapse'))
 })
 
 test('quality classification skips regional contrast for low-palette inputs', () => {
