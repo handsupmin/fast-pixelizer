@@ -3,6 +3,7 @@ import { alphaMaskStats } from './alpha-mask.mjs'
 import { edgeOverlapStats } from './edge-overlap.mjs'
 import { resizeToInput } from './image-io.mjs'
 
+const RGB_HISTOGRAM_BINS = 16
 const EDGE_MAGNITUDE_HISTOGRAM_BINS = [0, 8, 16, 24, 32, 48, 64, 96, 128, 192, Infinity]
 
 function grayAt(data, width, x, y) {
@@ -366,6 +367,63 @@ function rgbTileCoverageStats(inputTiles, inputCounts, outputTiles, outputCounts
   }
 }
 
+function addRgbHistogramBins(histogram, data, index) {
+  for (let ch = 0; ch < 3; ch++) {
+    const bucket = Math.min(RGB_HISTOGRAM_BINS - 1, data[index + ch] >> 4)
+    histogram[ch * RGB_HISTOGRAM_BINS + bucket]++
+  }
+}
+
+function rgbHistogramDrift(inputHistogram, inputCount, outputHistogram, outputCount) {
+  if (inputCount === 0 && outputCount === 0) return 0
+
+  let total = 0
+  for (let ch = 0; ch < 3; ch++) {
+    let channel = 0
+    const offset = ch * RGB_HISTOGRAM_BINS
+    for (let bin = 0; bin < RGB_HISTOGRAM_BINS; bin++) {
+      const inputValue = inputCount > 0 ? inputHistogram[offset + bin] / inputCount : 0
+      const outputValue = outputCount > 0 ? outputHistogram[offset + bin] / outputCount : 0
+      channel += Math.abs(inputValue - outputValue)
+    }
+    total += channel / 2
+  }
+
+  return total / 3
+}
+
+function tileRgbHistogramStats(
+  inputHistograms,
+  inputCounts,
+  outputHistograms,
+  outputCounts,
+  minSampleCount,
+) {
+  const values = []
+  let driftMax = 0
+
+  for (let tile = 0; tile < inputHistograms.length; tile++) {
+    if (Math.max(inputCounts[tile], outputCounts[tile]) < minSampleCount) continue
+
+    const drift = rgbHistogramDrift(
+      inputHistograms[tile],
+      inputCounts[tile],
+      outputHistograms[tile],
+      outputCounts[tile],
+    )
+    driftMax = Math.max(driftMax, drift)
+    values.push(drift)
+  }
+
+  values.sort((a, b) => a - b)
+
+  return {
+    tileRgbHistogramDriftMax: driftMax,
+    tileRgbHistogramDriftP95: percentile(values, 0.95),
+    tileRgbHistogramTileCount: values.length,
+  }
+}
+
 function dominantBucketCoverageStats(inputBuckets, inputCount, outputBuckets, outputCount) {
   if (inputCount === 0) {
     return {
@@ -619,10 +677,22 @@ export async function preservationStats(input, result, options = {}) {
   const tileCounts = new Uint32Array(tileCount)
   const inputEdgeMagnitudeTileCounts = new Uint32Array(tileCount)
   const outputEdgeMagnitudeTileCounts = new Uint32Array(tileCount)
+  const inputRgbTileHistograms = Array.from(
+    { length: tileCount },
+    () => new Uint32Array(RGB_HISTOGRAM_BINS * 3),
+  )
+  const outputRgbTileHistograms = Array.from(
+    { length: tileCount },
+    () => new Uint32Array(RGB_HISTOGRAM_BINS * 3),
+  )
+  const inputRgbTileHistogramCounts = new Uint32Array(tileCount)
+  const outputRgbTileHistogramCounts = new Uint32Array(tileCount)
   const hueMinChroma = options.hueMinChroma ?? 16
   const tileContrastMinStdDev = options.tileContrastMinStdDev ?? 8
   const tileChromaMinMean = options.tileChromaMinMean ?? 8
   const tileLineEdgeMinMean = options.tileLineEdgeMinMean ?? 6
+  const tileRgbHistogramMinSampleCount =
+    options.tileRgbHistogramMinSampleCount ?? QUALITY_RULES.minTileRgbHistogramSampleCount
   const tileEdgeMagnitudeHistogramMinSampleCount =
     options.tileEdgeMagnitudeHistogramMinSampleCount ??
     QUALITY_RULES.minTileEdgeMagnitudeHistogramSampleCount
@@ -667,16 +737,20 @@ export async function preservationStats(input, result, options = {}) {
       increment(inputRgbCoverage, key)
       increment(inputRgbTileCoverage[tile], key)
       increment(inputRgbBuckets, rgbBucketKey(input.data, i))
+      addRgbHistogramBins(inputRgbTileHistograms[tile], input.data, i)
       inputRgbCoverageCount++
       inputRgbTileCoverageCounts[tile]++
+      inputRgbTileHistogramCounts[tile]++
     }
     if (resized[i + 3] > 0) {
       const key = rgbKey(resized, i)
       increment(outputRgbCoverage, key)
       increment(outputRgbTileCoverage[tile], key)
       increment(outputRgbBuckets, rgbBucketKey(resized, i))
+      addRgbHistogramBins(outputRgbTileHistograms[tile], resized, i)
       outputRgbCoverageCount++
       outputRgbTileCoverageCounts[tile]++
+      outputRgbTileHistogramCounts[tile]++
     }
     let pixelError = 0
     for (let ch = 0; ch < 3; ch++) {
@@ -795,6 +869,13 @@ export async function preservationStats(input, result, options = {}) {
     inputRgbTileCoverageCounts,
     outputRgbTileCoverage,
     outputRgbTileCoverageCounts,
+  )
+  const tileRgbHistogram = tileRgbHistogramStats(
+    inputRgbTileHistograms,
+    inputRgbTileHistogramCounts,
+    outputRgbTileHistograms,
+    outputRgbTileHistogramCounts,
+    tileRgbHistogramMinSampleCount,
   )
   const dominantBucketCoverage = dominantBucketCoverageStats(
     inputRgbBuckets,
@@ -915,6 +996,9 @@ export async function preservationStats(input, result, options = {}) {
     rgbTileCoverageDriftMax: rgbTileCoverage.rgbTileCoverageDriftMax,
     rgbTileCoverageRetentionMin: rgbTileCoverage.rgbTileCoverageRetentionMin,
     rgbTileCoverageTileCount: rgbTileCoverage.rgbTileCoverageTileCount,
+    tileRgbHistogramDriftMax: tileRgbHistogram.tileRgbHistogramDriftMax,
+    tileRgbHistogramDriftP95: tileRgbHistogram.tileRgbHistogramDriftP95,
+    tileRgbHistogramTileCount: tileRgbHistogram.tileRgbHistogramTileCount,
     sourceDominantBucketCoverage: dominantBucketCoverage.sourceDominantBucketCoverage,
     outputDominantBucketCoverage: dominantBucketCoverage.outputDominantBucketCoverage,
     dominantBucketCoverageDrift: dominantBucketCoverage.dominantBucketCoverageDrift,

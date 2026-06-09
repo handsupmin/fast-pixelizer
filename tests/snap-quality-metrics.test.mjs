@@ -594,6 +594,20 @@ test('regional rgb coverage catches color relocation with unchanged global cover
   assert.equal(stats.rgbTileCoverageRetentionMin, 0)
 })
 
+test('tile RGB histogram drift catches regional channel distribution changes', async () => {
+  const source = makeRgbSplit(64, 64, 32, [255, 0, 0], [0, 0, 255])
+  const output = makeRgbSplit(64, 64, 32, [255, 0, 0], [0, 255, 0])
+  const preserved = await preservationStats(source, source, { tileGrid: 8 })
+  const drifted = await preservationStats(source, output, { tileGrid: 8 })
+
+  assert.equal(preserved.tileRgbHistogramDriftP95, 0)
+  assert.equal(drifted.tileRgbHistogramTileCount, 64)
+  assert.ok(
+    drifted.tileRgbHistogramDriftP95 > QUALITY_RULES.maxTileRgbHistogramDriftP95,
+    `expected regional RGB histogram drift above threshold, got ${drifted.tileRgbHistogramDriftP95}`,
+  )
+})
+
 test('edge overlap distinguishes preserved and removed line positions', () => {
   const image = makeChecker(64, 64, 8)
   const blank = makeSolid(64, 64, 127)
@@ -1572,6 +1586,21 @@ test('quality classification reviews low-palette regional coverage drift', () =>
 
   assert.equal(result.status, 'review')
   assert.ok(result.issues.some((issue) => issue.code === 'low-palette-regional-coverage-drift'))
+})
+
+test('quality classification reviews regional RGB histogram drift', () => {
+  const review = classifyMetrics({
+    tileRgbHistogramDriftP95: QUALITY_RULES.maxTileRgbHistogramDriftP95 + 0.01,
+    tileRgbHistogramTileCount: QUALITY_RULES.minTileRgbHistogramTileCount,
+  })
+  const pass = classifyMetrics({
+    tileRgbHistogramDriftP95: QUALITY_RULES.maxTileRgbHistogramDriftP95 - 0.01,
+    tileRgbHistogramTileCount: QUALITY_RULES.minTileRgbHistogramTileCount,
+  })
+
+  assert.equal(review.status, 'review')
+  assert.ok(review.issues.some((issue) => issue.code === 'regional-rgb-histogram-drift'))
+  assert.equal(pass.status, 'pass')
 })
 
 test('quality classification reviews exact cell color horizontal run drift', () => {

@@ -243,6 +243,18 @@ export function classifyMetrics(metrics) {
       ),
     )
   }
+  if (
+    (metrics.tileRgbHistogramTileCount ?? 0) >= QUALITY_RULES.minTileRgbHistogramTileCount &&
+    (metrics.tileRgbHistogramDriftP95 ?? 0) > QUALITY_RULES.maxTileRgbHistogramDriftP95
+  ) {
+    issues.push(
+      issue(
+        'review',
+        'regional-rgb-histogram-drift',
+        `tile RGB histogram p95 ${formatNum(metrics.tileRgbHistogramDriftP95)}`,
+      ),
+    )
+  }
   if (metrics.outputCoverage < QUALITY_RULES.minOutputCoverage) {
     issues.push(
       issue('review', 'output-shrink', `output coverage ${formatNum(metrics.outputCoverage)}`),
@@ -2035,6 +2047,11 @@ export function objective(metrics) {
         : 0) - QUALITY_RULES.maxDominantBucketCoverageDrift,
     ) *
       60 +
+    Math.max(
+      0,
+      (metrics.tileRgbHistogramDriftP95 ?? 0) - QUALITY_RULES.maxTileRgbHistogramDriftP95,
+    ) *
+      20 +
     Math.max(0, QUALITY_RULES.minOutputCoverage - metrics.outputCoverage) * 50 +
     Math.max(0, QUALITY_RULES.minOutputAreaCoverage - (metrics.outputAreaCoverage ?? 1)) * 50 +
     Math.max(0, (metrics.outputExpansion ?? 1) - QUALITY_RULES.maxOutputExpansion) * 50 +

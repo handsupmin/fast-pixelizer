@@ -158,6 +158,18 @@ export function summarize(results) {
       (max, item) => Math.max(max, item.dominantBucketCoverageDrift ?? 0),
       0,
     ),
+    tileRgbHistogramDriftMax: results.reduce(
+      (max, item) => Math.max(max, item.tileRgbHistogramDriftMax ?? 0),
+      0,
+    ),
+    tileRgbHistogramDriftP95Max: results.reduce(
+      (max, item) => Math.max(max, item.tileRgbHistogramDriftP95 ?? 0),
+      0,
+    ),
+    tileRgbHistogramTileCountTotal: results.reduce(
+      (sum, item) => sum + (item.tileRgbHistogramTileCount ?? 0),
+      0,
+    ),
     edgeMagnitudeHistogramDriftMean: mean(results, 'edgeMagnitudeHistogramDrift'),
     edgeMagnitudeHistogramDriftMax: results.reduce(
       (max, item) => Math.max(max, item.edgeMagnitudeHistogramDrift ?? 0),
@@ -451,6 +463,7 @@ function criteriaMarkdown() {
     `- Low-palette coverage: review when limited-palette inputs move visible RGB coverage by more than ${(QUALITY_RULES.maxLowPaletteCoverageDrift * 100).toFixed(0)}% or retain less than ${(QUALITY_RULES.minLowPaletteCoverageRetention * 100).toFixed(0)}% of source RGB coverage.`,
     `- Regional low-palette coverage: review when any eligible canvas tile moves visible RGB coverage by more than ${(QUALITY_RULES.maxLowPaletteTileCoverageDrift * 100).toFixed(0)}% or retains less than ${(QUALITY_RULES.minLowPaletteTileCoverageRetention * 100).toFixed(0)}% of source RGB coverage.`,
     `- Dominant bucket coverage: review when a source/output visible dominant RGB bucket covers at least ${(QUALITY_RULES.minDominantBucketCoverage * 100).toFixed(0)}% of visible pixels and changes coverage by more than ${(QUALITY_RULES.maxDominantBucketCoverageDrift * 100).toFixed(0)} percentage points.`,
+    `- Regional RGB distribution: review when eligible 8x8 canvas tile RGB channel histogram p95 exceeds ${QUALITY_RULES.maxTileRgbHistogramDriftP95}.`,
     `- Output coverage: review when original-size snap output keeps less than ${(QUALITY_RULES.minOutputCoverage * 100).toFixed(0)}% of the input canvas on either axis.`,
     `- Output area coverage: review when original-size snap output keeps less than ${(QUALITY_RULES.minOutputAreaCoverage * 100).toFixed(0)}% of the input canvas area.`,
     `- Output expansion: review when original-size snap output grows beyond ${QUALITY_RULES.maxOutputExpansion}x of the input canvas on either axis.`,
@@ -714,6 +727,9 @@ export function toMarkdown(summary) {
     'sourceDominantBucketCoverage',
     'outputDominantBucketCoverage',
     'dominantBucketCoverageDrift',
+    'tileRgbHistogramDriftMax',
+    'tileRgbHistogramDriftP95',
+    'tileRgbHistogramTileCount',
     'hueErrorMean',
     'hueErrorP95',
     'hueSampleCount',
