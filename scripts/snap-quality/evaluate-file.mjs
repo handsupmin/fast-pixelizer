@@ -567,6 +567,7 @@ async function buildMetrics(input, expected, snapshots, colorVariety) {
       outputCellDiagonalTransitionDownLeftCount:
         transitions.outputCellDiagonalTransitionDownLeftCount,
       cellMae: uniformity.cellMae,
+      cellStdDev: uniformity.cellStdDev,
       outputCellMae: outputUniformity.cellMae,
       outputAlphaCellMae: outputUniformity.alphaCellMae,
       preservationMae: preserve.mae,

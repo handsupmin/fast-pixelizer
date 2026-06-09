@@ -937,6 +937,11 @@ export function classifyMetrics(metrics) {
   if (metrics.cellMae > QUALITY_RULES.highCellMae) {
     issues.push(issue('review', 'noisy-cells', `cell MAE ${formatNum(metrics.cellMae)}`))
   }
+  if ((metrics.cellStdDev ?? 0) > QUALITY_RULES.highCellStdDev) {
+    issues.push(
+      issue('review', 'high-cell-variance', `cell std dev ${formatNum(metrics.cellStdDev)}`),
+    )
+  }
   if (metrics.preservationMae > QUALITY_RULES.maxPreservationMae) {
     issues.push(
       issue(
@@ -1452,6 +1457,7 @@ export function objective(metrics) {
     ) *
       16 +
     metrics.cellMae +
+    Math.max(0, (metrics.cellStdDev ?? 0) - QUALITY_RULES.highCellStdDev) * 0.5 +
     metrics.preservationMae +
     metrics.preservationP95 * 0.25 +
     Math.max(0, metrics.preservationP95 - QUALITY_RULES.maxPreservationP95) * 0.25 +

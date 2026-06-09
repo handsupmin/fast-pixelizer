@@ -84,6 +84,7 @@ export const QUALITY_RULES = {
   maxCellDiagonalTransitionErrorP95: 36,
   maxCellDiagonalTransitionErrorP99: 59.5,
   highCellMae: 18,
+  highCellStdDev: 30,
   maxPreservationMae: 38,
   maxPreservationP95: 70,
   maxTilePreservationMae: 40,

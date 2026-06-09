@@ -310,7 +310,7 @@ function criteriaMarkdown() {
     `- Axis cell transitions: review when either horizontal or vertical cell-adjacency transitions breach the same cell transition limits.`,
     `- Diagonal cell transitions: review when at least ${QUALITY_RULES.minCellDiagonalTransitionCount} source diagonal cell-adjacency transitions retain less than ${(QUALITY_RULES.minCellDiagonalTransitionRetention * 100).toFixed(0)}% of their strength, when output-only diagonal transitions exceed ${(QUALITY_RULES.maxCellDiagonalTransitionSpuriousRatio * 100).toFixed(0)}% of output diagonal transition strength, when mean diagonal transition color error exceeds ${QUALITY_RULES.maxCellDiagonalTransitionErrorMean}, when diagonal transition color error p95 exceeds ${QUALITY_RULES.maxCellDiagonalTransitionErrorP95}, or when diagonal transition color error p99 exceeds ${QUALITY_RULES.maxCellDiagonalTransitionErrorP99}.`,
     `- Directional diagonal cell transitions: review when either diagonal direction breaches the same diagonal transition limits.`,
-    `- Source disorder: review when intra-cell source MAE exceeds ${QUALITY_RULES.highCellMae}.`,
+    `- Source disorder: review when intra-cell source MAE exceeds ${QUALITY_RULES.highCellMae} or intra-cell source standard deviation exceeds ${QUALITY_RULES.highCellStdDev}.`,
     `- Preservation: review when average MAE exceeds ${QUALITY_RULES.maxPreservationMae} or p95 exceeds ${QUALITY_RULES.maxPreservationP95}.`,
     `- Regional preservation: review when any 8x8 canvas tile exceeds MAE ${QUALITY_RULES.maxTilePreservationMae} or tile p95 exceeds ${QUALITY_RULES.maxTilePreservationP95}.`,
     `- Alpha preservation: review when alpha MAE exceeds ${QUALITY_RULES.maxAlphaMae} or p95 exceeds ${QUALITY_RULES.maxAlphaP95}.`,

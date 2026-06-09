@@ -2716,6 +2716,22 @@ test('quality classification reviews regional preservation p95 above the tuned b
   assert.equal(pass.status, 'pass')
 })
 
+test('quality classification reviews high intra-cell source variance hidden by MAE', () => {
+  const review = classifyMetrics({
+    cellMae: 0,
+    cellStdDev: 31,
+  })
+  const pass = classifyMetrics({
+    cellMae: 0,
+    cellStdDev: 29,
+  })
+
+  assert.equal(review.status, 'review')
+  assert.ok(review.issues.some((issue) => issue.code === 'high-cell-variance'))
+  assert.ok(!review.issues.some((issue) => issue.code === 'noisy-cells'))
+  assert.equal(pass.status, 'pass')
+})
+
 test('quality classification reviews chroma drift on colorful inputs', () => {
   const result = classifyMetrics({
     alphaMae: 0,
