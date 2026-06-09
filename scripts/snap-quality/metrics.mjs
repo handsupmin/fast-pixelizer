@@ -358,6 +358,67 @@ function tileCoverageDriftStats(inputHits, inputCounts, outputHits, outputCounts
   }
 }
 
+function inkComponentStats(data, width, height, lumaThreshold, minArea) {
+  const visited = new Uint8Array(width * height)
+  const stack = []
+  let componentCount = 0
+  let componentPixelCount = 0
+  let largestComponentPixels = 0
+
+  function isInk(index) {
+    const offset = index * 4
+    return data[offset + 3] > 0 && lumaAt(data, offset) < lumaThreshold
+  }
+
+  for (let index = 0; index < width * height; index++) {
+    if (visited[index] || !isInk(index)) continue
+
+    visited[index] = 1
+    stack.length = 0
+    stack.push(index)
+    let area = 0
+
+    while (stack.length > 0) {
+      const current = stack.pop()
+      area++
+      const x = current % width
+      const y = Math.floor(current / width)
+      const left = current - 1
+      const right = current + 1
+      const up = current - width
+      const down = current + width
+
+      if (x > 0 && !visited[left] && isInk(left)) {
+        visited[left] = 1
+        stack.push(left)
+      }
+      if (x < width - 1 && !visited[right] && isInk(right)) {
+        visited[right] = 1
+        stack.push(right)
+      }
+      if (y > 0 && !visited[up] && isInk(up)) {
+        visited[up] = 1
+        stack.push(up)
+      }
+      if (y < height - 1 && !visited[down] && isInk(down)) {
+        visited[down] = 1
+        stack.push(down)
+      }
+    }
+
+    if (area < minArea) continue
+    componentCount++
+    componentPixelCount += area
+    largestComponentPixels = Math.max(largestComponentPixels, area)
+  }
+
+  return {
+    componentCount,
+    componentPixelCount,
+    largestComponentPixels,
+  }
+}
+
 function rgbCoverageStats(inputColors, inputCount, outputColors, outputCount) {
   if (inputCount === 0) {
     return {
@@ -765,6 +826,16 @@ export async function preservationStats(input, result, options = {}) {
   const tileLineEdgeMinMean = options.tileLineEdgeMinMean ?? 6
   const shadowCoverageLumaThreshold =
     options.shadowCoverageLumaThreshold ?? QUALITY_RULES.shadowCoverageLumaThreshold
+  const inkComponentLumaThreshold =
+    options.inkComponentLumaThreshold ?? QUALITY_RULES.inkCoverageLumaThreshold
+  const inkComponentMinArea = Math.max(
+    options.inkComponentMinArea ?? QUALITY_RULES.minInkComponentArea,
+    Math.floor(
+      input.width *
+        input.height *
+        (options.inkComponentMinAreaRatio ?? QUALITY_RULES.minInkComponentAreaRatio),
+    ),
+  )
   const brightCoverageLumaThreshold =
     options.brightCoverageLumaThreshold ?? QUALITY_RULES.brightCoverageLumaThreshold
   const tileShadowCoverageMinSampleCount =
@@ -1135,6 +1206,20 @@ export async function preservationStats(input, result, options = {}) {
         outputAlphaSmallComponentCount: 0,
         sourceAlphaEdgeTileCount: 0,
       }
+  const sourceInkComponents = inkComponentStats(
+    input.data,
+    input.width,
+    input.height,
+    inkComponentLumaThreshold,
+    inkComponentMinArea,
+  )
+  const outputInkComponents = inkComponentStats(
+    resized,
+    input.width,
+    input.height,
+    inkComponentLumaThreshold,
+    inkComponentMinArea,
+  )
   const meanRgbRDrift =
     meanRgbSampleCount > 0
       ? Math.abs(inputMeanRgbR / meanRgbSampleCount - outputMeanRgbR / meanRgbSampleCount)
@@ -1160,6 +1245,27 @@ export async function preservationStats(input, result, options = {}) {
     meanRgbBDrift,
     meanRgbChannelDrift: (meanRgbRDrift + meanRgbGDrift + meanRgbBDrift) / 3,
     meanRgbDrift: Math.hypot(meanRgbRDrift, meanRgbGDrift, meanRgbBDrift),
+    inkComponentMinArea,
+    sourceInkComponentCount: sourceInkComponents.componentCount,
+    outputInkComponentCount: outputInkComponents.componentCount,
+    sourceInkComponentPixelCount: sourceInkComponents.componentPixelCount,
+    outputInkComponentPixelCount: outputInkComponents.componentPixelCount,
+    inputInkComponentCoverage:
+      sourceInkComponents.componentPixelCount / (input.width * input.height),
+    outputInkComponentCoverage:
+      outputInkComponents.componentPixelCount / (input.width * input.height),
+    inkComponentCoverageDrift:
+      Math.abs(sourceInkComponents.componentPixelCount - outputInkComponents.componentPixelCount) /
+      (input.width * input.height),
+    inputInkLargestComponentCoverage:
+      sourceInkComponents.largestComponentPixels / (input.width * input.height),
+    outputInkLargestComponentCoverage:
+      outputInkComponents.largestComponentPixels / (input.width * input.height),
+    inkLargestComponentCoverageDrift:
+      Math.abs(
+        sourceInkComponents.largestComponentPixels - outputInkComponents.largestComponentPixels,
+      ) /
+      (input.width * input.height),
     tileMeanRgbDriftMax: tileMeanRgbDrift.tileMeanRgbDriftMax,
     tileMeanRgbDriftP95: tileMeanRgbDrift.tileMeanRgbDriftP95,
     tileMeanRgbDriftTileCount: tileMeanRgbDrift.tileMeanRgbDriftTileCount,

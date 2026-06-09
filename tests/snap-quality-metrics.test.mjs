@@ -623,6 +623,29 @@ test('ink coverage drift catches lost black outline area', async () => {
   )
 })
 
+test('ink component coverage drift catches lost connected ink areas', async () => {
+  const source = makeRgbSolid(64, 64, 128, 128, 128)
+  setColorRect(source, 0, 0, 16, 16, [0, 0, 0])
+  setColorRect(source, 48, 48, 64, 64, [0, 0, 0])
+  setColorRect(source, 24, 24, 26, 26, [0, 0, 0])
+  const output = makeRgbSolid(64, 64, 128, 128, 128)
+  const stats = await preservationStats(source, output)
+
+  assert.equal(stats.inkComponentMinArea, QUALITY_RULES.minInkComponentArea)
+  assert.equal(stats.sourceInkComponentCount, 2)
+  assert.equal(stats.outputInkComponentCount, 0)
+  assert.equal(stats.sourceInkComponentPixelCount, 512)
+  assert.equal(stats.outputInkComponentPixelCount, 0)
+  assert.equal(stats.inputInkComponentCoverage, 0.125)
+  assert.equal(stats.outputInkComponentCoverage, 0)
+  assert.equal(stats.inkComponentCoverageDrift, 0.125)
+  assert.equal(stats.inkLargestComponentCoverageDrift, 0.0625)
+  assert.ok(
+    stats.inkComponentCoverageDrift > QUALITY_RULES.maxInkComponentCoverageDrift,
+    `expected ink component coverage drift above threshold, got ${stats.inkComponentCoverageDrift}`,
+  )
+})
+
 test('saturated coverage drift catches lost vivid color area', async () => {
   const source = makeRgbSolid(64, 64, 96, 96, 96)
   setColorRect(source, 0, 0, 32, 32, [255, 0, 0])
@@ -3685,6 +3708,21 @@ test('quality classification reviews ink coverage drift', () => {
 
   assert.equal(review.status, 'review')
   assert.ok(review.issues.some((issue) => issue.code === 'ink-coverage-drift'))
+  assert.equal(pass.status, 'pass')
+})
+
+test('quality classification reviews ink component coverage drift', () => {
+  const review = classifyMetrics({
+    inkComponentCoverageDrift: QUALITY_RULES.maxInkComponentCoverageDrift + 0.01,
+    sourceInkComponentPixelCount: QUALITY_RULES.minInkComponentPixelCount,
+  })
+  const pass = classifyMetrics({
+    inkComponentCoverageDrift: QUALITY_RULES.maxInkComponentCoverageDrift - 0.01,
+    sourceInkComponentPixelCount: QUALITY_RULES.minInkComponentPixelCount,
+  })
+
+  assert.equal(review.status, 'review')
+  assert.ok(review.issues.some((issue) => issue.code === 'ink-component-coverage-drift'))
   assert.equal(pass.status, 'pass')
 })
 
