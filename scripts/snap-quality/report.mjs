@@ -501,7 +501,7 @@ function criteriaMarkdown() {
     `- Spurious color growth: review when at least ${QUALITY_RULES.minColorfulSpuriousPixelCount} output colorful pixels exist and more than ${(QUALITY_RULES.maxColorfulSpuriousRatio * 100).toFixed(0)}% of them were not colorful in the source.`,
     `- Regional chroma: review when any eligible 8x8 canvas tile falls outside chroma ratio ${QUALITY_RULES.minTileChromaRatio}-${QUALITY_RULES.maxTileChromaRatio}.`,
     `- Hue: review when at least ${QUALITY_RULES.minHueSampleCount} colorful pixels have hue error mean > ${QUALITY_RULES.maxHueErrorMean} degrees or p95 > ${QUALITY_RULES.maxHueErrorP95} degrees.`,
-    `- Regional hue: review when any 8x8 canvas tile with at least ${QUALITY_RULES.minTileHueSampleCount} colorful pixels has mean hue error > ${QUALITY_RULES.maxTileHueErrorMean} degrees.`,
+    `- Regional hue: review when any 8x8 canvas tile with at least ${QUALITY_RULES.minTileHueSampleCount} colorful pixels has mean hue error > ${QUALITY_RULES.maxTileHueErrorMean} degrees or p95 hue error > ${QUALITY_RULES.maxTileHueErrorP95} degrees.`,
     `- Line strength: review when resized snap edge strength falls outside ${QUALITY_RULES.minLineEdgeRatio}-${QUALITY_RULES.maxLineEdgeRatio}x the source edge strength.`,
     `- Regional line strength: review when any eligible 8x8 canvas tile keeps less than ${(QUALITY_RULES.minTileLineEdgeRatio * 100).toFixed(0)}% of source line-edge strength.`,
     `- Edge magnitude distribution: review when weak/medium/strong edge histogram drift exceeds ${QUALITY_RULES.maxEdgeMagnitudeHistogramDrift}.`,

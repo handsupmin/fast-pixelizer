@@ -539,6 +539,23 @@ test('tile hue error catches localized hue drift hidden by global hue stats', as
   assert.equal(stats.tileHueErrorP95Max, 120)
 })
 
+test('tile hue p95 catches rare local hue outliers below tile mean drift', async () => {
+  const source = makeRgbSolid(64, 64, 255, 0, 0)
+  const output = setColorRect(copyImage(source), 0, 0, 2, 2, [0, 255, 255])
+  const stats = await preservationStats(source, output, { tileGrid: 8 })
+
+  assert.equal(stats.hueSampleCount, 4096)
+  assert.equal(stats.hueErrorP95, 0)
+  assert.ok(
+    stats.tileHueErrorMeanMax < QUALITY_RULES.maxTileHueErrorMean,
+    `expected tile hue mean below threshold, got ${stats.tileHueErrorMeanMax}`,
+  )
+  assert.ok(
+    stats.tileHueErrorP95Max > QUALITY_RULES.maxTileHueErrorP95,
+    `expected tile hue p95 above threshold, got ${stats.tileHueErrorP95Max}`,
+  )
+})
+
 test('rgb coverage drift tracks low-palette color area changes', async () => {
   const source = makeRgbSplit(64, 64, 32, [0, 0, 0], [255, 255, 255])
   const output = makeRgbSplit(64, 64, 16, [0, 0, 0], [255, 255, 255])
@@ -3491,6 +3508,23 @@ test('quality classification reviews regional hue drift', () => {
 
   assert.equal(result.status, 'review')
   assert.ok(result.issues.some((issue) => issue.code === 'regional-hue-drift'))
+})
+
+test('quality classification reviews regional hue p95 drift', () => {
+  const review = classifyMetrics({
+    tileHueErrorMeanMax: QUALITY_RULES.maxTileHueErrorMean - 0.01,
+    tileHueErrorP95Max: QUALITY_RULES.maxTileHueErrorP95 + 0.01,
+    tileHueErrorTileCount: QUALITY_RULES.minTileHueTileCount,
+  })
+  const pass = classifyMetrics({
+    tileHueErrorMeanMax: QUALITY_RULES.maxTileHueErrorMean - 0.01,
+    tileHueErrorP95Max: QUALITY_RULES.maxTileHueErrorP95 - 0.01,
+    tileHueErrorTileCount: QUALITY_RULES.minTileHueTileCount,
+  })
+
+  assert.equal(review.status, 'review')
+  assert.ok(review.issues.some((issue) => issue.code === 'regional-hue-p95-drift'))
+  assert.equal(pass.status, 'pass')
 })
 
 test('quality classification skips regional contrast for low-palette inputs', () => {

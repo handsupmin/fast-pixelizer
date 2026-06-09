@@ -167,6 +167,7 @@ export const QUALITY_RULES = {
   minTileHueSampleCount: 16,
   minTileHueTileCount: 1,
   maxTileHueErrorMean: 70,
+  maxTileHueErrorP95: 170,
   minLineEdgeRatio: 0.55,
   maxLineEdgeRatio: 2.4,
   minTileLineEdgeRatio: 0.3,
