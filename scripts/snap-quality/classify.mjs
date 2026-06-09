@@ -173,6 +173,18 @@ export function classifyMetrics(metrics) {
   }
   if (
     metrics.lowPaletteCoverageEligible &&
+    (metrics.lowPaletteGrowth ?? 1) > QUALITY_RULES.maxLowPaletteGrowth
+  ) {
+    issues.push(
+      issue(
+        'review',
+        'low-palette-growth',
+        `low-palette color growth ${formatNum(metrics.lowPaletteGrowth)}`,
+      ),
+    )
+  }
+  if (
+    metrics.lowPaletteCoverageEligible &&
     (metrics.lowPaletteCoverageDrift > QUALITY_RULES.maxLowPaletteCoverageDrift ||
       metrics.lowPaletteCoverageRetention < QUALITY_RULES.minLowPaletteCoverageRetention)
   ) {
@@ -1398,6 +1410,12 @@ export function objective(metrics) {
       Math.max(0, metrics.paletteUtilizationTarget - QUALITY_RULES.minPaletteUtilizationTarget) *
       0.5 +
     Math.max(0, QUALITY_RULES.minLowPaletteRetention - metrics.lowPaletteRetention) * 50 +
+    Math.max(
+      0,
+      (metrics.lowPaletteCoverageEligible ? (metrics.lowPaletteGrowth ?? 1) : 1) -
+        QUALITY_RULES.maxLowPaletteGrowth,
+    ) *
+      50 +
     Math.max(0, (metrics.lowPaletteCoverageDrift ?? 0) - QUALITY_RULES.maxLowPaletteCoverageDrift) *
       80 +
     Math.max(

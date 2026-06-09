@@ -2511,6 +2511,17 @@ test('quality classification reviews low-palette coverage drift', () => {
   assert.ok(result.issues.some((issue) => issue.code === 'low-palette-coverage-drift'))
 })
 
+test('quality classification reviews low-palette color growth', () => {
+  const result = classifyMetrics({
+    lowPaletteCoverageEligible: true,
+    lowPaletteGrowth: 1.25,
+    lowPaletteRetention: 1,
+  })
+
+  assert.equal(result.status, 'review')
+  assert.ok(result.issues.some((issue) => issue.code === 'low-palette-growth'))
+})
+
 test('quality classification reviews hue drift on colorful inputs', () => {
   const result = classifyMetrics({
     alphaMae: 0,

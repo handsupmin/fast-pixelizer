@@ -31,10 +31,18 @@ async function timedSnap(input, options) {
   return { result, durationMs: performance.now() - start }
 }
 
-function lowPaletteRetention(inputRgbColorCount, outputRgbColorCount, colorVariety) {
+function lowPaletteColorRatio(inputRgbColorCount, outputRgbColorCount, colorVariety) {
   return inputRgbColorCount > 0 && inputRgbColorCount <= colorVariety + 1
     ? outputRgbColorCount / inputRgbColorCount
     : 1
+}
+
+function lowPaletteRetention(inputRgbColorCount, outputRgbColorCount, colorVariety) {
+  return Math.min(1, lowPaletteColorRatio(inputRgbColorCount, outputRgbColorCount, colorVariety))
+}
+
+function lowPaletteGrowth(inputRgbColorCount, outputRgbColorCount, colorVariety) {
+  return lowPaletteColorRatio(inputRgbColorCount, outputRgbColorCount, colorVariety)
 }
 
 function outputCoverage(input, result) {
@@ -274,6 +282,7 @@ function toItem({ dataset, expected, input, metrics, name, original, resized, un
     paletteDominanceDelta: formatNum(metrics.paletteDominanceDelta),
     outputRgbPaletteOverage: metrics.outputRgbPaletteOverage,
     lowPaletteRetention: formatNum(metrics.lowPaletteRetention),
+    lowPaletteGrowth: formatNum(metrics.lowPaletteGrowth),
     snapOriginalMs: formatNum(original.durationMs),
     snapResizedMs: formatNum(resized.durationMs),
     status: classification.status,
@@ -610,6 +619,7 @@ async function buildMetrics(input, expected, snapshots, colorVariety) {
         outputRgbColorCount,
         colorVariety,
       ),
+      lowPaletteGrowth: lowPaletteGrowth(inputRgbColorCount, outputRgbColorCount, colorVariety),
     },
     uniformity,
   }
