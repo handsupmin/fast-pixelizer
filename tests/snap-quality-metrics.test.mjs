@@ -1662,14 +1662,14 @@ test('quality classification reviews regional spurious edges above the tuned bou
     edgeJaccard: 1,
     edgeRecall: 1,
     edgeSpuriousRatio: 0,
-    edgeTileSpuriousMax: 0.56,
+    edgeTileSpuriousMax: 0.501,
     outputEdgeTileCount: 1,
   })
   const pass = classifyMetrics({
     edgeJaccard: 1,
     edgeRecall: 1,
     edgeSpuriousRatio: 0,
-    edgeTileSpuriousMax: 0.54,
+    edgeTileSpuriousMax: 0.499,
     outputEdgeTileCount: 1,
   })
 

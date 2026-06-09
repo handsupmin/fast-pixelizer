@@ -147,7 +147,7 @@ export const QUALITY_RULES = {
   minEdgeJaccard: 0.5,
   minEdgeTileCount: 1,
   minEdgeTileRecall: 0.7,
-  maxEdgeTileSpuriousRatio: 0.55,
+  maxEdgeTileSpuriousRatio: 0.5,
 }
 
 export const KNOWN_EXPECTATIONS = [
