@@ -1617,6 +1617,19 @@ export function classifyMetrics(metrics) {
     )
   }
   if (
+    (metrics.tileSaturatedCoverageTileCount ?? 0) >=
+      QUALITY_RULES.minTileSaturatedCoverageTileCount &&
+    (metrics.tileSaturatedCoverageDriftP95 ?? 0) > QUALITY_RULES.maxTileSaturatedCoverageDriftP95
+  ) {
+    issues.push(
+      issue(
+        'review',
+        'regional-saturated-coverage-drift',
+        `tile saturated coverage p95 ${formatNum(metrics.tileSaturatedCoverageDriftP95)}`,
+      ),
+    )
+  }
+  if (
     metrics.inputChromaMean >= QUALITY_RULES.minChromaMeanForRatio &&
     (metrics.tileChromaTileCount ?? 0) >= QUALITY_RULES.minTileChromaTileCount &&
     ((metrics.tileChromaRatioMin ?? 1) < QUALITY_RULES.minTileChromaRatio ||
@@ -2248,6 +2261,11 @@ export function objective(metrics) {
     ) *
       50 +
     Math.max(0, (metrics.saturatedCoverageDrift ?? 0) - QUALITY_RULES.maxSaturatedCoverageDrift) *
+      50 +
+    Math.max(
+      0,
+      (metrics.tileSaturatedCoverageDriftP95 ?? 0) - QUALITY_RULES.maxTileSaturatedCoverageDriftP95,
+    ) *
       50 +
     Math.max(0, QUALITY_RULES.minChromaRatio - metrics.chromaRatio) * 40 +
     Math.max(0, metrics.chromaRatio - QUALITY_RULES.maxChromaRatio) * 35 +

@@ -567,6 +567,20 @@ test('saturated coverage drift catches lost vivid color area', async () => {
   )
 })
 
+test('regional saturated coverage drift catches local vivid color loss', async () => {
+  const source = makeRgbSolid(64, 64, 96, 96, 96)
+  setColorRect(source, 0, 0, 16, 16, [255, 0, 0])
+  const output = makeRgbSolid(64, 64, 96, 96, 96)
+  const stats = await preservationStats(source, output)
+
+  assert.equal(stats.tileSaturatedCoverageTileCount, 64)
+  assert.equal(stats.tileSaturatedCoverageDriftMax, 1)
+  assert.ok(
+    stats.tileSaturatedCoverageDriftP95 > QUALITY_RULES.maxTileSaturatedCoverageDriftP95,
+    `expected regional saturated coverage drift above threshold, got ${stats.tileSaturatedCoverageDriftP95}`,
+  )
+})
+
 test('tile chroma ratio catches localized desaturation hidden by global chroma', async () => {
   const source = makeCellImage(
     [
@@ -3556,6 +3570,21 @@ test('quality classification reviews saturated coverage drift', () => {
 
   assert.equal(review.status, 'review')
   assert.ok(review.issues.some((issue) => issue.code === 'saturated-coverage-drift'))
+  assert.equal(pass.status, 'pass')
+})
+
+test('quality classification reviews regional saturated coverage drift', () => {
+  const review = classifyMetrics({
+    tileSaturatedCoverageDriftP95: QUALITY_RULES.maxTileSaturatedCoverageDriftP95 + 0.01,
+    tileSaturatedCoverageTileCount: QUALITY_RULES.minTileSaturatedCoverageTileCount,
+  })
+  const pass = classifyMetrics({
+    tileSaturatedCoverageDriftP95: QUALITY_RULES.maxTileSaturatedCoverageDriftP95 - 0.01,
+    tileSaturatedCoverageTileCount: QUALITY_RULES.minTileSaturatedCoverageTileCount,
+  })
+
+  assert.equal(review.status, 'review')
+  assert.ok(review.issues.some((issue) => issue.code === 'regional-saturated-coverage-drift'))
   assert.equal(pass.status, 'pass')
 })
 

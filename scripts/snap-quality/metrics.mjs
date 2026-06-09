@@ -695,6 +695,10 @@ export async function preservationStats(input, result, options = {}) {
   const inputColorfulCoverageTileCounts = new Uint32Array(tileCount)
   const outputColorfulCoverageTileHits = new Uint32Array(tileCount)
   const outputColorfulCoverageTileCounts = new Uint32Array(tileCount)
+  const inputSaturatedCoverageTileHits = new Uint32Array(tileCount)
+  const inputSaturatedCoverageTileCounts = new Uint32Array(tileCount)
+  const outputSaturatedCoverageTileHits = new Uint32Array(tileCount)
+  const outputSaturatedCoverageTileCounts = new Uint32Array(tileCount)
   const inputChromaTileSums = new Float64Array(tileCount)
   const outputChromaTileSums = new Float64Array(tileCount)
   const inputLineEdgeTileSums = new Float64Array(tileCount)
@@ -740,6 +744,8 @@ export async function preservationStats(input, result, options = {}) {
     options.tileBrightCoverageMinSampleCount ?? QUALITY_RULES.minTileBrightCoverageSampleCount
   const tileColorfulCoverageMinSampleCount =
     options.tileColorfulCoverageMinSampleCount ?? QUALITY_RULES.minTileColorfulCoverageSampleCount
+  const tileSaturatedCoverageMinSampleCount =
+    options.tileSaturatedCoverageMinSampleCount ?? QUALITY_RULES.minTileSaturatedCoverageSampleCount
   const tileRgbHistogramMinSampleCount =
     options.tileRgbHistogramMinSampleCount ?? QUALITY_RULES.minTileRgbHistogramSampleCount
   const tileEdgeMagnitudeHistogramMinSampleCount =
@@ -801,10 +807,14 @@ export async function preservationStats(input, result, options = {}) {
       inputShadowCoverageTileCounts[tile]++
       inputBrightCoverageTileCounts[tile]++
       inputColorfulCoverageTileCounts[tile]++
+      inputSaturatedCoverageTileCounts[tile]++
       if (inputLuma < shadowCoverageLumaThreshold) inputShadowCoverageTileHits[tile]++
       if (inputLuma > brightCoverageLumaThreshold) inputBrightCoverageTileHits[tile]++
       if (inputChromaValue >= colorfulCoverageChromaThreshold) {
         inputColorfulCoverageTileHits[tile]++
+      }
+      if (inputChromaValue > saturatedCoverageChromaThreshold) {
+        inputSaturatedCoverageTileHits[tile]++
       }
     }
     if (resized[i + 3] > 0) {
@@ -819,10 +829,14 @@ export async function preservationStats(input, result, options = {}) {
       outputShadowCoverageTileCounts[tile]++
       outputBrightCoverageTileCounts[tile]++
       outputColorfulCoverageTileCounts[tile]++
+      outputSaturatedCoverageTileCounts[tile]++
       if (outputLuma < shadowCoverageLumaThreshold) outputShadowCoverageTileHits[tile]++
       if (outputLuma > brightCoverageLumaThreshold) outputBrightCoverageTileHits[tile]++
       if (outputChromaValue >= colorfulCoverageChromaThreshold) {
         outputColorfulCoverageTileHits[tile]++
+      }
+      if (outputChromaValue > saturatedCoverageChromaThreshold) {
+        outputSaturatedCoverageTileHits[tile]++
       }
     }
     let pixelError = 0
@@ -923,6 +937,13 @@ export async function preservationStats(input, result, options = {}) {
     outputColorfulCoverageTileHits,
     outputColorfulCoverageTileCounts,
     tileColorfulCoverageMinSampleCount,
+  )
+  const tileSaturatedCoverage = tileCoverageDriftStats(
+    inputSaturatedCoverageTileHits,
+    inputSaturatedCoverageTileCounts,
+    outputSaturatedCoverageTileHits,
+    outputSaturatedCoverageTileCounts,
+    tileSaturatedCoverageMinSampleCount,
   )
   const tileContrast = tileContrastStats(
     inputLumaTileSums,
@@ -1059,6 +1080,9 @@ export async function preservationStats(input, result, options = {}) {
     tileColorfulCoverageDriftMax: tileColorfulCoverage.tileCoverageDriftMax,
     tileColorfulCoverageDriftP95: tileColorfulCoverage.tileCoverageDriftP95,
     tileColorfulCoverageTileCount: tileColorfulCoverage.tileCoverageTileCount,
+    tileSaturatedCoverageDriftMax: tileSaturatedCoverage.tileCoverageDriftMax,
+    tileSaturatedCoverageDriftP95: tileSaturatedCoverage.tileCoverageDriftP95,
+    tileSaturatedCoverageTileCount: tileSaturatedCoverage.tileCoverageTileCount,
     alphaMae: alphaCount > 0 ? alphaSum / alphaCount : 0,
     alphaP95: percentile(alphaErrors, 0.95),
     alphaMax: alphaErrors.length > 0 ? alphaErrors[alphaErrors.length - 1] : 0,
