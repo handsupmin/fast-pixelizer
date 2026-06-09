@@ -567,6 +567,23 @@ test('shadow coverage drift catches lost dark area', async () => {
   )
 })
 
+test('ink coverage drift catches lost black outline area', async () => {
+  const source = makeRgbSolid(64, 64, 128, 128, 128)
+  setColorRect(source, 0, 0, 16, 16, [0, 0, 0])
+  setColorRect(source, 48, 48, 64, 64, [0, 0, 0])
+  const output = makeRgbSolid(64, 64, 128, 128, 128)
+  const stats = await preservationStats(source, output)
+
+  assert.equal(stats.sourceInkPixelCount, 512)
+  assert.equal(stats.outputInkPixelCount, 0)
+  assert.equal(stats.inputInkCoverage, 0.125)
+  assert.equal(stats.outputInkCoverage, 0)
+  assert.ok(
+    stats.inkCoverageDrift > QUALITY_RULES.maxInkCoverageDrift,
+    `expected ink coverage drift above threshold, got ${stats.inkCoverageDrift}`,
+  )
+})
+
 test('saturated coverage drift catches lost vivid color area', async () => {
   const source = makeRgbSolid(64, 64, 96, 96, 96)
   setColorRect(source, 0, 0, 32, 32, [255, 0, 0])
@@ -3586,6 +3603,21 @@ test('quality classification reviews shadow coverage drift', () => {
 
   assert.equal(review.status, 'review')
   assert.ok(review.issues.some((issue) => issue.code === 'shadow-coverage-drift'))
+  assert.equal(pass.status, 'pass')
+})
+
+test('quality classification reviews ink coverage drift', () => {
+  const review = classifyMetrics({
+    inkCoverageDrift: QUALITY_RULES.maxInkCoverageDrift + 0.01,
+    sourceInkPixelCount: QUALITY_RULES.minInkCoveragePixelCount,
+  })
+  const pass = classifyMetrics({
+    inkCoverageDrift: QUALITY_RULES.maxInkCoverageDrift - 0.01,
+    sourceInkPixelCount: QUALITY_RULES.minInkCoveragePixelCount,
+  })
+
+  assert.equal(review.status, 'review')
+  assert.ok(review.issues.some((issue) => issue.code === 'ink-coverage-drift'))
   assert.equal(pass.status, 'pass')
 })
 

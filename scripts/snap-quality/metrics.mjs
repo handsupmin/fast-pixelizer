@@ -777,6 +777,8 @@ export async function preservationStats(input, result, options = {}) {
   let outputColorfulPixelCount = 0
   let retainedColorfulPixelCount = 0
   let spuriousColorfulPixelCount = 0
+  let sourceInkPixelCount = 0
+  let outputInkPixelCount = 0
   let sourceShadowPixelCount = 0
   let outputShadowPixelCount = 0
   let sourceBrightPixelCount = 0
@@ -855,6 +857,8 @@ export async function preservationStats(input, result, options = {}) {
     const alphaError = Math.abs(input.data[i + 3] - resized[i + 3])
     const inputColorful = input.data[i + 3] > 0 && inputChromaValue >= hueMinChroma
     const outputColorful = resized[i + 3] > 0 && outputChromaValue >= hueMinChroma
+    const inputInk = input.data[i + 3] > 0 && inputLuma < QUALITY_RULES.inkCoverageLumaThreshold
+    const outputInk = resized[i + 3] > 0 && outputLuma < QUALITY_RULES.inkCoverageLumaThreshold
     const inputShadow = input.data[i + 3] > 0 && inputLuma < shadowCoverageLumaThreshold
     const outputShadow = resized[i + 3] > 0 && outputLuma < shadowCoverageLumaThreshold
     const inputBright = input.data[i + 3] > 0 && inputLuma > brightCoverageLumaThreshold
@@ -896,6 +900,8 @@ export async function preservationStats(input, result, options = {}) {
     if (outputColorful) outputColorfulPixelCount++
     if (inputColorful && outputColorful) retainedColorfulPixelCount++
     if (!inputColorful && outputColorful) spuriousColorfulPixelCount++
+    if (inputInk) sourceInkPixelCount++
+    if (outputInk) outputInkPixelCount++
     if (inputShadow) sourceShadowPixelCount++
     if (outputShadow) outputShadowPixelCount++
     if (inputBright) sourceBrightPixelCount++
@@ -1145,6 +1151,15 @@ export async function preservationStats(input, result, options = {}) {
     outputColorfulPixelCount,
     retainedColorfulPixelCount,
     spuriousColorfulPixelCount,
+    sourceInkPixelCount,
+    outputInkPixelCount,
+    inputInkCoverage: inputRgbCoverageCount > 0 ? sourceInkPixelCount / inputRgbCoverageCount : 0,
+    outputInkCoverage:
+      outputRgbCoverageCount > 0 ? outputInkPixelCount / outputRgbCoverageCount : 0,
+    inkCoverageDrift: Math.abs(
+      (inputRgbCoverageCount > 0 ? sourceInkPixelCount / inputRgbCoverageCount : 0) -
+        (outputRgbCoverageCount > 0 ? outputInkPixelCount / outputRgbCoverageCount : 0),
+    ),
     sourceShadowPixelCount,
     outputShadowPixelCount,
     inputShadowCoverage:

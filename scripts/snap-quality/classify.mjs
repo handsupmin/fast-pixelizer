@@ -1253,6 +1253,19 @@ export function classifyMetrics(metrics) {
     )
   }
   if (
+    Math.max(metrics.sourceInkPixelCount ?? 0, metrics.outputInkPixelCount ?? 0) >=
+      QUALITY_RULES.minInkCoveragePixelCount &&
+    (metrics.inkCoverageDrift ?? 0) > QUALITY_RULES.maxInkCoverageDrift
+  ) {
+    issues.push(
+      issue(
+        'review',
+        'ink-coverage-drift',
+        `ink coverage drift ${formatNum(metrics.inkCoverageDrift)}`,
+      ),
+    )
+  }
+  if (
     Math.max(metrics.sourceShadowPixelCount ?? 0, metrics.outputShadowPixelCount ?? 0) >=
       QUALITY_RULES.minShadowCoveragePixelCount &&
     (metrics.shadowCoverageDrift ?? 0) > QUALITY_RULES.maxShadowCoverageDrift
@@ -2021,6 +2034,7 @@ export function objective(metrics) {
     Math.max(0, (metrics.tileLumaMeanDeltaMax ?? 0) - QUALITY_RULES.maxTileLumaMeanDelta) * 0.5 +
     Math.max(0, (metrics.tileLumaMeanDeltaP95 ?? 0) - QUALITY_RULES.maxTileLumaMeanDeltaP95) *
       0.35 +
+    Math.max(0, (metrics.inkCoverageDrift ?? 0) - QUALITY_RULES.maxInkCoverageDrift) * 80 +
     Math.max(0, (metrics.shadowCoverageDrift ?? 0) - QUALITY_RULES.maxShadowCoverageDrift) * 50 +
     Math.max(
       0,
