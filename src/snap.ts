@@ -143,15 +143,15 @@ export function snap(input: ImageLike, options?: SnapOptions): SnapResult {
   const initialGrid = shouldPreferUniformGrid(uniformGrid, transitionGrid)
     ? uniformGrid
     : (transitionGrid ?? uniformGrid)
+  const hasStrongGrid = Boolean(initialGrid)
   let numCols = initialGrid?.cols ?? 0
   let numRows = initialGrid?.rows ?? 0
 
   if (!transitionGrid && !uniformGrid) {
     const colProfile = computeColProfile(quantData, width, height)
     const rowProfile = computeRowProfile(quantData, width, height)
-    const minStep = minimumPlausibleStep(width, height)
-    const colStepEstimate = estimatePeriodicStep(colProfile, minStep)
-    const rowStepEstimate = estimatePeriodicStep(rowProfile, minStep)
+    const colStepEstimate = estimatePeriodicStep(colProfile)
+    const rowStepEstimate = estimatePeriodicStep(rowProfile)
     const fallbackStep = Math.max(1, Math.min(width, height) / FALLBACK_SEGMENTS)
 
     let baseStep = fallbackStep
@@ -175,6 +175,7 @@ export function snap(input: ImageLike, options?: SnapOptions): SnapResult {
       numRows = sharedCount
     }
 
+    const minStep = minimumPlausibleStep(width, height)
     const colPeakEstimate = estimatePeakStep(colProfile, minStep)
     const rowPeakEstimate = estimatePeakStep(rowProfile, minStep)
     if (colPeakEstimate && rowPeakEstimate) {
@@ -187,9 +188,11 @@ export function snap(input: ImageLike, options?: SnapOptions): SnapResult {
     }
   }
 
-  const plausibleGrid = clampGridToPlausibleCells(width, height, numCols, numRows)
-  numCols = plausibleGrid.cols
-  numRows = plausibleGrid.rows
+  if (hasStrongGrid) {
+    const plausibleGrid = clampGridToPlausibleCells(width, height, numCols, numRows)
+    numCols = plausibleGrid.cols
+    numRows = plausibleGrid.rows
+  }
 
   const colCuts = buildUniformCuts(width, numCols)
   const rowCuts = buildUniformCuts(height, numRows)

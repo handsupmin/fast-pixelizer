@@ -1,7 +1,18 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
+import fs from 'node:fs'
+import path from 'node:path'
 import sharp from 'sharp'
 import { snap } from '../dist/index.js'
+
+const MODEL_EXAMPLE_DIR = path.resolve('../mono-pix/src/assets/examples')
+const MODEL_EXAMPLE_GRIDS = new Map([
+  ['gemini-nano-banana-2.png', { cols: 557, rows: 306 }],
+  ['gpt-image-2.png', { cols: 350, rows: 264 }],
+  ['midjourney.png', { cols: 744, rows: 430 }],
+  ['nano-banana-2.png', { cols: 565, rows: 298 }],
+  ['seedream-4.5.png', { cols: 1387, rows: 778 }],
+])
 
 async function loadImage(file) {
   const { data, info } = await sharp(file).ensureAlpha().raw().toBuffer({ resolveWithObject: true })
@@ -121,9 +132,9 @@ async function cropImage(image, left, top, width, height) {
   }
 }
 
-async function detect(file) {
+async function detect(file, options) {
   const input = await loadImage(file)
-  const result = snap(input)
+  const result = snap(input, options)
   return {
     detectedResolution: result.detectedResolution,
     cols: result.colCuts.length - 1,
@@ -186,6 +197,29 @@ test('uniform snap outputs keep the same grid when snapped again', async () => {
     const gap = await repeatGap(file)
     assert.equal(gap, 0, `expected repeated snap to preserve ${file}, got grid gap ${gap}`)
   }
+})
+
+test(
+  'model-generated pseudo pixel art preserves illustration detail',
+  { skip: !fs.existsSync(MODEL_EXAMPLE_DIR) },
+  async () => {
+    for (const [file, expected] of MODEL_EXAMPLE_GRIDS) {
+      const grid = await detect(path.join(MODEL_EXAMPLE_DIR, file), { colorVariety: 64 })
+      assert.deepEqual(
+        { cols: grid.cols, rows: grid.rows },
+        expected,
+        `expected ${file} to preserve the 1.3.0-style detail grid`,
+      )
+    }
+  },
+)
+
+test('hand-authored snap examples still recover their source grid', async () => {
+  const after = await detect('examples/example-snap-after.png', { colorVariety: 64 })
+  const before = await detect('examples/example-snap-before.png', { colorVariety: 64 })
+
+  assert.deepEqual({ cols: after.cols, rows: after.rows }, { cols: 41, rows: 41 })
+  assert.deepEqual({ cols: before.cols, rows: before.rows }, { cols: 41, rows: 42 })
 })
 
 test('blurred scaled pixel art recovers the source grid', async () => {
