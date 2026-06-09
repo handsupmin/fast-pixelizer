@@ -1566,6 +1566,19 @@ export function classifyMetrics(metrics) {
     )
   }
   if (
+    (metrics.tileColorfulCoverageTileCount ?? 0) >=
+      QUALITY_RULES.minTileColorfulCoverageTileCount &&
+    (metrics.tileColorfulCoverageDriftP95 ?? 0) > QUALITY_RULES.maxTileColorfulCoverageDriftP95
+  ) {
+    issues.push(
+      issue(
+        'review',
+        'regional-colorful-coverage-drift',
+        `tile colorful coverage p95 ${formatNum(metrics.tileColorfulCoverageDriftP95)}`,
+      ),
+    )
+  }
+  if (
     Math.max(metrics.sourceBrightPixelCount ?? 0, metrics.outputBrightPixelCount ?? 0) >=
       QUALITY_RULES.minBrightCoveragePixelCount &&
     (metrics.brightCoverageDrift ?? 0) > QUALITY_RULES.maxBrightCoverageDrift
@@ -2223,6 +2236,11 @@ export function objective(metrics) {
       25 +
     Math.max(0, (metrics.colorfulSpuriousRatio ?? 0) - QUALITY_RULES.maxColorfulSpuriousRatio) *
       40 +
+    Math.max(
+      0,
+      (metrics.tileColorfulCoverageDriftP95 ?? 0) - QUALITY_RULES.maxTileColorfulCoverageDriftP95,
+    ) *
+      50 +
     Math.max(0, (metrics.brightCoverageDrift ?? 0) - QUALITY_RULES.maxBrightCoverageDrift) * 50 +
     Math.max(
       0,

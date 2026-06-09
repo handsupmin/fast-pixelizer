@@ -149,6 +149,18 @@ export function summarize(results) {
       (sum, item) => sum + (item.spuriousColorfulPixelCount ?? 0),
       0,
     ),
+    tileColorfulCoverageDriftMax: results.reduce(
+      (max, item) => Math.max(max, item.tileColorfulCoverageDriftMax ?? 0),
+      0,
+    ),
+    tileColorfulCoverageDriftP95Max: results.reduce(
+      (max, item) => Math.max(max, item.tileColorfulCoverageDriftP95 ?? 0),
+      0,
+    ),
+    tileColorfulCoverageTileCountTotal: results.reduce(
+      (sum, item) => sum + (item.tileColorfulCoverageTileCount ?? 0),
+      0,
+    ),
     sourceBrightPixelCountTotal: results.reduce(
       (sum, item) => sum + (item.sourceBrightPixelCount ?? 0),
       0,
@@ -567,6 +579,7 @@ function criteriaMarkdown() {
     `- Regional contrast: review when any non-low-palette eligible 8x8 canvas tile keeps less than ${(QUALITY_RULES.minTileContrastRatio * 100).toFixed(0)}% of source luma contrast.`,
     `- Chroma: review when colorful inputs with mean chroma at least ${QUALITY_RULES.minChromaMeanForRatio} fall outside chroma ratio ${QUALITY_RULES.minChromaRatio}-${QUALITY_RULES.maxChromaRatio}.`,
     `- Spurious color growth: review when at least ${QUALITY_RULES.minColorfulSpuriousPixelCount} output colorful pixels exist and more than ${(QUALITY_RULES.maxColorfulSpuriousRatio * 100).toFixed(0)}% of them were not colorful in the source.`,
+    `- Regional colorful coverage: review when eligible 8x8 canvas tile p95 changes coverage of pixels at or above chroma ${QUALITY_RULES.colorfulCoverageChromaThreshold} by more than ${(QUALITY_RULES.maxTileColorfulCoverageDriftP95 * 100).toFixed(0)} percentage points.`,
     `- Bright coverage: review when at least ${QUALITY_RULES.minBrightCoveragePixelCount} source or output pixels exceed luma ${QUALITY_RULES.brightCoverageLumaThreshold} and visible bright coverage drifts by more than ${(QUALITY_RULES.maxBrightCoverageDrift * 100).toFixed(0)} percentage points.`,
     `- Regional bright coverage: review when eligible 8x8 canvas tile p95 changes coverage of pixels above luma ${QUALITY_RULES.brightCoverageLumaThreshold} by more than ${(QUALITY_RULES.maxTileBrightCoverageDriftP95 * 100).toFixed(0)} percentage points.`,
     `- Saturated color coverage: review when at least ${QUALITY_RULES.minSaturatedCoveragePixelCount} source or output pixels exceed chroma ${QUALITY_RULES.saturatedCoverageChromaThreshold} and visible saturated coverage drifts by more than ${(QUALITY_RULES.maxSaturatedCoverageDrift * 100).toFixed(0)} percentage points.`,
@@ -777,6 +790,9 @@ export function toMarkdown(summary) {
     'outputColorfulPixelCount',
     'retainedColorfulPixelCount',
     'spuriousColorfulPixelCount',
+    'tileColorfulCoverageDriftMax',
+    'tileColorfulCoverageDriftP95',
+    'tileColorfulCoverageTileCount',
     'sourceBrightPixelCount',
     'outputBrightPixelCount',
     'inputBrightCoverage',

@@ -507,6 +507,20 @@ test('colorful spurious ratio catches output-only colorful pixels', async () => 
   assert.equal(stats.colorfulSpuriousRatio, 1)
 })
 
+test('regional colorful coverage drift catches local color area loss', async () => {
+  const source = makeRgbSolid(64, 64, 96, 96, 96)
+  setColorRect(source, 0, 0, 16, 16, [220, 20, 20])
+  const output = makeRgbSolid(64, 64, 96, 96, 96)
+  const stats = await preservationStats(source, output)
+
+  assert.equal(stats.tileColorfulCoverageTileCount, 64)
+  assert.equal(stats.tileColorfulCoverageDriftMax, 1)
+  assert.ok(
+    stats.tileColorfulCoverageDriftP95 > QUALITY_RULES.maxTileColorfulCoverageDriftP95,
+    `expected regional colorful coverage drift above threshold, got ${stats.tileColorfulCoverageDriftP95}`,
+  )
+})
+
 test('bright coverage drift catches lost bright area', async () => {
   const source = makeRgbSolid(64, 64, 64, 64, 64)
   setColorRect(source, 0, 0, 32, 32, [240, 240, 240])
@@ -3483,6 +3497,21 @@ test('quality classification reviews spurious color growth', () => {
 
   assert.equal(result.status, 'review')
   assert.ok(result.issues.some((issue) => issue.code === 'spurious-color-growth'))
+})
+
+test('quality classification reviews regional colorful coverage drift', () => {
+  const review = classifyMetrics({
+    tileColorfulCoverageDriftP95: QUALITY_RULES.maxTileColorfulCoverageDriftP95 + 0.01,
+    tileColorfulCoverageTileCount: QUALITY_RULES.minTileColorfulCoverageTileCount,
+  })
+  const pass = classifyMetrics({
+    tileColorfulCoverageDriftP95: QUALITY_RULES.maxTileColorfulCoverageDriftP95 - 0.01,
+    tileColorfulCoverageTileCount: QUALITY_RULES.minTileColorfulCoverageTileCount,
+  })
+
+  assert.equal(review.status, 'review')
+  assert.ok(review.issues.some((issue) => issue.code === 'regional-colorful-coverage-drift'))
+  assert.equal(pass.status, 'pass')
 })
 
 test('quality classification reviews bright coverage drift', () => {
