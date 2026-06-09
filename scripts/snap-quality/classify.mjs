@@ -1454,6 +1454,19 @@ export function classifyMetrics(metrics) {
     )
   }
   if (
+    !metrics.lowPaletteCoverageEligible &&
+    (metrics.tileContrastTileCount ?? 0) >= QUALITY_RULES.minTileContrastTileCount &&
+    (metrics.tileContrastRatioMin ?? 1) < QUALITY_RULES.minTileContrastRatio
+  ) {
+    issues.push(
+      issue(
+        'review',
+        'regional-contrast-collapse',
+        `min tile contrast ratio ${formatNum(metrics.tileContrastRatioMin)}`,
+      ),
+    )
+  }
+  if (
     metrics.inputChromaMean >= QUALITY_RULES.minChromaMeanForRatio &&
     (metrics.chromaRatio < QUALITY_RULES.minChromaRatio ||
       metrics.chromaRatio > QUALITY_RULES.maxChromaRatio)
@@ -1975,6 +1988,15 @@ export function objective(metrics) {
     Math.max(0, (metrics.outputCellIntegerError ?? 0) - QUALITY_RULES.maxOutputCellIntegerError) *
       100 +
     Math.abs(1 - metrics.contrastRatio) * 10 +
+    Math.max(
+      0,
+      QUALITY_RULES.minTileContrastRatio -
+        (!metrics.lowPaletteCoverageEligible &&
+        (metrics.tileContrastTileCount ?? 0) >= QUALITY_RULES.minTileContrastTileCount
+          ? (metrics.tileContrastRatioMin ?? 1)
+          : 1),
+    ) *
+      25 +
     Math.max(0, QUALITY_RULES.minChromaRatio - metrics.chromaRatio) * 40 +
     Math.max(0, metrics.chromaRatio - QUALITY_RULES.maxChromaRatio) * 35 +
     Math.max(0, metrics.hueErrorMean - QUALITY_RULES.maxHueErrorMean) * 0.5 +

@@ -352,6 +352,22 @@ test('tile preservation catches small localized loss below pixel p95', async () 
   assert.equal(stats.tileP95Mae, 0)
 })
 
+test('tile contrast catches localized contrast collapse hidden by global contrast', async () => {
+  const source = makeChecker(16, 16, 1)
+  const output = setRgbRect(copyImage(source), 0, 0, 8, 8, 128)
+  const stats = await preservationStats(source, output, { tileGrid: 2 })
+
+  assert.equal(stats.tileContrastTileCount, 4)
+  assert.ok(
+    stats.tileContrastRatioMin < 1e-6,
+    `expected collapsed tile contrast near 0, got ${stats.tileContrastRatioMin}`,
+  )
+  assert.ok(
+    stats.tileContrastRatioMax > 0.99 && stats.tileContrastRatioMax < 1.01,
+    `expected preserved tile contrast near 1, got ${stats.tileContrastRatioMax}`,
+  )
+})
+
 test('cell uniformity tracks alpha variation separately from RGB variation', () => {
   const image = makeSolid(16, 16, 96)
   setAlphaRect(image, 0, 0, 4, 8, 0)
@@ -3175,6 +3191,28 @@ test('quality classification reviews low-palette coverage drift', () => {
 
   assert.equal(result.status, 'review')
   assert.ok(result.issues.some((issue) => issue.code === 'low-palette-coverage-drift'))
+})
+
+test('quality classification reviews regional contrast collapse', () => {
+  const result = classifyMetrics({
+    lowPaletteCoverageEligible: false,
+    tileContrastRatioMin: QUALITY_RULES.minTileContrastRatio - 0.01,
+    tileContrastTileCount: QUALITY_RULES.minTileContrastTileCount,
+  })
+
+  assert.equal(result.status, 'review')
+  assert.ok(result.issues.some((issue) => issue.code === 'regional-contrast-collapse'))
+})
+
+test('quality classification skips regional contrast for low-palette inputs', () => {
+  const result = classifyMetrics({
+    lowPaletteCoverageEligible: true,
+    tileContrastRatioMin: 0,
+    tileContrastTileCount: QUALITY_RULES.minTileContrastTileCount,
+  })
+
+  assert.equal(result.status, 'pass')
+  assert.ok(!result.issues.some((issue) => issue.code === 'regional-contrast-collapse'))
 })
 
 test('quality classification reviews low-palette color growth', () => {
