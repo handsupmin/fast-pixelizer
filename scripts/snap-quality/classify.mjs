@@ -762,6 +762,18 @@ export function classifyMetrics(metrics) {
     )
   }
   if (
+    (metrics.sourceCellTransitionCount ?? 0) >= QUALITY_RULES.minCellTransitionCount &&
+    (metrics.cellTransitionErrorMean ?? 0) > QUALITY_RULES.maxCellTransitionErrorMean
+  ) {
+    issues.push(
+      issue(
+        'review',
+        'cell-transition-color-drift',
+        `cell transition color error ${formatNum(metrics.cellTransitionErrorMean)}`,
+      ),
+    )
+  }
+  if (
     (metrics.sourceCellDiagonalTransitionCount ?? 0) >=
       QUALITY_RULES.minCellDiagonalTransitionCount &&
     (metrics.cellDiagonalTransitionRetention ?? 1) <
@@ -827,6 +839,22 @@ export function classifyMetrics(metrics) {
         'directional-spurious-cell-diagonal-transitions',
         `max diagonal cell transition spurious ratio ${formatNum(
           metrics.cellDiagonalTransitionDirectionSpuriousRatioMax,
+        )}`,
+      ),
+    )
+  }
+  if (
+    (metrics.sourceCellDiagonalTransitionCount ?? 0) >=
+      QUALITY_RULES.minCellDiagonalTransitionCount &&
+    (metrics.cellDiagonalTransitionErrorMean ?? 0) >
+      QUALITY_RULES.maxCellDiagonalTransitionErrorMean
+  ) {
+    issues.push(
+      issue(
+        'review',
+        'cell-diagonal-transition-color-drift',
+        `diagonal cell transition color error ${formatNum(
+          metrics.cellDiagonalTransitionErrorMean,
         )}`,
       ),
     )
@@ -1472,6 +1500,7 @@ export function objective(metrics) {
     ) *
       30 +
     metrics.cellTransitionErrorMean * 0.1 +
+    Math.max(0, metrics.cellTransitionErrorMean - QUALITY_RULES.maxCellTransitionErrorMean) * 1 +
     Math.max(
       0,
       QUALITY_RULES.minCellDiagonalTransitionRetention -
@@ -1496,6 +1525,12 @@ export function objective(metrics) {
         QUALITY_RULES.maxCellDiagonalTransitionSpuriousRatio,
     ) *
       20 +
+    Math.max(
+      0,
+      (metrics.cellDiagonalTransitionErrorMean ?? 0) -
+        QUALITY_RULES.maxCellDiagonalTransitionErrorMean,
+    ) *
+      1 +
     Math.max(0, QUALITY_RULES.minSourceCellSize - metrics.sourceCellSize) * 500 +
     Math.max(0, metrics.shortAxisCells - QUALITY_RULES.maxShortAxisCells) * 10 +
     Math.max(0, metrics.sourceCellSize - QUALITY_RULES.maxSourceCellSizeReview) * 2 +
