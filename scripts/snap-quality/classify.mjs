@@ -796,31 +796,79 @@ export function classifyMetrics(metrics) {
   }
   if (
     (metrics.sourceCellTransitionCount ?? 0) >= QUALITY_RULES.minCellTransitionCount &&
-    ((metrics.cellTransitionErrorP95 ?? 0) > QUALITY_RULES.maxCellTransitionErrorP95 ||
-      (metrics.cellTransitionAxisErrorP95Max ?? 0) > QUALITY_RULES.maxCellTransitionErrorP95)
+    (metrics.cellTransitionErrorP95 ?? 0) > QUALITY_RULES.maxCellTransitionErrorP95
   ) {
     issues.push(
       issue(
         'review',
         'cell-transition-color-outlier',
-        `cell transition color error p95 ${formatNum(
-          metrics.cellTransitionErrorP95,
-        )}, axis p95 max ${formatNum(metrics.cellTransitionAxisErrorP95Max)}`,
+        `cell transition color error p95 ${formatNum(metrics.cellTransitionErrorP95)}`,
+      ),
+    )
+  }
+  if (
+    ((metrics.sourceCellTransitionXCount ?? 0) >= QUALITY_RULES.minCellTransitionCount &&
+      (metrics.cellTransitionXErrorP95 ?? 0) > QUALITY_RULES.maxCellTransitionErrorP95) ||
+    ((metrics.sourceCellTransitionYCount ?? 0) >= QUALITY_RULES.minCellTransitionCount &&
+      (metrics.cellTransitionYErrorP95 ?? 0) > QUALITY_RULES.maxCellTransitionErrorP95) ||
+    (Math.max(metrics.sourceCellTransitionXCount ?? 0, metrics.sourceCellTransitionYCount ?? 0) >=
+      QUALITY_RULES.minCellTransitionCount &&
+      (metrics.cellTransitionAxisErrorP95Max ?? 0) > QUALITY_RULES.maxCellTransitionErrorP95) ||
+    ((metrics.sourceCellTransitionXCount ?? 0) === 0 &&
+      (metrics.sourceCellTransitionYCount ?? 0) === 0 &&
+      (metrics.sourceCellTransitionCount ?? 0) >= QUALITY_RULES.minCellTransitionCount &&
+      (metrics.cellTransitionAxisErrorP95Max ?? 0) > QUALITY_RULES.maxCellTransitionErrorP95)
+  ) {
+    issues.push(
+      issue(
+        'review',
+        'axis-cell-transition-color-outlier',
+        `axis cell transition color p95 max ${formatNum(
+          Math.max(
+            metrics.cellTransitionAxisErrorP95Max ?? 0,
+            metrics.cellTransitionXErrorP95 ?? 0,
+            metrics.cellTransitionYErrorP95 ?? 0,
+          ),
+        )}`,
       ),
     )
   }
   if (
     (metrics.sourceCellTransitionCount ?? 0) >= QUALITY_RULES.minCellTransitionCount &&
-    ((metrics.cellTransitionErrorP99 ?? 0) > QUALITY_RULES.maxCellTransitionErrorP99 ||
-      (metrics.cellTransitionAxisErrorP99Max ?? 0) > QUALITY_RULES.maxCellTransitionErrorP99)
+    (metrics.cellTransitionErrorP99 ?? 0) > QUALITY_RULES.maxCellTransitionErrorP99
   ) {
     issues.push(
       issue(
         'review',
         'localized-cell-transition-color-outlier',
-        `cell transition color error p99 ${formatNum(
-          metrics.cellTransitionErrorP99,
-        )}, axis p99 max ${formatNum(metrics.cellTransitionAxisErrorP99Max)}`,
+        `cell transition color error p99 ${formatNum(metrics.cellTransitionErrorP99)}`,
+      ),
+    )
+  }
+  if (
+    ((metrics.sourceCellTransitionXCount ?? 0) >= QUALITY_RULES.minCellTransitionCount &&
+      (metrics.cellTransitionXErrorP99 ?? 0) > QUALITY_RULES.maxCellTransitionErrorP99) ||
+    ((metrics.sourceCellTransitionYCount ?? 0) >= QUALITY_RULES.minCellTransitionCount &&
+      (metrics.cellTransitionYErrorP99 ?? 0) > QUALITY_RULES.maxCellTransitionErrorP99) ||
+    (Math.max(metrics.sourceCellTransitionXCount ?? 0, metrics.sourceCellTransitionYCount ?? 0) >=
+      QUALITY_RULES.minCellTransitionCount &&
+      (metrics.cellTransitionAxisErrorP99Max ?? 0) > QUALITY_RULES.maxCellTransitionErrorP99) ||
+    ((metrics.sourceCellTransitionXCount ?? 0) === 0 &&
+      (metrics.sourceCellTransitionYCount ?? 0) === 0 &&
+      (metrics.sourceCellTransitionCount ?? 0) >= QUALITY_RULES.minCellTransitionCount &&
+      (metrics.cellTransitionAxisErrorP99Max ?? 0) > QUALITY_RULES.maxCellTransitionErrorP99)
+  ) {
+    issues.push(
+      issue(
+        'review',
+        'localized-axis-cell-transition-color-outlier',
+        `axis cell transition color p99 max ${formatNum(
+          Math.max(
+            metrics.cellTransitionAxisErrorP99Max ?? 0,
+            metrics.cellTransitionXErrorP99 ?? 0,
+            metrics.cellTransitionYErrorP99 ?? 0,
+          ),
+        )}`,
       ),
     )
   }
@@ -913,10 +961,7 @@ export function classifyMetrics(metrics) {
   if (
     (metrics.sourceCellDiagonalTransitionCount ?? 0) >=
       QUALITY_RULES.minCellDiagonalTransitionCount &&
-    ((metrics.cellDiagonalTransitionErrorP95 ?? 0) >
-      QUALITY_RULES.maxCellDiagonalTransitionErrorP95 ||
-      (metrics.cellDiagonalTransitionDirectionErrorP95Max ?? 0) >
-        QUALITY_RULES.maxCellDiagonalTransitionErrorP95)
+    (metrics.cellDiagonalTransitionErrorP95 ?? 0) > QUALITY_RULES.maxCellDiagonalTransitionErrorP95
   ) {
     issues.push(
       issue(
@@ -924,17 +969,50 @@ export function classifyMetrics(metrics) {
         'cell-diagonal-transition-color-outlier',
         `diagonal cell transition color error p95 ${formatNum(
           metrics.cellDiagonalTransitionErrorP95,
-        )}, direction p95 max ${formatNum(metrics.cellDiagonalTransitionDirectionErrorP95Max)}`,
+        )}`,
+      ),
+    )
+  }
+  if (
+    ((metrics.sourceCellDiagonalTransitionDownRightCount ?? 0) >=
+      QUALITY_RULES.minCellDiagonalTransitionCount &&
+      (metrics.cellDiagonalTransitionDownRightErrorP95 ?? 0) >
+        QUALITY_RULES.maxCellDiagonalTransitionErrorP95) ||
+    ((metrics.sourceCellDiagonalTransitionDownLeftCount ?? 0) >=
+      QUALITY_RULES.minCellDiagonalTransitionCount &&
+      (metrics.cellDiagonalTransitionDownLeftErrorP95 ?? 0) >
+        QUALITY_RULES.maxCellDiagonalTransitionErrorP95) ||
+    (Math.max(
+      metrics.sourceCellDiagonalTransitionDownRightCount ?? 0,
+      metrics.sourceCellDiagonalTransitionDownLeftCount ?? 0,
+    ) >= QUALITY_RULES.minCellDiagonalTransitionCount &&
+      (metrics.cellDiagonalTransitionDirectionErrorP95Max ?? 0) >
+        QUALITY_RULES.maxCellDiagonalTransitionErrorP95) ||
+    ((metrics.sourceCellDiagonalTransitionDownRightCount ?? 0) === 0 &&
+      (metrics.sourceCellDiagonalTransitionDownLeftCount ?? 0) === 0 &&
+      (metrics.sourceCellDiagonalTransitionCount ?? 0) >=
+        QUALITY_RULES.minCellDiagonalTransitionCount &&
+      (metrics.cellDiagonalTransitionDirectionErrorP95Max ?? 0) >
+        QUALITY_RULES.maxCellDiagonalTransitionErrorP95)
+  ) {
+    issues.push(
+      issue(
+        'review',
+        'directional-cell-diagonal-transition-color-outlier',
+        `directional diagonal cell transition color p95 max ${formatNum(
+          Math.max(
+            metrics.cellDiagonalTransitionDirectionErrorP95Max ?? 0,
+            metrics.cellDiagonalTransitionDownRightErrorP95 ?? 0,
+            metrics.cellDiagonalTransitionDownLeftErrorP95 ?? 0,
+          ),
+        )}`,
       ),
     )
   }
   if (
     (metrics.sourceCellDiagonalTransitionCount ?? 0) >=
       QUALITY_RULES.minCellDiagonalTransitionCount &&
-    ((metrics.cellDiagonalTransitionErrorP99 ?? 0) >
-      QUALITY_RULES.maxCellDiagonalTransitionErrorP99 ||
-      (metrics.cellDiagonalTransitionDirectionErrorP99Max ?? 0) >
-        QUALITY_RULES.maxCellDiagonalTransitionErrorP99)
+    (metrics.cellDiagonalTransitionErrorP99 ?? 0) > QUALITY_RULES.maxCellDiagonalTransitionErrorP99
   ) {
     issues.push(
       issue(
@@ -942,7 +1020,43 @@ export function classifyMetrics(metrics) {
         'localized-cell-diagonal-transition-color-outlier',
         `diagonal cell transition color error p99 ${formatNum(
           metrics.cellDiagonalTransitionErrorP99,
-        )}, direction p99 max ${formatNum(metrics.cellDiagonalTransitionDirectionErrorP99Max)}`,
+        )}`,
+      ),
+    )
+  }
+  if (
+    ((metrics.sourceCellDiagonalTransitionDownRightCount ?? 0) >=
+      QUALITY_RULES.minCellDiagonalTransitionCount &&
+      (metrics.cellDiagonalTransitionDownRightErrorP99 ?? 0) >
+        QUALITY_RULES.maxCellDiagonalTransitionErrorP99) ||
+    ((metrics.sourceCellDiagonalTransitionDownLeftCount ?? 0) >=
+      QUALITY_RULES.minCellDiagonalTransitionCount &&
+      (metrics.cellDiagonalTransitionDownLeftErrorP99 ?? 0) >
+        QUALITY_RULES.maxCellDiagonalTransitionErrorP99) ||
+    (Math.max(
+      metrics.sourceCellDiagonalTransitionDownRightCount ?? 0,
+      metrics.sourceCellDiagonalTransitionDownLeftCount ?? 0,
+    ) >= QUALITY_RULES.minCellDiagonalTransitionCount &&
+      (metrics.cellDiagonalTransitionDirectionErrorP99Max ?? 0) >
+        QUALITY_RULES.maxCellDiagonalTransitionErrorP99) ||
+    ((metrics.sourceCellDiagonalTransitionDownRightCount ?? 0) === 0 &&
+      (metrics.sourceCellDiagonalTransitionDownLeftCount ?? 0) === 0 &&
+      (metrics.sourceCellDiagonalTransitionCount ?? 0) >=
+        QUALITY_RULES.minCellDiagonalTransitionCount &&
+      (metrics.cellDiagonalTransitionDirectionErrorP99Max ?? 0) >
+        QUALITY_RULES.maxCellDiagonalTransitionErrorP99)
+  ) {
+    issues.push(
+      issue(
+        'review',
+        'localized-directional-cell-diagonal-transition-color-outlier',
+        `directional diagonal cell transition color p99 max ${formatNum(
+          Math.max(
+            metrics.cellDiagonalTransitionDirectionErrorP99Max ?? 0,
+            metrics.cellDiagonalTransitionDownRightErrorP99 ?? 0,
+            metrics.cellDiagonalTransitionDownLeftErrorP99 ?? 0,
+          ),
+        )}`,
       ),
     )
   }
