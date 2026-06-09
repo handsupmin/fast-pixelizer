@@ -486,7 +486,7 @@ function criteriaMarkdown() {
     `- Preservation: review when average MAE exceeds ${QUALITY_RULES.maxPreservationMae} or p95 exceeds ${QUALITY_RULES.maxPreservationP95}.`,
     `- Border preservation: review when the outer one-source-cell band has RGB MAE above ${QUALITY_RULES.maxBorderPreservationMae}.`,
     `- Regional preservation: review when any 8x8 canvas tile exceeds MAE ${QUALITY_RULES.maxTilePreservationMae} or tile p95 exceeds ${QUALITY_RULES.maxTilePreservationP95}.`,
-    `- Regional luma drift: review when any 8x8 canvas tile changes mean luma by more than ${QUALITY_RULES.maxTileLumaMeanDelta}.`,
+    `- Regional luma drift: review when any 8x8 canvas tile changes mean luma by more than ${QUALITY_RULES.maxTileLumaMeanDelta} or tile luma p95 exceeds ${QUALITY_RULES.maxTileLumaMeanDeltaP95}.`,
     `- Alpha preservation: review when alpha MAE exceeds ${QUALITY_RULES.maxAlphaMae} or p95 exceeds ${QUALITY_RULES.maxAlphaP95}.`,
     `- Rare alpha preservation: review when any original-size alpha pixel changes by more than ${QUALITY_RULES.maxAlphaMax}.`,
     `- Regional alpha preservation: review when any 8x8 canvas tile alpha MAE exceeds ${QUALITY_RULES.maxAlphaTileMae} or alpha tile p95 exceeds ${QUALITY_RULES.maxAlphaTileP95}.`,

@@ -388,6 +388,21 @@ test('tile luma mean delta catches localized brightness drift hidden by preserva
   assert.equal(stats.tileLumaMeanDeltaP95, 0)
 })
 
+test('tile luma p95 catches broad moderate brightness drift below max-tile luma', async () => {
+  const source = makeSolid(64, 64, 32)
+  const output = makeSolid(64, 64, 41)
+  const stats = await preservationStats(source, output, { tileGrid: 8 })
+
+  assert.ok(
+    stats.tileLumaMeanDeltaMax < QUALITY_RULES.maxTileLumaMeanDelta,
+    `expected max tile luma below threshold, got ${stats.tileLumaMeanDeltaMax}`,
+  )
+  assert.ok(
+    stats.tileLumaMeanDeltaP95 > QUALITY_RULES.maxTileLumaMeanDeltaP95,
+    `expected tile luma p95 above threshold, got ${stats.tileLumaMeanDeltaP95}`,
+  )
+})
+
 test('tile contrast catches localized contrast collapse hidden by global contrast', async () => {
   const source = makeChecker(16, 16, 1)
   const output = setRgbRect(copyImage(source), 0, 0, 8, 8, 128)
@@ -3411,6 +3426,23 @@ test('quality classification reviews regional luma drift', () => {
 
   assert.equal(result.status, 'review')
   assert.ok(result.issues.some((issue) => issue.code === 'regional-luma-drift'))
+})
+
+test('quality classification reviews regional luma p95 drift', () => {
+  const review = classifyMetrics({
+    tileLumaMeanDeltaMax: QUALITY_RULES.maxTileLumaMeanDelta - 0.01,
+    tileLumaMeanDeltaP95: QUALITY_RULES.maxTileLumaMeanDeltaP95 + 0.01,
+    tileLumaMeanDeltaTileCount: QUALITY_RULES.minTileLumaMeanDeltaTileCount,
+  })
+  const pass = classifyMetrics({
+    tileLumaMeanDeltaMax: QUALITY_RULES.maxTileLumaMeanDelta - 0.01,
+    tileLumaMeanDeltaP95: QUALITY_RULES.maxTileLumaMeanDeltaP95 - 0.01,
+    tileLumaMeanDeltaTileCount: QUALITY_RULES.minTileLumaMeanDeltaTileCount,
+  })
+
+  assert.equal(review.status, 'review')
+  assert.ok(review.issues.some((issue) => issue.code === 'regional-luma-p95-drift'))
+  assert.equal(pass.status, 'pass')
 })
 
 test('quality classification reviews regional line edge collapse', () => {
