@@ -422,6 +422,19 @@ test('chroma ratio detects desaturated colorful output', async () => {
   assert.equal(stats.chromaRatio, 0)
 })
 
+test('colorful spurious ratio catches output-only colorful pixels', async () => {
+  const source = makeSolid(64, 64, 96)
+  const output = setColorRect(copyImage(source), 0, 0, 16, 16, [255, 0, 0])
+  const stats = await preservationStats(source, output)
+
+  assert.equal(stats.sourceColorfulPixelCount, 0)
+  assert.equal(stats.outputColorfulPixelCount, 256)
+  assert.equal(stats.retainedColorfulPixelCount, 0)
+  assert.equal(stats.spuriousColorfulPixelCount, 256)
+  assert.equal(stats.colorfulRetention, 1)
+  assert.equal(stats.colorfulSpuriousRatio, 1)
+})
+
 test('tile chroma ratio catches localized desaturation hidden by global chroma', async () => {
   const source = makeCellImage(
     [
@@ -3271,6 +3284,16 @@ test('quality classification reviews regional chroma drift on colorful inputs', 
   assert.ok(desaturated.issues.some((issue) => issue.code === 'regional-chroma-drift'))
   assert.equal(oversaturated.status, 'review')
   assert.ok(oversaturated.issues.some((issue) => issue.code === 'regional-chroma-drift'))
+})
+
+test('quality classification reviews spurious color growth', () => {
+  const result = classifyMetrics({
+    colorfulSpuriousRatio: QUALITY_RULES.maxColorfulSpuriousRatio + 0.01,
+    outputColorfulPixelCount: QUALITY_RULES.minColorfulSpuriousPixelCount,
+  })
+
+  assert.equal(result.status, 'review')
+  assert.ok(result.issues.some((issue) => issue.code === 'spurious-color-growth'))
 })
 
 test('quality classification reviews low-palette coverage drift', () => {

@@ -518,6 +518,10 @@ export async function preservationStats(input, result, options = {}) {
   let alphaCount = 0
   let inputRgbCoverageCount = 0
   let outputRgbCoverageCount = 0
+  let sourceColorfulPixelCount = 0
+  let outputColorfulPixelCount = 0
+  let retainedColorfulPixelCount = 0
+  let spuriousColorfulPixelCount = 0
 
   for (let pixel = 0; pixel < input.width * input.height; pixel += stride) {
     const x = pixel % input.width
@@ -552,6 +556,8 @@ export async function preservationStats(input, result, options = {}) {
     const outputLuma = lumaAt(resized, i)
     const inputChromaValue = chromaAt(input.data, i)
     const outputChromaValue = chromaAt(resized, i)
+    const inputColorful = input.data[i + 3] > 0 && inputChromaValue >= hueMinChroma
+    const outputColorful = resized[i + 3] > 0 && outputChromaValue >= hueMinChroma
     const inputLineEdge = localAxisGradient(input.data, input.width, x, y, i)
     const outputLineEdge = localAxisGradient(resized, input.width, x, y, i)
     tileSums[tile] += pixelError / 3
@@ -565,12 +571,11 @@ export async function preservationStats(input, result, options = {}) {
     inputLineEdgeTileSums[tile] += inputLineEdge
     outputLineEdgeTileSums[tile] += outputLineEdge
     tileCounts[tile]++
-    if (
-      input.data[i + 3] > 0 &&
-      resized[i + 3] > 0 &&
-      inputChromaValue >= hueMinChroma &&
-      outputChromaValue >= hueMinChroma
-    ) {
+    if (inputColorful) sourceColorfulPixelCount++
+    if (outputColorful) outputColorfulPixelCount++
+    if (inputColorful && outputColorful) retainedColorfulPixelCount++
+    if (!inputColorful && outputColorful) spuriousColorfulPixelCount++
+    if (inputColorful && outputColorful) {
       const hueError = hueDistance(hueAt(input.data, i), hueAt(resized, i))
       hueErrors.push(hueError)
       tileHueErrors[tile].push(hueError)
@@ -742,6 +747,14 @@ export async function preservationStats(input, result, options = {}) {
     rgbTileCoverageDriftMax: rgbTileCoverage.rgbTileCoverageDriftMax,
     rgbTileCoverageRetentionMin: rgbTileCoverage.rgbTileCoverageRetentionMin,
     rgbTileCoverageTileCount: rgbTileCoverage.rgbTileCoverageTileCount,
+    sourceColorfulPixelCount,
+    outputColorfulPixelCount,
+    retainedColorfulPixelCount,
+    spuriousColorfulPixelCount,
+    colorfulRetention:
+      sourceColorfulPixelCount > 0 ? retainedColorfulPixelCount / sourceColorfulPixelCount : 1,
+    colorfulSpuriousRatio:
+      outputColorfulPixelCount > 0 ? spuriousColorfulPixelCount / outputColorfulPixelCount : 0,
     hueErrorMean:
       hueErrors.length > 0
         ? hueErrors.reduce((total, value) => total + value, 0) / hueErrors.length

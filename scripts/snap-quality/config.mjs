@@ -96,6 +96,8 @@ export const QUALITY_RULES = {
   minChromaMeanForRatio: 8,
   minChromaRatio: 0.9,
   maxChromaRatio: 1.2,
+  maxColorfulSpuriousRatio: 0.1,
+  minColorfulSpuriousPixelCount: 16,
   minHueSampleCount: 1000,
   maxHueErrorMean: 25,
   maxHueErrorP95: 80,

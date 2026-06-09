@@ -1494,6 +1494,18 @@ export function classifyMetrics(metrics) {
     )
   }
   if (
+    (metrics.outputColorfulPixelCount ?? 0) >= QUALITY_RULES.minColorfulSpuriousPixelCount &&
+    (metrics.colorfulSpuriousRatio ?? 0) > QUALITY_RULES.maxColorfulSpuriousRatio
+  ) {
+    issues.push(
+      issue(
+        'review',
+        'spurious-color-growth',
+        `colorful output-only ratio ${formatNum(metrics.colorfulSpuriousRatio)}`,
+      ),
+    )
+  }
+  if (
     metrics.inputChromaMean >= QUALITY_RULES.minChromaMeanForRatio &&
     (metrics.tileChromaTileCount ?? 0) >= QUALITY_RULES.minTileChromaTileCount &&
     ((metrics.tileChromaRatioMin ?? 1) < QUALITY_RULES.minTileChromaRatio ||
@@ -2050,6 +2062,8 @@ export function objective(metrics) {
           : 1),
     ) *
       25 +
+    Math.max(0, (metrics.colorfulSpuriousRatio ?? 0) - QUALITY_RULES.maxColorfulSpuriousRatio) *
+      40 +
     Math.max(0, QUALITY_RULES.minChromaRatio - metrics.chromaRatio) * 40 +
     Math.max(0, metrics.chromaRatio - QUALITY_RULES.maxChromaRatio) * 35 +
     Math.max(0, QUALITY_RULES.minTileChromaRatio - (metrics.tileChromaRatioMin ?? 1)) * 35 +
