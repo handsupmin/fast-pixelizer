@@ -144,7 +144,7 @@ export const QUALITY_RULES = {
   maxEdgeDirectionDrift: 0.7,
   minEdgeRecall: 0.88,
   maxEdgeSpuriousRatio: 0.4,
-  minEdgeJaccard: 0.4,
+  minEdgeJaccard: 0.5,
   minEdgeTileCount: 1,
   minEdgeTileRecall: 0.7,
   maxEdgeTileSpuriousRatio: 0.55,
