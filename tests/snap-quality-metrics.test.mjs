@@ -1608,6 +1608,23 @@ test('quality classification reviews edge direction drift', () => {
   assert.ok(result.issues.some((issue) => issue.code === 'edge-direction-drift'))
 })
 
+test('quality classification reviews source edge recall below the tuned boundary', () => {
+  const review = classifyMetrics({
+    edgeJaccard: 1,
+    edgeRecall: 0.87,
+    edgeSpuriousRatio: 0,
+  })
+  const pass = classifyMetrics({
+    edgeJaccard: 1,
+    edgeRecall: 0.89,
+    edgeSpuriousRatio: 0,
+  })
+
+  assert.equal(review.status, 'review')
+  assert.ok(review.issues.some((issue) => issue.code === 'edge-recall-loss'))
+  assert.equal(pass.status, 'pass')
+})
+
 test('quality classification reviews regional edge loss and growth', () => {
   const loss = classifyMetrics({
     edgeJaccard: 1,
