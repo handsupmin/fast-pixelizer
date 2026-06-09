@@ -1625,6 +1625,21 @@ test('quality classification reviews source edge recall below the tuned boundary
   assert.equal(pass.status, 'pass')
 })
 
+test('quality classification reviews phase alignment below the tuned boundary', () => {
+  const review = classifyMetrics({
+    axisPhaseAlignmentMin: 1,
+    phaseAlignment: 0.59,
+  })
+  const pass = classifyMetrics({
+    axisPhaseAlignmentMin: 1,
+    phaseAlignment: 0.61,
+  })
+
+  assert.equal(review.status, 'review')
+  assert.ok(review.issues.some((issue) => issue.code === 'phase-misaligned-grid'))
+  assert.equal(pass.status, 'pass')
+})
+
 test('quality classification reviews spurious edges above the tuned boundary', () => {
   const review = classifyMetrics({
     edgeJaccard: 1,

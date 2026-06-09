@@ -26,7 +26,7 @@ export const QUALITY_RULES = {
   maxExpectedGridGap: 0,
   minEdgeAlignment: 0.6,
   minAxisEdgeAlignment: 0.35,
-  minPhaseAlignment: 0.5,
+  minPhaseAlignment: 0.6,
   minAxisPhaseAlignment: 0.35,
   minCellColorDominance: 0.18,
   minCellColorDominanceP05: 0.05,
