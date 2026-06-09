@@ -124,6 +124,18 @@ export function summarize(results) {
     ),
     hueErrorMean: mean(results, 'hueErrorMean'),
     hueErrorP95Mean: mean(results, 'hueErrorP95'),
+    tileHueErrorMeanMax: results.reduce(
+      (max, item) => Math.max(max, item.tileHueErrorMeanMax ?? 0),
+      0,
+    ),
+    tileHueErrorP95Max: results.reduce(
+      (max, item) => Math.max(max, item.tileHueErrorP95Max ?? 0),
+      0,
+    ),
+    tileHueErrorTileCountTotal: results.reduce(
+      (sum, item) => sum + (item.tileHueErrorTileCount ?? 0),
+      0,
+    ),
     tileContrastRatioMin: results.reduce(
       (min, item) => Math.min(min, item.tileContrastRatioMin ?? 1),
       results.length > 0 ? 1 : 0,
@@ -432,6 +444,7 @@ function criteriaMarkdown() {
     `- Chroma: review when colorful inputs with mean chroma at least ${QUALITY_RULES.minChromaMeanForRatio} fall outside chroma ratio ${QUALITY_RULES.minChromaRatio}-${QUALITY_RULES.maxChromaRatio}.`,
     `- Regional chroma: review when any eligible 8x8 canvas tile falls outside chroma ratio ${QUALITY_RULES.minTileChromaRatio}-${QUALITY_RULES.maxTileChromaRatio}.`,
     `- Hue: review when at least ${QUALITY_RULES.minHueSampleCount} colorful pixels have hue error mean > ${QUALITY_RULES.maxHueErrorMean} degrees or p95 > ${QUALITY_RULES.maxHueErrorP95} degrees.`,
+    `- Regional hue: review when any 8x8 canvas tile with at least ${QUALITY_RULES.minTileHueSampleCount} colorful pixels has mean hue error > ${QUALITY_RULES.maxTileHueErrorMean} degrees.`,
     `- Line strength: review when resized snap edge strength falls outside ${QUALITY_RULES.minLineEdgeRatio}-${QUALITY_RULES.maxLineEdgeRatio}x the source edge strength.`,
     `- Regional line strength: review when any eligible 8x8 canvas tile keeps less than ${(QUALITY_RULES.minTileLineEdgeRatio * 100).toFixed(0)}% of source line-edge strength.`,
     `- Edge direction: review when at least ${QUALITY_RULES.minEdgeDirectionCount} strong source and output edges shift x/y/diagonal direction histogram by more than ${QUALITY_RULES.maxEdgeDirectionDrift}.`,
@@ -632,6 +645,9 @@ export function toMarkdown(summary) {
     'hueErrorMean',
     'hueErrorP95',
     'hueSampleCount',
+    'tileHueErrorMeanMax',
+    'tileHueErrorP95Max',
+    'tileHueErrorTileCount',
     'contrastRatio',
     'tileContrastRatioMin',
     'tileContrastRatioMax',

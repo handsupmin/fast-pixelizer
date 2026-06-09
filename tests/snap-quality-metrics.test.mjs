@@ -433,6 +433,22 @@ test('hue error detects color direction drift', async () => {
   assert.equal(stats.hueErrorP95, 120)
 })
 
+test('tile hue error catches localized hue drift hidden by global hue stats', async () => {
+  const source = makeRgbSolid(64, 64, 255, 0, 0)
+  const output = setColorRect(copyImage(source), 0, 0, 8, 8, [0, 255, 0])
+  const stats = await preservationStats(source, output, { tileGrid: 8 })
+
+  assert.equal(stats.hueSampleCount, 4096)
+  assert.ok(
+    stats.hueErrorMean < QUALITY_RULES.maxHueErrorMean,
+    `expected global hue mean below review threshold, got ${stats.hueErrorMean}`,
+  )
+  assert.equal(stats.hueErrorP95, 0)
+  assert.equal(stats.tileHueErrorTileCount, 64)
+  assert.equal(stats.tileHueErrorMeanMax, 120)
+  assert.equal(stats.tileHueErrorP95Max, 120)
+})
+
 test('rgb coverage drift tracks low-palette color area changes', async () => {
   const source = makeRgbSplit(64, 64, 32, [0, 0, 0], [255, 255, 255])
   const output = makeRgbSplit(64, 64, 16, [0, 0, 0], [255, 255, 255])
@@ -3268,6 +3284,16 @@ test('quality classification reviews regional line edge collapse', () => {
 
   assert.equal(result.status, 'review')
   assert.ok(result.issues.some((issue) => issue.code === 'regional-line-edge-collapse'))
+})
+
+test('quality classification reviews regional hue drift', () => {
+  const result = classifyMetrics({
+    tileHueErrorMeanMax: QUALITY_RULES.maxTileHueErrorMean + 0.01,
+    tileHueErrorTileCount: QUALITY_RULES.minTileHueTileCount,
+  })
+
+  assert.equal(result.status, 'review')
+  assert.ok(result.issues.some((issue) => issue.code === 'regional-hue-drift'))
 })
 
 test('quality classification skips regional contrast for low-palette inputs', () => {

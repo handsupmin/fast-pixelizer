@@ -1,4 +1,4 @@
-import { MAX_METRIC_SAMPLES } from './config.mjs'
+import { MAX_METRIC_SAMPLES, QUALITY_RULES } from './config.mjs'
 import { alphaMaskStats } from './alpha-mask.mjs'
 import { edgeOverlapStats } from './edge-overlap.mjs'
 import { resizeToInput } from './image-io.mjs'
@@ -392,6 +392,28 @@ function tileChromaStats(inputSums, outputSums, counts, minInputMean) {
   }
 }
 
+function tileHueStats(tileErrors, minSamples) {
+  let errorMeanMax = 0
+  let errorP95Max = 0
+  let tileCount = 0
+
+  for (const values of tileErrors) {
+    if (values.length < minSamples) continue
+
+    values.sort((a, b) => a - b)
+    const mean = values.reduce((sum, value) => sum + value, 0) / values.length
+    errorMeanMax = Math.max(errorMeanMax, mean)
+    errorP95Max = Math.max(errorP95Max, percentile(values, 0.95))
+    tileCount++
+  }
+
+  return {
+    tileHueErrorMeanMax: errorMeanMax,
+    tileHueErrorP95Max: errorP95Max,
+    tileHueErrorTileCount: tileCount,
+  }
+}
+
 function tileLineEdgeStats(inputSums, outputSums, counts, minInputMean) {
   let ratioMin = 1
   let ratioMax = 1
@@ -461,6 +483,8 @@ export async function preservationStats(input, result, options = {}) {
   const outputRgbTileCoverage = createTileCoverage(tileCount)
   const inputRgbTileCoverageCounts = new Uint32Array(tileCount)
   const outputRgbTileCoverageCounts = new Uint32Array(tileCount)
+  const tileHueErrors = Array.from({ length: tileCount }, () => [])
+  const tileHueMinSampleCount = options.tileHueMinSampleCount ?? QUALITY_RULES.minTileHueSampleCount
   const hueErrors = []
   const errors = []
   const alphaErrors = []
@@ -523,7 +547,9 @@ export async function preservationStats(input, result, options = {}) {
       inputChromaValue >= hueMinChroma &&
       outputChromaValue >= hueMinChroma
     ) {
-      hueErrors.push(hueDistance(hueAt(input.data, i), hueAt(resized, i)))
+      const hueError = hueDistance(hueAt(input.data, i), hueAt(resized, i))
+      hueErrors.push(hueError)
+      tileHueErrors[tile].push(hueError)
     }
     alphaSum += alphaError
     alphaCount++
@@ -550,6 +576,7 @@ export async function preservationStats(input, result, options = {}) {
     tileCounts,
     tileChromaMinMean,
   )
+  const tileHue = tileHueStats(tileHueErrors, tileHueMinSampleCount)
   const tileLineEdge = tileLineEdgeStats(
     inputLineEdgeTileSums,
     outputLineEdgeTileSums,
@@ -689,6 +716,9 @@ export async function preservationStats(input, result, options = {}) {
         : 0,
     hueErrorP95: percentile(hueErrors, 0.95),
     hueSampleCount: hueErrors.length,
+    tileHueErrorMeanMax: tileHue.tileHueErrorMeanMax,
+    tileHueErrorP95Max: tileHue.tileHueErrorP95Max,
+    tileHueErrorTileCount: tileHue.tileHueErrorTileCount,
     contrastRatio: inputLuma.stdDev > 0 ? outputLuma.stdDev / inputLuma.stdDev : 1,
     tileContrastRatioMin: tileContrast.tileContrastRatioMin,
     tileContrastRatioMax: tileContrast.tileContrastRatioMax,
