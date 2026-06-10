@@ -4,6 +4,7 @@ import fs from 'node:fs'
 import path from 'node:path'
 import sharp from 'sharp'
 import { snap } from '../dist/index.js'
+import { preservationStats } from '../scripts/snap-quality/metrics.mjs'
 
 const MODEL_EXAMPLE_DIR = path.resolve('../mono-pix/src/assets/examples')
 const MODEL_EXAMPLE_GRIDS = new Map([
@@ -234,6 +235,21 @@ test(
 
     assert.ok(colorCount > 64, `expected adaptive detail palette, got ${colorCount} colors`)
     assert.ok(colorCount <= 256, `expected detail palette to stay capped, got ${colorCount} colors`)
+  },
+)
+
+test(
+  'model-generated pseudo pixel art keeps crisp line edges',
+  { skip: !fs.existsSync(MODEL_EXAMPLE_DIR) },
+  async () => {
+    const input = await loadImage(path.join(MODEL_EXAMPLE_DIR, 'gpt-image-2.png'))
+    const result = snap(input, { colorVariety: 64, output: 'original' })
+    const preserve = await preservationStats(input, result, { edgeOverlap: true })
+
+    assert.ok(
+      preserve.lineEdgeRatio >= 0.84,
+      `expected generated detail snap to keep line edges crisp, got ${preserve.lineEdgeRatio}`,
+    )
   },
 )
 

@@ -1,5 +1,5 @@
 import type { ImageLike } from './index'
-import { resampleCells, resampleMeanCells } from './snap-cells'
+import { resampleCells, resampleDetailCells } from './snap-cells'
 import {
   FALLBACK_SEGMENTS,
   MIN_CELLS,
@@ -228,7 +228,7 @@ export function snap(input: ImageLike, options?: SnapOptions): SnapResult {
   )
   const cells = preserveGeneratedDetail
     ? kmeansQuantize(
-        resampleMeanCells(data, width, colCuts, rowCuts),
+        resampleDetailCells(data, width, colCuts, rowCuts),
         numCols * numRows,
         Math.max(colorVariety, DETAIL_PRESERVATION_COLOR_FLOOR),
         DETAIL_PRESERVATION_MAX_ITER,
