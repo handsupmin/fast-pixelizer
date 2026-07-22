@@ -58,6 +58,96 @@ function makeTransparentBorderPattern(width, height, border) {
   return { data, width, height }
 }
 
+function makeRichPixelArt(width, height, colorCount = 400) {
+  const data = new Uint8ClampedArray(width * height * 4)
+  for (let y = 0; y < height; y++) {
+    for (let x = 0; x < width; x++) {
+      const index = y * width + x
+      const color = index % colorCount
+      const offset = index * 4
+      data[offset] = color % 251
+      data[offset + 1] = (color * 37) % 253
+      data[offset + 2] = (color * 83) % 255
+      data[offset + 3] = 255
+    }
+  }
+  return { data, width, height }
+}
+
+function makeCoarseGeneratedPixelArt(cols, rows, step) {
+  const width = cols * step
+  const height = rows * step
+  const data = new Uint8ClampedArray(width * height * 4)
+  const colorAt = (col, row) => {
+    const block = Math.floor(col / 5) + Math.floor(row / 7)
+    const value = (col * 17 + row * 31 + block * 53) % 256
+    return [value, (value * 3 + col * 5) % 256, (value * 7 + row * 11) % 256]
+  }
+
+  for (let y = 0; y < height; y++) {
+    for (let x = 0; x < width; x++) {
+      const col = Math.floor(x / step)
+      const row = Math.floor(y / step)
+      const localX = x % step
+      const localY = y % step
+      const color = colorAt(col, row)
+      const adjacent = colorAt(Math.min(cols - 1, col + 1), Math.min(rows - 1, row + 1))
+      const blend = localX >= step - 2 || localY >= step - 2 ? 0.35 : 0
+      const offset = (y * width + x) * 4
+      for (let channel = 0; channel < 3; channel++) {
+        data[offset + channel] = Math.round(
+          color[channel] * (1 - blend) + adjacent[channel] * blend,
+        )
+      }
+      data[offset + 3] = 255
+    }
+  }
+
+  return { data, width, height }
+}
+
+function makePhaseOffsetPixelArt() {
+  const width = 1006
+  const height = 934
+  const step = 32
+  const colCuts = [0]
+  const rowCuts = [0]
+  for (let x = 22; x < width; x += step) colCuts.push(x)
+  for (let y = 2; y < height; y += step) rowCuts.push(y)
+  colCuts.push(width)
+  rowCuts.push(height)
+
+  const cols = colCuts.length - 1
+  const rows = rowCuts.length - 1
+  const palette = [
+    [146, 192, 126, 255],
+    [103, 103, 103, 255],
+    [232, 225, 225, 255],
+    [157, 188, 234, 255],
+    [238, 145, 42, 255],
+  ]
+  const data = new Uint8ClampedArray(width * height * 4)
+
+  for (let row = 0; row < rows; row++) {
+    for (let col = 0; col < cols; col++) {
+      const dx = Math.abs(col - Math.floor(cols / 2))
+      const insideBowl = row >= 5 && row <= 27 && dx <= Math.max(5, 14 - Math.abs(row - 16))
+      const outline = insideBowl && (row === 5 || row === 27 || dx >= 13 - Math.abs(row - 16))
+      const fish = row >= 17 && row <= 19 && col >= 12 && col <= 18
+      const color = palette[outline ? 1 : fish ? 4 : insideBowl ? (row < 10 ? 2 : 3) : 0]
+
+      for (let y = rowCuts[row]; y < rowCuts[row + 1]; y++) {
+        for (let x = colCuts[col]; x < colCuts[col + 1]; x++) {
+          const offset = (y * width + x) * 4
+          data.set(color, offset)
+        }
+      }
+    }
+  }
+
+  return { data, width, height }
+}
+
 function scaleWithGutters(image, scale, gutter) {
   const width = image.width * scale + (image.width - 1) * gutter
   const height = image.height * scale + (image.height - 1) * gutter
@@ -210,6 +300,98 @@ test('uniform snap outputs keep the same grid when snapped again', async () => {
   }
 })
 
+test('resized snap outputs are pixel-identical when snapped again', async () => {
+  for (const file of [
+    'examples/example-32-clean.png',
+    'examples/example-32-detail.png',
+    'examples/example-64-clean.png',
+    'examples/example-64-detail.png',
+    'examples/example-snap-before.png',
+    'examples/example-snap-after.png',
+  ]) {
+    const input = await loadImage(file)
+    const first = snap(input, { colorVariety: 64, output: 'resized' })
+    const repeated = snap(first, { colorVariety: 64, output: 'resized' })
+
+    assert.deepEqual(
+      { width: repeated.width, height: repeated.height },
+      { width: first.width, height: first.height },
+      `expected repeated snap to preserve the native grid for ${file}`,
+    )
+    assert.deepEqual(repeated.data, first.data, `expected repeated snap to preserve ${file} pixels`)
+  }
+})
+
+test(
+  'model example resized outputs are pixel-identical when snapped again',
+  { skip: !fs.existsSync(MODEL_EXAMPLE_DIR) },
+  async () => {
+    for (const file of MODEL_EXAMPLE_GRIDS.keys()) {
+      const input = await loadImage(path.join(MODEL_EXAMPLE_DIR, file))
+      const first = snap(input, { colorVariety: 64, output: 'resized' })
+      const repeated = snap(first, { colorVariety: 64, output: 'resized' })
+
+      assert.deepEqual(
+        { width: repeated.width, height: repeated.height },
+        { width: first.width, height: first.height },
+        `expected repeated snap to preserve the native grid for ${file}`,
+      )
+      assert.deepEqual(
+        repeated.data,
+        first.data,
+        `expected repeated snap to preserve ${file} pixels`,
+      )
+    }
+  },
+)
+
+test(
+  'model example original-size outputs recover the same grid when snapped again',
+  { skip: !fs.existsSync(MODEL_EXAMPLE_DIR) },
+  async () => {
+    for (const file of MODEL_EXAMPLE_GRIDS.keys()) {
+      const input = await loadImage(path.join(MODEL_EXAMPLE_DIR, file))
+      const resized = snap(input, { colorVariety: 64, output: 'resized' })
+      const original = snap(input, { colorVariety: 64, output: 'original' })
+      const repeated = snap(original, { colorVariety: 64, output: 'resized' })
+
+      assert.deepEqual(
+        { width: repeated.width, height: repeated.height },
+        { width: resized.width, height: resized.height },
+        `expected original-size output to preserve the grid for ${file}`,
+      )
+    }
+  },
+)
+
+test('exact scaled pixel art preserves every source color and pixel', async () => {
+  const input = await scaleImage(makeRichPixelArt(32, 32), 10, 'nearest')
+  const original = snap(input, { colorVariety: 64, output: 'original' })
+  const resized = snap(input, { colorVariety: 64, output: 'resized' })
+  const repeated = snap(resized, { colorVariety: 64, output: 'resized' })
+
+  assert.deepEqual({ width: original.width, height: original.height }, { width: 320, height: 320 })
+  assert.deepEqual(original.data, input.data)
+  assert.deepEqual({ width: resized.width, height: resized.height }, { width: 32, height: 32 })
+  assert.deepEqual(repeated.data, resized.data)
+})
+
+test('phase-offset crisp pixel art preserves its source and stays stable', () => {
+  const input = makePhaseOffsetPixelArt()
+  const original = snap(input, { colorVariety: 64, output: 'original' })
+  const resized = snap(input, { colorVariety: 64, output: 'resized' })
+  const repeated = snap(original, { colorVariety: 64, output: 'resized' })
+
+  assert.deepEqual({ width: resized.width, height: resized.height }, { width: 32, height: 31 })
+  assert.deepEqual({ width: original.width, height: original.height }, { width: 1006, height: 934 })
+  assert.deepEqual(original.data, input.data)
+  assert.deepEqual(
+    { width: repeated.width, height: repeated.height },
+    { width: resized.width, height: resized.height },
+  )
+  assert.deepEqual(repeated.data, resized.data)
+})
+
 test(
   'model-generated pseudo pixel art preserves illustration detail',
   { skip: !fs.existsSync(MODEL_EXAMPLE_DIR) },
@@ -253,6 +435,24 @@ test(
   },
 )
 
+test('coarse generated pixel art preserves local edge contrast', async () => {
+  const input = makeCoarseGeneratedPixelArt(128, 96, 8)
+  const result = snap(input, { colorVariety: 64, output: 'resized' })
+  const repeated = snap(result, { colorVariety: 64, output: 'resized' })
+  const preserve = await preservationStats(input, result, { edgeOverlap: true })
+  const colorCount = uniqueRgbColorCount(result)
+
+  assert.deepEqual({ width: result.width, height: result.height }, { width: 128, height: 96 })
+  assert.ok(colorCount > 64, `expected an adaptive edge palette, got ${colorCount} colors`)
+  assert.ok(colorCount <= 256, `expected the edge palette to stay capped, got ${colorCount} colors`)
+  assert.ok(
+    preserve.lineEdgeRatio >= 0.95 && preserve.lineEdgeRatio <= 1.25,
+    `expected balanced line contrast, got ${preserve.lineEdgeRatio}`,
+  )
+  assert.ok(preserve.edgeRecall >= 0.95, `expected edge recall, got ${preserve.edgeRecall}`)
+  assert.deepEqual(repeated.data, result.data)
+})
+
 test('hand-authored snap examples keep the requested palette budget', async () => {
   const input = await loadImage('examples/example-snap-before.png')
   const result = snap(input, { colorVariety: 64, output: 'resized' })
@@ -262,9 +462,13 @@ test('hand-authored snap examples keep the requested palette budget', async () =
 
 test('hand-authored snap examples still recover their source grid', async () => {
   const after = await detect('examples/example-snap-after.png', { colorVariety: 64 })
+  const afterWithGrid = await detect('examples/example-snap-after-with-grid.png', {
+    colorVariety: 64,
+  })
   const before = await detect('examples/example-snap-before.png', { colorVariety: 64 })
 
   assert.deepEqual({ cols: after.cols, rows: after.rows }, { cols: 41, rows: 41 })
+  assert.deepEqual({ cols: afterWithGrid.cols, rows: afterWithGrid.rows }, { cols: 41, rows: 41 })
   assert.deepEqual({ cols: before.cols, rows: before.rows }, { cols: 41, rows: 42 })
 })
 
@@ -290,6 +494,14 @@ test('non-square scaled pixel art recovers the square source grid', async () => 
   const grid = detectImage(input)
 
   assert.deepEqual(grid, { cols: 40, rows: 40 })
+})
+
+test('non-integer scaled output keeps dimensions and pixel buffer consistent', async () => {
+  const input = await resizeImage(makePattern(48, 32), 360, 240, 'nearest')
+  const result = snap(input, { colorVariety: 64, output: 'resized' })
+
+  assert.deepEqual({ width: result.width, height: result.height }, { width: 48, height: 32 })
+  assert.equal(result.data.length, result.width * result.height * 4)
 })
 
 test('transparent padded pixel art keeps the full source grid', async () => {

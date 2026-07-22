@@ -45,7 +45,8 @@ function lowPaletteGrowth(inputRgbColorCount, outputRgbColorCount, colorVariety)
   return lowPaletteColorRatio(inputRgbColorCount, outputRgbColorCount, colorVariety)
 }
 
-function outputPaletteBudget(expected, colorVariety) {
+function outputPaletteBudget(expected, colorVariety, inputRgbColorCount, preservedSourceColors) {
+  if (preservedSourceColors) return Math.max(colorVariety + 1, inputRgbColorCount)
   return expected?.mode === 'preserve-detail' ? Math.max(colorVariety + 1, 257) : colorVariety + 1
 }
 
@@ -856,7 +857,13 @@ async function buildMetrics(input, expected, snapshots, colorVariety) {
       outputExpansion: outputExpansion(input, original.result),
       outputRgbPaletteOverage: Math.max(
         0,
-        outputRgbColorCount - outputPaletteBudget(expected, colorVariety),
+        outputRgbColorCount -
+          outputPaletteBudget(
+            expected,
+            colorVariety,
+            inputRgbColorCount,
+            resized.result.preservedSourceColors,
+          ),
       ),
       inputColorDominance: paletteDominance.inputColorDominance,
       outputColorDominance: paletteDominance.outputColorDominance,
